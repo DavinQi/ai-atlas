@@ -1021,8 +1021,15 @@ window.addEventListener('DOMContentLoaded',()=>{
   sw($('main'),d=>{if(mq.matches)go(cur+d);});
   const st=$('stage'),oc=st.onclick;st.onclick=e=>{if(Date.now()-(+$('main').dataset.swiped||0)<400)return;oc&&oc(e);};
   new MutationObserver(()=>body.classList.toggle('zopen',!$('zoomer').hidden)).observe($('zoomer'),{attributes:true});
-  const fixCover=()=>{const s=$('stage').querySelector('svg');if(s&&P[cur].div)s.setAttribute('viewBox',mq.matches?'110 140 1400 440':'0 0 1600 800');};
-  new MutationObserver(fixCover).observe($('stage'),{childList:true});fixCover();mq.addEventListener('change',fixCover);
+  const pq=matchMedia('(max-width:600px) and (orientation:portrait)');
+  const pn=document.createElement('div');pn.id='pnote';$('stage').after(pn);
+  const fixCover=()=>{const s=$('stage').querySelector('svg');if(!s)return;if(!s.dataset.p)pn.textContent='';body.classList.toggle('portrait',pq.matches);
+    if(P[cur].div){if(!mq.matches){s.setAttribute('viewBox','0 0 1600 800');return;}
+      if(pq.matches){document.fonts.ready.then(()=>{const b=s.getBBox();s.setAttribute('viewBox',`${b.x-30} ${b.y-30} ${b.width+60} ${b.height+60}`);});}
+      else s.setAttribute('viewBox','110 140 1400 440');return;}
+    if(pq.matches&&!s.dataset.p)document.fonts.ready.then(()=>{if(s.isConnected&&!s.dataset.p)portraitize(s);});};
+  new MutationObserver(fixCover).observe($('stage'),{childList:true});fixCover();
+  const reflow=()=>{go(cur,false);};mq.addEventListener('change',reflow);pq.addEventListener('change',reflow);
   const AR={prev:['上一张','Previous'],next:['下一张','Next'],replay:['重播动画','Replay animation'],zoom:['放大','Zoom'],ov:['总览','Overview']};
   const aria=()=>{for(const k in AR){const e=$(k);e.setAttribute('aria-label',AR[k][LANG==='en'?1:0]);e.title=AR[k][LANG==='en'?1:0];}};
   aria();document.querySelectorAll('.lang button').forEach(b=>b.addEventListener('click',aria));
@@ -1032,6 +1039,63 @@ window.addEventListener('DOMContentLoaded',()=>{
   zv.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;pts.set(e.pointerId,[e.clientX,e.clientY]);
     if(pts.size===2&&pinch){e.stopImmediatePropagation();const[a,b]=[...pts.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]),r=zv.getBoundingClientRect();
       zoomAt(d/pinch.d,(a[0]+b[0])/2-r.left,(a[1]+b[1])/2-r.top);pinch.d=d;}},true);
-  const up=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=null;};
+  const fitS=()=>{const v=zv.getBoundingClientRect();return Math.min(v.width/1600,v.height/800)*0.96;};
+  const _apply=applyZ;applyZ=function(){if(mq.matches){const v=zv.getBoundingClientRect(),w=1600*z.s,h=800*z.s,m=60;
+      z.x=w<=v.width?(v.width-w)/2:Math.min(m,Math.max(v.width-w-m,z.x));z.y=h<=v.height?(v.height-h)/2:Math.min(m,Math.max(v.height-h-m,z.y));}_apply();};
+  const toggle=(cx,cy)=>{if(z.s>fitS()*1.05)fitZ();else zoomAt(2.5,cx,cy);};
+  let lastTap=0,tapPos=null,lastToggle=0;
+  zv.addEventListener('pointerup',e=>{if(!mq.matches||e.pointerType==='mouse')return;const now=Date.now(),r=zv.getBoundingClientRect(),p=[e.clientX-r.left,e.clientY-r.top];
+    if(now-lastTap<320&&tapPos&&Math.hypot(p[0]-tapPos[0],p[1]-tapPos[1])<30){toggle(p[0],p[1]);lastToggle=now;lastTap=0;}else{lastTap=now;tapPos=p;}},true);
+  zv.addEventListener('dblclick',e=>{if(!mq.matches)return;e.stopImmediatePropagation();if(Date.now()-lastToggle<500)return;const r=zv.getBoundingClientRect();toggle(e.clientX-r.left,e.clientY-r.top);},true);
+  $('zr').onclick=()=>fitZ();
+  const _close=closeZoom;closeZoom=function(){_close();if(mq.matches)fitZ();};
+  $('zx').onclick=closeZoom;
+  document.addEventListener('gesturestart',e=>{if(mq.matches&&!e.target.closest('#zview'))e.preventDefault();});
+  const up=e=>{pts.delete(e.pointerId);if(pts.size<2){if(pinch&&mq.matches&&z.s<fitS())fitZ();pinch=null;}};
   zv.addEventListener('pointerup',up,true);zv.addEventListener('pointercancel',up,true);
 });
+
+/* ---- portrait reflow: guillotine-cut the diagram into tiles and stack them ---- */
+function portraitize(svg){
+  const W=520,PAD=12,GAP=22;
+  const notes=[...svg.querySelectorAll(':scope>g.note')];
+  const pn=document.getElementById('pnote');
+  pn.textContent=notes.map(n=>[...n.querySelectorAll('text')].map(t=>t.textContent).join(LANG==='en'?' ':'')).join('\n');
+  notes.forEach(n=>n.remove());
+  const kids=[...svg.children];const atoms=[];
+  kids.forEach(el=>{
+    if(el.classList.contains('arr')||el.tagName==='path'||el.tagName==='line')return;
+    const add=(e,blocker)=>{let b;try{b=e.getBBox();}catch(_){return;}if(!b.width&&!b.height)return;
+      if(!blocker&&b.width>700)return;atoms.push({i:atoms.length,x:b.x,y:b.y,w:b.width,h:b.height});};
+    if(el.classList.contains('frame')){el.querySelectorAll('text').forEach(t=>add(t,false));return;}
+    add(el,el.classList.contains('node'));
+  });
+  if(!atoms.length)return;
+  const ext=a=>{const x=Math.min(...a.map(t=>t.x)),y=Math.min(...a.map(t=>t.y));return{x,y,w:Math.max(...a.map(t=>t.x+t.w))-x,h:Math.max(...a.map(t=>t.y+t.h))-y};};
+  const gaps=(a,k,s)=>{const iv=a.map(t=>[t[k],t[k]+t[s]]).sort((p,q)=>p[0]-q[0]);const g=[];let e=iv[0][1];
+    for(const[p,q]of iv.slice(1)){if(p>e+6)g.push((p+e)/2);e=Math.max(e,q);}return g;};
+  const mk=a=>{const E=ext(a);E.ids=a.map(t=>t.i);return E;};
+  const cost=ts=>{const seq=ts.flatMap(t=>t.ids.slice().sort((p,q)=>p-q));let inv=0;for(let i=1;i<seq.length;i++)if(seq[i]<seq[i-1])inv++;
+    return inv*1.5+ts.length+ts.reduce((s,t)=>s+(t.w>W?(t.w/W-1)*8:0),0);};
+  function split(a,depth=0){const E=ext(a);if(E.w<=W||depth>8)return[mk(a)];
+    const opts=[];
+    const vg=gaps(a,'x','w').filter(c=>c-E.x<=W);
+    if(vg.length){const c=vg[vg.length-1];opts.push([...split(a.filter(t=>t.x+t.w/2<c),depth+1),...split(a.filter(t=>t.x+t.w/2>=c),depth+1)]);}
+    const hg=gaps(a,'y','h');
+    if(hg.length){const cuts=[-1e9,...hg,1e9],out=[];for(let i=0;i<cuts.length-1;i++){const r=a.filter(t=>t.y+t.h/2>=cuts[i]&&t.y+t.h/2<cuts[i+1]);if(r.length)out.push(...split(r,depth+1));}opts.push(out);}
+    if(!opts.length){const vg2=gaps(a,'x','w');if(vg2.length){const c=vg2[0];opts.push([...split(a.filter(t=>t.x+t.w/2<c),depth+1),...split(a.filter(t=>t.x+t.w/2>=c),depth+1)]);}}
+    if(!opts.length)return[mk(a)];
+    return opts.reduce((p,q)=>cost(q)<cost(p)?q:p);}
+  const tiles=split(atoms).map(t=>({x:t.x-PAD,y:t.y-PAD,w:t.w+2*PAD,h:t.h+2*PAD}));
+  tiles.forEach(t=>{t.s=Math.min(1,W/t.w);t.dw=t.w*t.s;t.dh=t.h*t.s;});
+  const rows=[];let row=[];
+  tiles.forEach(t=>{const sw=row.reduce((s,q)=>s+q.dw,0)+GAP*row.length;if(row.length&&sw+t.dw<=W)row.push(t);else{if(row.length)rows.push(row);row=[t];}});
+  if(row.length)rows.push(row);
+  const inner=svg.innerHTML;let y=0,out='',defs='',k=0;const uid='p'+Math.random().toString(36).slice(2,7);
+  rows.forEach((r,ri)=>{const rw=r.reduce((s,q)=>s+q.dw,0)+GAP*(r.length-1),rh=Math.max(...r.map(q=>q.dh));let x=(W-rw)/2;
+    if(ri)out+=`<path d="M40 ${y-GAP/2}H${W-40}" stroke="#2B2B2B" stroke-opacity=".15" stroke-width="1.5" stroke-dasharray="6 6"/>`;
+    r.forEach(t=>{const id=uid+(k++);defs+=`<clipPath id="${id}" clipPathUnits="userSpaceOnUse"><rect x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}"/></clipPath>`;
+      out+=`<g transform="translate(${x} ${y+(rh-t.dh)/2}) scale(${t.s}) translate(${-t.x} ${-t.y})" data-s="${t.s}"><g clip-path="url(#${id})">${inner}</g></g>`;x+=t.dw+GAP;});
+    y+=rh+GAP;});
+  svg.dataset.p=1;svg.setAttribute('viewBox',`0 0 ${W} ${y-GAP}`);svg.innerHTML=`<defs>${defs}</defs>`+out;
+}

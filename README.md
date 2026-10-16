@@ -18,7 +18,7 @@ A hand-drawn style, bilingual (English / 中文) atlas of AI-native software eng
 - **Bilingual toggle:** 中文 / EN switch in the top-right corner. The default follows your browser language, your choice is remembered, and it is reflected in the URL (`?lang=en|zh`).
 - **Hand-drawn diagrams:** sketch-style inline SVG with animated arrows. Click any diagram to zoom and pan.
 - **Keyboard shortcuts:** `←` `→` page · `Enter` zoom · `F` fullscreen · `G` overview grid · `R` replay animation · `Esc` close.
-- **Mobile friendly:** on phones and tablets the sidebar becomes a drawer (☰), diagrams scale to the screen width, you swipe left/right to change pages, pinch or tap a diagram to zoom, and every button is a ≥44px touch target. The desktop layout is unchanged.
+- **Mobile friendly:** on phones and tablets the sidebar becomes a drawer (☰), diagrams reflow into a top-to-bottom portrait layout on phones held upright (takeaways become text cards), you swipe left/right to change pages, tap a diagram to open the zoom view (pinch, double-tap to toggle fit/zoom, a Reset button), and every button is a ≥44px touch target. The desktop layout is unchanged.
 - **Deep links:** `#12` opens diagram 12, `#ch3` opens the chapter 3 cover, e.g. [`?lang=en#ch3`](https://davinqi.github.io/ai-atlas/?lang=en#ch3). Add `&static` to disable animations.
 
 ## Screenshots
