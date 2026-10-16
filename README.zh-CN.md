@@ -18,6 +18,7 @@
 - **中英切换**：右上角 中文 / EN 按钮。默认跟随浏览器语言，记住你的选择，并同步到网址（`?lang=zh|en`）。
 - **手绘风图示**：草图风格的 SVG，箭头带动画；点击图可放大、拖拽平移。
 - **快捷键**：`←` `→` 翻页 · `Enter` 放大 · `F` 全屏 · `G` 总览 · `R` 重播动画 · `Esc` 关闭。
+- **适配手机**：在手机和平板上，侧栏变成抽屉菜单（☰），图自动缩放到屏幕宽度，左右滑动翻页，双指或点击图可放大，按钮触控区域都不小于 44px。桌面版样式保持不变。
 - **深链接**：`#12` 直达第 12 张图，`#ch3` 直达第 3 章章节页，例如 [`?lang=zh#ch3`](https://davinqi.github.io/ai-atlas/?lang=zh#ch3)；加 `&static` 可关闭动画。
 
 ## 截图
@@ -26,6 +27,10 @@
 | ![章节页](docs/screenshots/zh-cover.jpg) | ![总览](docs/screenshots/zh-overview.jpg) |
 | **训练全景流程** | **多 Agent 编排层** |
 | ![训练全景](docs/screenshots/zh-diagram-training.jpg) | ![编排层](docs/screenshots/zh-diagram-orchestration.jpg) |
+
+**手机效果（iPhone 14）：**
+
+<img src="docs/screenshots/zh-mobile.jpg" alt="手机版" width="300">
 
 ## 本地运行
 纯静态文件，无需构建。

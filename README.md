@@ -18,6 +18,7 @@ A hand-drawn style, bilingual (English / 中文) atlas of AI-native software eng
 - **Bilingual toggle:** 中文 / EN switch in the top-right corner. The default follows your browser language, your choice is remembered, and it is reflected in the URL (`?lang=en|zh`).
 - **Hand-drawn diagrams:** sketch-style inline SVG with animated arrows. Click any diagram to zoom and pan.
 - **Keyboard shortcuts:** `←` `→` page · `Enter` zoom · `F` fullscreen · `G` overview grid · `R` replay animation · `Esc` close.
+- **Mobile friendly:** on phones and tablets the sidebar becomes a drawer (☰), diagrams scale to the screen width, you swipe left/right to change pages, pinch or tap a diagram to zoom, and every button is a ≥44px touch target. The desktop layout is unchanged.
 - **Deep links:** `#12` opens diagram 12, `#ch3` opens the chapter 3 cover, e.g. [`?lang=en#ch3`](https://davinqi.github.io/ai-atlas/?lang=en#ch3). Add `&static` to disable animations.
 
 ## Screenshots
@@ -26,6 +27,10 @@ A hand-drawn style, bilingual (English / 中文) atlas of AI-native software eng
 | ![Chapter cover](docs/screenshots/en-cover.jpg) | ![Overview](docs/screenshots/en-overview.jpg) |
 | **Training pipeline** | **Multi-agent orchestration** |
 | ![Training pipeline](docs/screenshots/en-diagram-training.jpg) | ![Orchestration](docs/screenshots/en-diagram-orchestration.jpg) |
+
+**On mobile (iPhone 14):**
+
+<img src="docs/screenshots/en-mobile.jpg" alt="Mobile view" width="300">
 
 ## Run locally
 The site is plain static files with no build step.

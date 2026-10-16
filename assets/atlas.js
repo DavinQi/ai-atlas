@@ -1008,3 +1008,27 @@ function setLang(l,init){
 }
 setLang(detectLang(),true);
 window.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.lang button').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));});
+
+/* ---- mobile: drawer, swipe, pinch ---- */
+window.addEventListener('DOMContentLoaded',()=>{
+  const mq=matchMedia('(max-width:1023px)'),body=document.body;
+  const m=$('menu');m.onclick=()=>body.classList.toggle('drawer');
+  $('backdrop').onclick=()=>body.classList.remove('drawer');
+  $('nav').addEventListener('click',e=>{if(mq.matches&&e.target.closest('li,.ch>button'))setTimeout(()=>body.classList.remove('drawer'),60);});
+  const sw=(el,fn)=>{let s=null;el.addEventListener('touchstart',e=>{s=e.touches.length===1?{x:e.touches[0].clientX,y:e.touches[0].clientY,t:Date.now()}:null;},{passive:true});
+    el.addEventListener('touchend',e=>{if(!s)return;const t=e.changedTouches[0],dx=t.clientX-s.x,dy=t.clientY-s.y;
+      if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5&&Date.now()-s.t<800){fn(dx<0?1:-1);el.dataset.swiped=Date.now();}s=null;},{passive:true});};
+  sw($('main'),d=>{if(mq.matches)go(cur+d);});
+  const st=$('stage'),oc=st.onclick;st.onclick=e=>{if(Date.now()-(+$('main').dataset.swiped||0)<400)return;oc&&oc(e);};
+  new MutationObserver(()=>body.classList.toggle('zopen',!$('zoomer').hidden)).observe($('zoomer'),{attributes:true});
+  const fixCover=()=>{const s=$('stage').querySelector('svg');if(s&&P[cur].div)s.setAttribute('viewBox',mq.matches?'110 140 1400 440':'0 0 1600 800');};
+  new MutationObserver(fixCover).observe($('stage'),{childList:true});fixCover();mq.addEventListener('change',fixCover);
+  /* pinch zoom in zoom layer */
+  const zv=$('zview'),pts=new Map();let pinch=null;
+  zv.addEventListener('pointerdown',e=>{pts.set(e.pointerId,[e.clientX,e.clientY]);if(pts.size===2){const[a,b]=[...pts.values()];pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1])};}},true);
+  zv.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;pts.set(e.pointerId,[e.clientX,e.clientY]);
+    if(pts.size===2&&pinch){e.stopImmediatePropagation();const[a,b]=[...pts.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]),r=zv.getBoundingClientRect();
+      zoomAt(d/pinch.d,(a[0]+b[0])/2-r.left,(a[1]+b[1])/2-r.top);pinch.d=d;}},true);
+  const up=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=null;};
+  zv.addEventListener('pointerup',up,true);zv.addEventListener('pointercancel',up,true);
+});
