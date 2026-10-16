@@ -3,7 +3,7 @@
 <p>对应图 #13 · 第二章「Agent 设计原理与范式」</p>
 </blockquote>
 <h2>概述</h2>
-<p>**Model Context Protocol（MCP）**是一个开放协议，用于在 LLM 应用与外部数据源和工具之间建立标准化的集成。官方规范说明，MCP 借鉴了 Language Server Protocol（LSP）：正如 LSP 统一了编程语言支持在各种开发工具中的接入方式，MCP 统一了上下文和工具接入 AI 应用生态的方式。在 MCP 出现之前，每个 AI 应用都要为每个工具单独写集成，形成「M 个应用 × N 个工具」的组合爆炸；有了统一协议，就变成「M + N」。</p>
+<p><strong>Model Context Protocol（MCP）</strong>是一个开放协议，用于在 LLM 应用与外部数据源和工具之间建立标准化的集成。官方规范说明，MCP 借鉴了 Language Server Protocol（LSP）：正如 LSP 统一了编程语言支持在各种开发工具中的接入方式，MCP 统一了上下文和工具接入 AI 应用生态的方式。在 MCP 出现之前，每个 AI 应用都要为每个工具单独写集成，形成「M 个应用 × N 个工具」的组合爆炸；有了统一协议，就变成「M + N」。</p>
 <h2>核心机制</h2>
 <p><strong>1. 三种角色。</strong> 协议使用 JSON-RPC 2.0 消息，在以下角色之间通信：</p>
 <ul>

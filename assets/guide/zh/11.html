@@ -3,8 +3,8 @@
 <p>对应图 #11 · 第二章「Agent 设计原理与范式」</p>
 </blockquote>
 <h2>概述</h2>
-<p>「Agent」一词的定义并不统一。Anthropic 在《Building effective agents》中把所有基于 LLM 的自动化系统统称为 agentic systems，并做了一个关键区分：**工作流（workflow）**是由预先写好的代码路径编排 LLM 和工具；<strong>Agent</strong> 则由 LLM 自己动态决定流程和工具调用，自主掌控完成任务的方式。</p>
-<p>Lilian Weng 在 2023 年的综述《LLM Powered Autonomous Agents》中给出了被广泛引用的组成框架：LLM 充当 Agent 的「大脑」，配合三个关键组件——<strong>规划（Planning）</strong>、<strong>记忆（Memory）<strong>和</strong>工具使用（Tool Use）</strong>。</p>
+<p>「Agent」一词的定义并不统一。Anthropic 在《Building effective agents》中把所有基于 LLM 的自动化系统统称为 agentic systems，并做了一个关键区分：<strong>工作流（workflow）</strong>是由预先写好的代码路径编排 LLM 和工具；<strong>Agent</strong> 则由 LLM 自己动态决定流程和工具调用，自主掌控完成任务的方式。</p>
+<p>Lilian Weng 在 2023 年的综述《LLM Powered Autonomous Agents》中给出了被广泛引用的组成框架：LLM 充当 Agent 的「大脑」，配合三个关键组件——<strong>规划（Planning）</strong>、<strong>记忆（Memory）</strong>和<strong>工具使用（Tool Use）</strong>。</p>
 <h2>核心机制</h2>
 <p><strong>1. 规划。</strong> 把大任务拆成可管理的子目标；并通过自我反思（self-reflection）从过去的行动中总结经验、修正错误。</p>
 <p><strong>2. 记忆。</strong> Weng 的划分是：</p>

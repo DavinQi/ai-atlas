@@ -3,7 +3,7 @@
 <p>对应图 #4 · 第一章「大模型如何训练」</p>
 </blockquote>
 <h2>概述</h2>
-<p>模型从不直接「看」文字。原始文本先经过<strong>清洗与去重</strong>，再由**分词器（tokenizer）<strong>切成离散 token，每个 token 对应一个整数 id，最后通过</strong>嵌入矩阵（embedding）**查表变成向量，进入 Transformer。数据质量决定模型上限，分词方式则决定同样的算力能「读」多少文本、各语言的成本是否公平。</p>
+<p>模型从不直接「看」文字。原始文本先经过<strong>清洗与去重</strong>，再由<strong>分词器（tokenizer）</strong>切成离散 token，每个 token 对应一个整数 id，最后通过<strong>嵌入矩阵（embedding）</strong>查表变成向量，进入 Transformer。数据质量决定模型上限，分词方式则决定同样的算力能「读」多少文本、各语言的成本是否公平。</p>
 <h2>核心机制</h2>
 <p><strong>1. 数据管线。</strong> 以 FineWeb 为例：它从 96 个 Common Crawl 快照中构建出 15T token 的数据集，并对去重和过滤策略做了系统消融；从中筛出的 1.3T token 教育类子集 FineWeb-Edu，在 MMLU、ARC 等知识与推理基准上带来显著提升。典型步骤包括：文本抽取 → 语言识别 → 启发式与模型打分的质量过滤 → MinHash 等去重 → 隐私信息与有害内容过滤。</p>
 <p><strong>2. 子词分词（BPE）。</strong> Sennrich 等人把字节对编码（BPE）引入神经机器翻译：从字符（或字节）开始，反复把语料中出现频率最高的相邻符号对合并成新符号，直到词表达到目标大小。这样常见词是一个 token，罕见词被拆成若干子词，不存在「未登录词」。SentencePiece 把原始文本（含空格）直接当作序列处理，不依赖语言相关的预分词，适合中文等不以空格分词的语言。</p>
