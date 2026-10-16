@@ -1,22 +1,43 @@
-# AI-Native Engineering Atlas · AI 原生研发图集
+**English** | [简体中文](README.zh-CN.md)
 
-A bilingual (中文 / English), hand-drawn style atlas of AI-native software engineering: 36 diagrams + 6 chapter pages, from LLM training and agent design to multi-agent coding and the changing dev lifecycle.
+# AI-Native Engineering Atlas
 
-Author: [DavinQi](https://github.com/DavinQi)
+A hand-drawn style, bilingual (English / 中文) atlas of AI-native software engineering, **from Copilot to Agent Harness**: 36 diagrams + 6 chapter pages.
 
-## Usage
-Plain static files, no build step. Open `index.html` locally or publish the folder with GitHub Pages
-(Settings → Pages → Deploy from branch → select the branch/folder containing `index.html`).
+**Live site:** [English](https://davinqi.github.io/ai-atlas/?lang=en) · [中文](https://davinqi.github.io/ai-atlas/?lang=zh)
 
-- Language: toggle 中文 / EN in the top-right corner. Default follows the browser (`zh*` → Chinese, otherwise English); the choice is saved in `localStorage` and reflected in the URL (`?lang=zh` / `?lang=en`).
-- Deep links: `#12` (diagram 12), `#ch3` (chapter 3 cover), e.g. `index.html?lang=en#ch3`.
-- Keys: ← → page · Enter zoom · F fullscreen · G overview · R replay animation · Esc close.
-- `?static` disables animations (useful for screenshots/printing).
+## Chapters
+1. **How LLMs Are Trained**: data, pre-training, post-training (SFT / RLHF / DPO / RLVR), inference, misconceptions, training cost
+2. **Agent Design: Principles & Patterns**: components, ReAct / Plan / Reflection, MCP, memory & RAG, multi-agent harness, guardrails
+3. **The Evolution of Programming**: from assembly and IDEs to Copilot, AI IDEs and coding agents
+4. **AI Coding Today**: Amdahl's law, context engineering, spec-driven development, layered verification, metrics, a 7-day roadmap
+5. **Multi-Agent Programming**: why multi-agent, worktree isolation, race vs pipeline, orchestration, humans + agents
+6. **How AI Reshapes the Dev Lifecycle**: CI/CD → AIOps self-healing → the future, roles and open questions
+
+## Features
+- **Bilingual toggle:** 中文 / EN switch in the top-right corner. The default follows your browser language, your choice is remembered, and it is reflected in the URL (`?lang=en|zh`).
+- **Hand-drawn diagrams:** sketch-style inline SVG with animated arrows. Click any diagram to zoom and pan.
+- **Keyboard shortcuts:** `←` `→` page · `Enter` zoom · `F` fullscreen · `G` overview grid · `R` replay animation · `Esc` close.
+- **Deep links:** `#12` opens diagram 12, `#ch3` opens the chapter 3 cover, e.g. [`?lang=en#ch3`](https://davinqi.github.io/ai-atlas/?lang=en#ch3). Add `&static` to disable animations.
+
+## Screenshots
+| Chapter cover | Overview grid |
+|---|---|
+| ![Chapter cover](docs/screenshots/en-cover.jpg) | ![Overview](docs/screenshots/en-overview.jpg) |
+| **Training pipeline** | **Multi-agent orchestration** |
+| ![Training pipeline](docs/screenshots/en-diagram-training.jpg) | ![Orchestration](docs/screenshots/en-diagram-orchestration.jpg) |
+
+## Run locally
+The site is plain static files with no build step.
+```bash
+git clone https://github.com/DavinQi/ai-atlas.git
+cd ai-atlas
+python3 -m http.server 8000   # then open http://localhost:8000/?lang=en
+```
+You can also open `index.html` directly in a browser.
 
 ## Files
-- `index.html` – entry page
-- `assets/atlas.js` – rendering engine, diagram definitions and the zh→en dictionary
-- `assets/style.css` – styles
-- `assets/fonts/` – subset web fonts (ZCOOL XiaoWei, Kalam, IBM Plex Mono, Noto Sans CJK SC; all SIL OFL)
+`index.html` (entry) · `assets/atlas.js` (renderer, diagrams, i18n dictionary) · `assets/style.css` · `assets/fonts/` (subset web fonts, SIL OFL)
 
-Diagrams are rendered as inline SVG at runtime; English text is auto-shrunk to fit its boxes.
+## Author
+[DavinQi](https://github.com/DavinQi)
