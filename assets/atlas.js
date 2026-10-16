@@ -1023,6 +1023,9 @@ window.addEventListener('DOMContentLoaded',()=>{
   new MutationObserver(()=>body.classList.toggle('zopen',!$('zoomer').hidden)).observe($('zoomer'),{attributes:true});
   const fixCover=()=>{const s=$('stage').querySelector('svg');if(s&&P[cur].div)s.setAttribute('viewBox',mq.matches?'110 140 1400 440':'0 0 1600 800');};
   new MutationObserver(fixCover).observe($('stage'),{childList:true});fixCover();mq.addEventListener('change',fixCover);
+  const AR={prev:['上一张','Previous'],next:['下一张','Next'],replay:['重播动画','Replay animation'],zoom:['放大','Zoom'],ov:['总览','Overview']};
+  const aria=()=>{for(const k in AR){const e=$(k);e.setAttribute('aria-label',AR[k][LANG==='en'?1:0]);e.title=AR[k][LANG==='en'?1:0];}};
+  aria();document.querySelectorAll('.lang button').forEach(b=>b.addEventListener('click',aria));
   /* pinch zoom in zoom layer */
   const zv=$('zview'),pts=new Map();let pinch=null;
   zv.addEventListener('pointerdown',e=>{pts.set(e.pointerId,[e.clientX,e.clientY]);if(pts.size===2){const[a,b]=[...pts.values()];pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1])};}},true);
