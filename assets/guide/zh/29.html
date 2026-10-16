@@ -1,0 +1,39 @@
+<h1>为什么多 Agent：用并行换时间，代价是 token 与审阅</h1>
+<blockquote>
+<p>对应图 #29 · 第五章「多 Agent 编程」</p>
+</blockquote>
+<h2>概述</h2>
+<p>单个 Coding Agent 一次只能做一件事。当任务可以拆成彼此独立的部分时，同时运行多个 Agent 就能<strong>用并行换时间</strong>。但并行不是免费的：每个 Agent 都消耗 token，每份产出都需要人审阅。多 Agent 编程的核心问题，就是这笔账什么时候划算。</p>
+<h2>核心机制</h2>
+<p><strong>1. 收益来自并行和上下文隔离。</strong> Anthropic 的多 Agent 研究系统中，子 Agent 在各自的上下文窗口中并行探索问题的不同方面，再把最重要的信息压缩后交给主 Agent。他们的内部研究评测显示，多 Agent 系统比单 Agent 高出 90.2%；在复杂查询上，并行化把研究时间缩短了最多 90%。</p>
+<p><strong>2. 代价是 token。</strong> 同一篇文章给出：Agent 的 token 用量约为聊天的 4 倍，多 Agent 系统约为 15 倍；token 用量本身就解释了 80% 的性能差异。</p>
+<p><strong>3. 编码任务的并行度有限。</strong> Anthropic 明确指出，大多数编码任务中真正可并行的部分比研究任务少，而且 LLM Agent 还不擅长实时协调和委派。需要所有 Agent 共享同一上下文、或 Agent 之间依赖很多的任务，目前不适合多 Agent。</p>
+<p><strong>4. 人的审阅是新瓶颈。</strong> X 上分享 Orca 用法的开发者总结了多开之后会撞上的四件事：新副本缺依赖和密钥跑不起来；盯不过来哪个在干活、哪个在等确认；看不过来——生成越来越快，瓶颈变成验收；被一家厂商的额度绑住。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2023 MetaGPT、ChatDev、AutoGen</strong>：早期多 Agent 软件开发框架</li>
+<li><strong>2023 多 Agent 辩论</strong>：多个模型实例多轮辩论提升推理和事实性</li>
+<li><strong>2025 Anthropic 多 Agent 研究系统</strong></li>
+<li><strong>Claude Code / Codex / Cursor 的子 Agent</strong>：每个子 Agent 在自己的上下文窗口中工作，把结果返回给主 Agent</li>
+</ul>
+<h2>工程实践与数字</h2>
+<p><strong>什么时候值得用多 Agent：</strong></p>
+<ul>
+<li>子任务彼此独立：不同模块、不同页面、前后端分头审查。</li>
+<li>改错代价高，值得多个方案对比（见「赛跑」打法）。</li>
+<li>信息量超出单个上下文：大规模调研、代码库探索。</li>
+</ul>
+<p><strong>什么时候别用：</strong></p>
+<ul>
+<li>小改动、文案调整。</li>
+<li>改动高度耦合，必须在同一上下文里协调。</li>
+<li>还没有自动化验证，审阅能力跟不上。</li>
+</ul>
+<p><strong>算账：</strong> 三个 Agent 并行，就是三份额度。前述开发者引用一篇评测的说法：省下的是来回重试的时间，额度照付三份；所以只在支付、权限、数据迁移这类改错了很麻烦的地方赛跑。</p>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「多 Agent 一定更快。」</strong> 取决于任务可并行的程度，协调和审阅都有成本。</li>
+<li><strong>「token 便宜，不用算。」</strong> 15 倍的消耗在规模化后非常可观。</li>
+<li><strong>「Agent 多了可以少看代码。」</strong> 产出越多，越需要自动化验证和更好的审阅工具。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2308.08155" target="_blank" rel="noopener noreferrer">AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation</a> <span class="rmeta">· Wu et al. · 2023</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2307.07924" target="_blank" rel="noopener noreferrer">ChatDev: Communicative Agents for Software Development</a> <span class="rmeta">· Qian et al. · 2023</span></li><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener noreferrer">How we built our multi-agent research system</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2305.14325" target="_blank" rel="noopener noreferrer">Improving Factuality and Reasoning in Language Models through Multiagent Debate</a> <span class="rmeta">· Du et al. · 2023</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2308.00352" target="_blank" rel="noopener noreferrer">MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework</a> <span class="rmeta">· Hong et al. · 2023</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/CopperForgeAI/status/2108830306014998719" target="_blank" rel="noopener noreferrer">Orca 从入门到精通 (Orca from beginner to expert)</a> <span class="rmeta">· @CopperForgeAI · 2026-10-10</span></li></ol></section>

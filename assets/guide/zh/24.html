@@ -1,0 +1,41 @@
+<h1>Spec 驱动：先澄清再动手，约束与假设分开写</h1>
+<blockquote>
+<p>对应图 #24 · 第四章「当前如何做 AI 编程」</p>
+</blockquote>
+<h2>概述</h2>
+<p>Agent 写代码越快，需求理解偏差的代价越大：方向错了，写得越多返工越多。Spec 驱动的做法是<strong>先把需求澄清成一份可验证的规格说明，再让 Agent 动手</strong>。阿里巴巴实践手册给出了一个关键写法：<strong>把「约束」和「假设」分开写</strong>——Spec 负责划定「什么算对」的边界，不负责规定实现路径。</p>
+<h2>核心机制</h2>
+<p><strong>1. 不假设需求是完整的。</strong> 手册指出，人在写需求时往往会省略权限边界、并发处理、幂等策略等默认知识，而 AI 缺少这类组织记忆，只能猜测或忽略。例如「生成公开分享链接」这个简单需求，背后涉及撤销机制、访问控制和数据一致性等多个决策。团队的做法是让 AI 主动追问隐含的业务和技术决策，把确认结果沉淀为可追溯的 Spec 和 Tasks，在开发成本最低的阶段暴露风险。</p>
+<p><strong>2. 约束 vs 假设。</strong></p>
+<ul>
+<li><strong>约束</strong>：数据不能出域、接口必须向后兼容、延迟不能超过阈值。要长期保存，并尽可能自动检查。</li>
+<li><strong>假设</strong>：用微服务还是单体、用哪种缓存策略。这些是有待验证的假设，应允许 AI 根据实现和运行中的反馈自己调整。</li>
+</ul>
+<p><strong>3. 一份够用的 Spec 包含什么。</strong> 综合手册与一线实践：</p>
+<ul>
+<li>要解决的问题与<strong>非目标</strong></li>
+<li>范围与优先级</li>
+<li>约束（可自动检查的尽量写成检查项）</li>
+<li>关键决策及理由</li>
+<li><strong>验收标准</strong>（最好能直接转成测试）</li>
+<li>待确认事项</li>
+</ul>
+<p><strong>4. 澄清要适可而止。</strong> 一位开发者在 X 上分享的经验是：用连续追问把目标、约束和取舍问清楚，沉淀到 Spec 或 CONTEXT.md；当剩下的问题已经不会显著改变实现方向和验收结果时，就可以开始开发，不必要求提前规划所有实现细节，否则需求对齐本身又会变成一套很重的流程。他同时提到，Superpowers 这类围绕 Spec 和 TDD 的重型 Skill 会消耗大量 token，模型变强后，一些原本有用的约束和流程正在变成噪声。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>Plan-and-Solve（2023）</strong>：先规划再执行可以减少漏步骤错误，是「先澄清后动手」在模型层面的对应</li>
+<li><strong>阿里巴巴《AI Native 研发范式实践手册》</strong>：约束与假设分离的 Spec 写法</li>
+</ul>
+<h2>工程实践与数字</h2>
+<ul>
+<li><strong>Spec 也是多 Agent 的共享上下文</strong>：负责实现和审查的 Agent 读同一份 Spec，不需要重读之前的全部对话。</li>
+<li><strong>验收标准先行</strong>：千问用增团队引入 TDD，先用失败测试固定需求边界，再用最小实现让测试通过，最后在测试保护下重构。</li>
+<li><strong>复杂需求拆成可独立验收的 Issue</strong>，只有能独立推进的部分才并行。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「Spec 越详细越好。」</strong> 把实现路径写死会剥夺 Agent 根据反馈调整的空间，也会让流程过重。</li>
+<li><strong>「需求写清楚是产品经理的事。」</strong> 手册的做法是让 AI 主动追问，把澄清前置为团队流程。</li>
+<li><strong>「有 Spec 就不需要测试。」</strong> Spec 定义什么算对，测试才能证明做对了。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2305.04091" target="_blank" rel="noopener noreferrer">Plan-and-Solve Prompting: Improving Zero-Shot Chain-of-Thought Reasoning by Large Language Models</a> <span class="rmeta">· Wang et al. · 2023</span></li><li><span class="rb rb-doc">文档</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li></ol></section>

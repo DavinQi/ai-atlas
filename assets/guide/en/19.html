@@ -1,0 +1,35 @@
+<h1>From Completion to AI IDEs: The Model Entered the Cursor, Then the Editor</h1>
+<blockquote>
+<p>Companion to diagram #19 · Chapter 3 &quot;The Evolution of Programming&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>AI's first step into developer tools was <strong>completion at the cursor</strong>: predicting the next line or block from the current file and cursor position. The second step was the <strong>AI IDE</strong>: the model no longer watches only the cursor but understands the whole project, edits across files, and explains and refactors code in chat. In both, the human still leads every change in the editor; AI is the &quot;copilot&quot;.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Code completion models.</strong> OpenAI's Codex paper introduced a GPT model fine-tuned on public GitHub code and noted that a production version powers GitHub Copilot. It also found repeated sampling an effective strategy: with 100 samples per problem, 70.2% of HumanEval problems were solved versus 28.8% with one sample. This explains why completion tools often offer several candidates.</p>
+<p><strong>2. From completion to chat and multi-file edits.</strong> AI IDEs add, beyond completion:</p>
+<ul>
+<li><strong>Chat</strong>: ask, explain and generate about selected code or the whole project.</li>
+<li><strong>Multi-file edits</strong>: one change spanning several files, presented as diffs for review.</li>
+<li><strong>Project-level context</strong>: index the codebase and retrieve relevant files on demand.</li>
+</ul>
+<p><strong>3. Persistent project rules.</strong> Keeping the model aligned with team conventions relies on rules files committed to the repo. Cursor's docs say rules provide persistent, reusable context at the prompt level; project rules live in <code>.cursor/rules</code> under version control; <code>AGENTS.md</code> is supported as a simpler alternative. AGENTS.md is positioned as &quot;a README for agents&quot;, and its site says it is used by over 60k open-source projects. Claude Code reads <code>CLAUDE.md</code>.</p>
+<p><strong>4. Moving toward agents.</strong> GitHub Copilot's docs now cover agent mode in the IDE, a CLI, and a coding agent that works asynchronously in the cloud and can open or update PRs for human review. The line between completion tools and agent tools is blurring.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2021 Codex / HumanEval</strong></li>
+<li><strong>June 29, 2021: Copilot technical preview</strong>, working especially well at first for Python, JavaScript, TypeScript, Ruby and Go</li>
+<li><strong>2023 Copilot randomized controlled experiment</strong>: developers using Copilot implemented a JavaScript HTTP server 55.8% faster than the control group</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>Productivity evidence depends on context</strong>: the 55.8% figure comes from a well-bounded experimental task. METR's 2025 randomized controlled trial found that 16 experienced open-source developers completing 246 tasks in mature projects they knew well took <strong>19% longer</strong> when AI was allowed (mainly Cursor Pro with Claude 3.5/3.7 Sonnet); developers had expected a 24% speedup beforehand and still believed afterwards they had been 20% faster. The two studies do not contradict each other: gains depend heavily on task type, codebase familiarity and quality bar.</li>
+<li><strong>Commit rules files to Git</strong> so the team shares and reviews them.</li>
+<li><strong>Review AI-generated diffs like a colleague's PR</strong>, rather than accepting them directly.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;Feeling faster means being faster.&quot;</strong> METR's study shows perception and measurement can point in opposite directions.</li>
+<li><strong>&quot;Completion acceptance rate equals productivity.&quot;</strong> Acceptance rate measures usage, not delivery outcomes (see Chapter 4, &quot;Metrics&quot;).</li>
+<li><strong>&quot;The more rules, the better.&quot;</strong> Rules consume context; add them one by one for recurring problems.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2107.03374" target="_blank" rel="noopener noreferrer">Evaluating Large Language Models Trained on Code</a> <span class="rmeta">· Chen et al. · 2021</span></li><li><span class="rb rb-doc">Docs</span><a href="https://github.blog/news-insights/product-news/introducing-github-copilot-ai-pair-programmer/" target="_blank" rel="noopener noreferrer">Introducing GitHub Copilot: your AI pair programmer</a> <span class="rmeta">· Nat Friedman (GitHub) · 2021</span></li><li><span class="rb rb-doc">Docs</span><a href="https://agents.md/" target="_blank" rel="noopener noreferrer">AGENTS.md</a> <span class="rmeta">· AGENTS.md project · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://code.claude.com/docs/en/memory" target="_blank" rel="noopener noreferrer">Claude Code docs: Memory (CLAUDE.md)</a> <span class="rmeta">· Anthropic · 2026</span></li><li><span class="rb rb-doc">Docs</span><a href="https://cursor.com/docs/context/rules" target="_blank" rel="noopener noreferrer">Cursor docs: Rules</a> <span class="rmeta">· Cursor · 2026</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2507.09089" target="_blank" rel="noopener noreferrer">Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity</a> <span class="rmeta">· Becker et al. (METR) · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2302.06590" target="_blank" rel="noopener noreferrer">The Impact of AI on Developer Productivity: Evidence from GitHub Copilot</a> <span class="rmeta">· Peng et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://docs.github.com/en/copilot/get-started/what-is-github-copilot" target="_blank" rel="noopener noreferrer">What is GitHub Copilot?</a> <span class="rmeta">· GitHub Docs · 2026</span></li></ol></section>

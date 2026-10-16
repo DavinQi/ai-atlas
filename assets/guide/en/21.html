@@ -1,0 +1,65 @@
+<h1>Four Generations of Tools: More Autonomy Demands More Automated Verification</h1>
+<blockquote>
+<p>Companion to diagram #21 · Chapter 3 &quot;The Evolution of Programming&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>Putting the previous articles together gives four generations of developer tools: <strong>traditional IDE → AI completion → AI IDE → coding agent</strong>. From left to right, AI takes on more work and humans intervene less; but every increment of autonomy needs an increment of <strong>automated verification</strong> as a safety net. This is the chapter's most important conclusion.</p>
+<h2>Core Mechanisms</h2>
+<table>
+<thead>
+<tr>
+<th>Generation</th>
+<th>What AI does</th>
+<th>What humans do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Traditional IDE</td>
+<td>Nothing (static analysis)</td>
+<td>Everything</td>
+</tr>
+<tr>
+<td>AI completion</td>
+<td>Predicts next code</td>
+<td>Accept/reject each</td>
+</tr>
+<tr>
+<td>AI IDE</td>
+<td>Chat, multi-file edits</td>
+<td>Review each diff</td>
+</tr>
+<tr>
+<td>Coding agent</td>
+<td>Read-edit-run-fix loop</td>
+<td>Set task, review PR</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why does more autonomy demand more verification?</strong></p>
+<ul>
+<li><strong>Human review becomes coarser</strong>: with completion, humans see every line; with agents, they see a whole PR, or only test results and core logic.</li>
+<li><strong>Errors compound</strong>: Anthropic notes agents are stateful and errors compound; autonomy means higher cost and the risk of compounding errors.</li>
+<li><strong>Verification is the only reliable signal for self-correction</strong>: Anthropic stresses agents need ground truth from the environment at every step.</li>
+</ul>
+<p>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em> (annotated edition) proposes a pattern: AI always solves first the problems whose feedback is public and whose verification can scale — which is why coding was solved first.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2021 HumanEval</strong>: measuring functional correctness with unit tests</li>
+<li><strong>2023 SWE-bench</strong>: judging whether an issue is fixed with the repo's own tests</li>
+<li><strong>2023 Reflexion</strong>: using test feedback to improve on the next attempt</li>
+<li><strong>2025 DeepSeek-R1</strong>: reinforcement learning on verifiable rewards, with code problems graded by compilers and tests</li>
+</ul>
+<p>From evaluation to training to usage, &quot;automatically verifiable&quot; runs throughout.</p>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>Choose the generation by task risk</strong>: exploratory prototypes can let the agent be highly autonomous; payments, permissions and data migrations, where mistakes are costly, call for lower autonomy or stronger human gates.</li>
+<li><strong>Add verification before adding autonomy</strong>: for untested modules, have the agent write tests first, then change functionality.</li>
+<li><strong>Verification must cover real paths</strong>: the X developer cited earlier found that no matter how many unit tests you write, production can still break; the key is giving the agent an end-to-end test environment so it can run from a real entry point to the result the user needs, and inspect tables and logs.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;The newest generation is always best.&quot;</strong> The right generation depends on the task and verification conditions.</li>
+<li><strong>&quot;Code review is enough.&quot;</strong> Human review cannot keep up with agent output speed; machines must check first (see Chapter 4, &quot;Layered Verification&quot;).</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2501.12948" target="_blank" rel="noopener noreferrer">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a> <span class="rmeta">· DeepSeek-AI · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2303.11366" target="_blank" rel="noopener noreferrer">Reflexion: Language Agents with Verbal Reinforcement Learning</a> <span class="rmeta">· Shinn et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener noreferrer">How we built our multi-agent research system</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2107.03374" target="_blank" rel="noopener noreferrer">Evaluating Large Language Models Trained on Code</a> <span class="rmeta">· Chen et al. · 2021</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2310.06770" target="_blank" rel="noopener noreferrer">SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</a> <span class="rmeta">· Jimenez et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li></ol></section>

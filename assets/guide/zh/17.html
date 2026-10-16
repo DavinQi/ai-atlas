@@ -1,0 +1,44 @@
+<h1>编程的进化：人的关注点从语法，到代码，再到任务</h1>
+<blockquote>
+<p>对应图 #17 · 第三章「编程的进化」</p>
+</blockquote>
+<h2>概述</h2>
+<p>编程史可以看作一部「人把什么交给机器」的历史。每一次跃迁，都把一层细节从人的注意力中移走：高级语言让人不必关心机器指令，IDE 和代码补全让人少记 API，AI 补全让人少敲样板代码，而 Coding Agent 开始让人从「写代码」转向「定义任务和验收结果」。</p>
+<h2>核心机制</h2>
+<p>图中的时间轴可以分成三个阶段，每个阶段人的关注点不同：</p>
+<p><strong>1. 关注语法（高级语言与 IDE 时代）。</strong></p>
+<ul>
+<li><strong>1957 年 FORTRAN</strong>：Backus 等人发表《The FORTRAN Automatic Coding System》，高级语言把公式翻译成机器指令。</li>
+<li><strong>1995 年 Java</strong>：1995 年 5 月作为 Sun Java 平台的核心组件发布，「一次编写，到处运行」，靠 JVM 屏蔽平台差异。</li>
+<li><strong>1996 年 IntelliSense</strong>：微软的代码补全功能，1996 年首次出现在主流微软产品中（Visual Basic 5.0 控件创建版），依靠静态分析提示成员和参数。</li>
+</ul>
+<p><strong>2. 关注代码（AI 补全与 AI IDE 时代）。</strong></p>
+<ul>
+<li><strong>2021 年 Codex 与 Copilot</strong>：OpenAI 的 Codex 论文报告，在新发布的 HumanEval 基准上，Codex 解决了 28.8% 的问题，而 GPT-3 为 0%；论文同时说明 GitHub Copilot 由 Codex 的一个生产版本驱动。同年 6 月 29 日，GitHub 发布 Copilot 技术预览版，定位为「AI 结对程序员」。</li>
+<li>之后出现了以 Cursor 为代表的 AI IDE，把模型从「光标处补全」扩展到对整个编辑器、多文件和对话的深度集成。</li>
+</ul>
+<p><strong>3. 关注任务（Coding Agent 时代）。</strong></p>
+<ul>
+<li><strong>2025 年 2 月 24 日</strong>：Anthropic 随 Claude 3.7 Sonnet 发布命令行 agentic 编码工具 Claude Code。</li>
+<li><strong>2025 年 4 月</strong>：OpenAI 开源 Codex CLI，一个在本地终端运行的轻量级编码 Agent。</li>
+<li>Agent 不再嵌入编辑器等待逐条指令，而是在「行动—验证—纠错」的闭环中自主推进任务。</li>
+</ul>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2021 Codex / HumanEval</strong></li>
+<li><strong>2023 SWE-bench</strong>：2,294 个来自 12 个流行 Python 仓库真实 GitHub issue 的任务；发布时最好的模型 Claude 2 仅解决 1.96%</li>
+<li><strong>2024 SWE-agent</strong>：为 Agent 专门设计的计算机接口，在 SWE-bench 上 pass@1 达到 12.5%</li>
+<li><strong>2024 年 11 月 MCP 发布</strong></li>
+</ul>
+<h2>工程实践与数字</h2>
+<ul>
+<li><strong>评测基准的演进反映了关注点的变化</strong>：HumanEval 测「根据文档字符串写一个函数」；SWE-bench 测「在真实代码库里修一个 issue」，需要跨函数、跨文件协调修改，与执行环境交互，处理很长的上下文。</li>
+<li>阿里巴巴《AI Native 研发范式实践手册》（解读版）记录：截至 2026 年中，主流模型在 SWE-bench Verified 上的通过率已从两年前的不足 30% 提升到 80% 左右；行业共识随之转向——瓶颈不再是生成代码本身，而是需求理解、环境构建、测试验证、发布运维等占研发生命周期 70%～80% 的环节。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「AI 会让编程技能变得不重要。」</strong> 每一次抽象层提升，都把重心转向更高层的能力：问题定义、架构判断和验证设计。</li>
+<li><strong>「基准分数高就等于能交付。」</strong> 手册明确指出，基准高分不等于生产环境中的真实交付能力。</li>
+<li><strong>「Agent 是 Copilot 的增强版。」</strong> 两者的交互模式不同：补全是人主导、逐行接受；Agent 是人给任务、审结果。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2405.15793" target="_blank" rel="noopener noreferrer">SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering</a> <span class="rmeta">· Yang et al. · 2024</span></li><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/news/model-context-protocol" target="_blank" rel="noopener noreferrer">Introducing the Model Context Protocol</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/news/claude-3-7-sonnet" target="_blank" rel="noopener noreferrer">Claude 3.7 Sonnet and Claude Code</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-doc">文档</span><a href="https://en.wikipedia.org/wiki/Code_completion" target="_blank" rel="noopener noreferrer">Code completion (Wikipedia; IntelliSense history)</a> <span class="rmeta">· Wikipedia · </span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2107.03374" target="_blank" rel="noopener noreferrer">Evaluating Large Language Models Trained on Code</a> <span class="rmeta">· Chen et al. · 2021</span></li><li><span class="rb rb-doc">文档</span><a href="https://en.wikipedia.org/wiki/Fortran" target="_blank" rel="noopener noreferrer">Fortran (Wikipedia)</a> <span class="rmeta">· Wikipedia · </span></li><li><span class="rb rb-doc">文档</span><a href="https://github.blog/news-insights/product-news/introducing-github-copilot-ai-pair-programmer/" target="_blank" rel="noopener noreferrer">Introducing GitHub Copilot: your AI pair programmer</a> <span class="rmeta">· Nat Friedman (GitHub) · 2021</span></li><li><span class="rb rb-doc">文档</span><a href="https://en.wikipedia.org/wiki/Java_(programming_language)" target="_blank" rel="noopener noreferrer">Java (programming language) (Wikipedia)</a> <span class="rmeta">· Wikipedia · </span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2310.06770" target="_blank" rel="noopener noreferrer">SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</a> <span class="rmeta">· Jimenez et al. · 2023</span></li><li><span class="rb rb-doc">文档</span><a href="https://github.com/openai/codex" target="_blank" rel="noopener noreferrer">openai/codex (Codex CLI repository)</a> <span class="rmeta">· OpenAI · 2025</span></li><li><span class="rb rb-doc">文档</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li></ol></section>

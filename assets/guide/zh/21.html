@@ -1,0 +1,65 @@
+<h1>四代工具对比：自主度越高，越依赖自动验证</h1>
+<blockquote>
+<p>对应图 #21 · 第三章「编程的进化」</p>
+</blockquote>
+<h2>概述</h2>
+<p>把前几篇的内容放在一起，可以得到四代开发工具：<strong>传统 IDE → AI 补全 → AI IDE → Coding Agent</strong>。从左到右，AI 承担的工作越来越多，人的介入越来越少；但每多一分自主度，就要多一分<strong>自动化验证</strong>来兜底。这是本章最重要的结论。</p>
+<h2>核心机制</h2>
+<table>
+<thead>
+<tr>
+<th>代际</th>
+<th>AI 做什么</th>
+<th>人做什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>传统 IDE</td>
+<td>无（静态分析）</td>
+<td>全部</td>
+</tr>
+<tr>
+<td>AI 补全</td>
+<td>预测下一段代码</td>
+<td>逐条接受或拒绝</td>
+</tr>
+<tr>
+<td>AI IDE</td>
+<td>对话、多文件修改</td>
+<td>审每个 diff</td>
+</tr>
+<tr>
+<td>Coding Agent</td>
+<td>读、改、跑、修的闭环</td>
+<td>定任务、审 PR</td>
+</tr>
+</tbody>
+</table>
+<p><strong>为什么自主度越高越依赖验证？</strong></p>
+<ul>
+<li><strong>人工审查的粒度变粗</strong>：补全时人看每一行；Agent 时人看整个 PR，甚至只看测试结果和核心逻辑。</li>
+<li><strong>错误会累积</strong>：Anthropic 指出 Agent 是有状态的，错误会累积；自主性意味着更高成本和错误累积的风险。</li>
+<li><strong>验证是 Agent 自我纠错的唯一可靠信号</strong>：Anthropic 强调 Agent 每一步都要从环境中获得「真实反馈」。</li>
+</ul>
+<p>阿里巴巴《AI Native 研发范式实践手册》（解读版）提出一个规律：AI 总是优先解决那些反馈公开、验证可以规模化的问题，这也是编码最先被解决的原因。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2021 HumanEval</strong>：用单元测试衡量功能正确性</li>
+<li><strong>2023 SWE-bench</strong>：用仓库原有测试判断 issue 是否被修复</li>
+<li><strong>2023 Reflexion</strong>：利用测试反馈让 Agent 在下次尝试中改进</li>
+<li><strong>2025 DeepSeek-R1</strong>：在可验证奖励上做强化学习，代码题用编译器和测试判分</li>
+</ul>
+<p>可以看到，从评测到训练再到使用，「可自动验证」贯穿始终。</p>
+<h2>工程实践与数字</h2>
+<ul>
+<li><strong>按任务风险选择代际</strong>：探索性原型可以让 Agent 高度自主；支付、权限、数据迁移等改错代价高的地方，应降低自主度或加强人工关卡。</li>
+<li><strong>先补验证，再提自主度</strong>：没有测试的模块，先让 Agent 补测试，再让它改功能。</li>
+<li><strong>验证要覆盖真实路径</strong>：前述 X 上的开发者经验是，单元测试写得再多，上线仍可能出错；关键是为 Agent 提供端到端的测试环境，让它能从真实入口执行到用户需要的结果，并能查库表和日志。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「最新一代工具一定最好。」</strong> 合适的代际取决于任务和验证条件。</li>
+<li><strong>「有 Code Review 就够了。」</strong> 人的审阅难以覆盖 Agent 的产出速度，需要机器先把关（见第四章「分层验证」）。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2501.12948" target="_blank" rel="noopener noreferrer">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a> <span class="rmeta">· DeepSeek-AI · 2025</span></li><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2303.11366" target="_blank" rel="noopener noreferrer">Reflexion: Language Agents with Verbal Reinforcement Learning</a> <span class="rmeta">· Shinn et al. · 2023</span></li><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener noreferrer">How we built our multi-agent research system</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2107.03374" target="_blank" rel="noopener noreferrer">Evaluating Large Language Models Trained on Code</a> <span class="rmeta">· Chen et al. · 2021</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2310.06770" target="_blank" rel="noopener noreferrer">SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</a> <span class="rmeta">· Jimenez et al. · 2023</span></li><li><span class="rb rb-doc">文档</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li></ol></section>

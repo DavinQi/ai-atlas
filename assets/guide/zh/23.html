@@ -1,0 +1,46 @@
+<h1>上下文工程：0→1 靠生成能力，1→N 靠上下文</h1>
+<blockquote>
+<p>对应图 #23 · 第四章「当前如何做 AI 编程」</p>
+</blockquote>
+<h2>概述</h2>
+<p>在新项目里，AI 生成代码的速度令人惊艳；但到了已有代码库，问题就从「会不会写」变成「看不看得懂」。阿里巴巴实践手册把这总结为：<strong>0→1 靠生成能力，1→N 靠上下文工程。</strong> Anthropic 的定义是：上下文工程是在 LLM 推理时，策划和维护最优 token 集合的一系列策略；由于注意力预算有限，好的上下文工程就是找到最小的高信号 token 集合，最大化得到期望结果的可能性。</p>
+<h2>核心机制</h2>
+<p><strong>1. 为什么上下文有限。</strong> Anthropic 指出 needle-in-a-haystack 类评测揭示了「context rot」：上下文中的 token 越多，模型准确回忆信息的能力越弱，因此上下文是边际收益递减的有限资源。「Lost in the Middle」研究也发现，信息位于长上下文中间时，模型的利用效果显著下降。</p>
+<p><strong>2. 上下文的组成。</strong> 对 Coding Agent 而言，上下文通常包括：</p>
+<ul>
+<li><strong>项目地图</strong>：架构、模块职责、代码入口</li>
+<li><strong>规则</strong>：技术栈约束、编码规范、禁止事项（CLAUDE.md、AGENTS.md、<code>.cursor/rules</code>）</li>
+<li><strong>需求</strong>：Spec、验收标准</li>
+<li><strong>工具</strong>：Skill、MCP、CLI</li>
+<li><strong>运行事实</strong>：日志、测试结果、数据库状态</li>
+</ul>
+<p><strong>3. 「即时」加载。</strong> 与其预先塞满上下文，不如只保留轻量标识（文件路径、查询、链接），运行时用工具按需加载。Claude Code 用 <code>glob</code>、<code>grep</code> 浏览代码库就是例子。</p>
+<p><strong>4. 长任务管理。</strong> 压缩（对接近上限的对话做摘要后开启新窗口）、结构化笔记（把进度写到上下文之外）、子 Agent（各自探索，只返回精华）。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2023 Lost in the Middle</strong></li>
+<li><strong>2025 Anthropic《Effective context engineering for AI agents》</strong></li>
+<li><strong>AGENTS.md</strong>：开放格式，官网称已被超过 6 万个开源项目采用</li>
+</ul>
+<h2>工程实践与数字</h2>
+<p><strong>千问用增 Agent 的三阶段经历</strong>（阿里巴巴实践手册）：</p>
+<ul>
+<li><strong>第一阶段</strong>：约 15 名服务端工程师各自探索 AI Coding，部分场景下代码生成速度可达传统方式的数倍甚至约 10 倍。</li>
+<li><strong>第二阶段</strong>：0 到 1 建设完成后，单纯依赖代码生成的边际收益下降；真正的难题变成让 AI 在已有代码库中准确理解项目结构、业务需求和工程约束。</li>
+<li><strong>第三阶段</strong>：工程建设重点转向组织上下文、明确边界和建立验证机制。</li>
+</ul>
+<p><strong>团队用三类资产解决「AI 如何理解项目」</strong>：代码文档说明「为什么这样设计」，代码图谱精确查询定义、调用关系和影响范围，Rules 把团队经验固化为可执行约束。</p>
+<p><strong>手册把上下文视为组织资产</strong>：Skill、MCP、Spec、README / runbook、模板与 checklist。如果不沉淀这些资产，团队就会停留在「每个人临时问 AI」的阶段。</p>
+<p><strong>实用建议：</strong></p>
+<ul>
+<li>规则文件提交到 Git，新的 worktree 才能读到（X 上分享 Orca 用法的开发者特别提醒了这一点）。</li>
+<li>规则不要一次写几十条，Agent 在同一件事上反复犯错时再补一条。</li>
+<li>一个流程重复超过三次，就可以整理成 Skill 复用。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「上下文越多越好。」</strong> context rot 说明多余的 token 会稀释注意力。</li>
+<li><strong>「换更强的模型就能解决看不懂老代码。」</strong> 手册的经验是，持续建设高质量上下文、明确约束和可验证反馈，往往比单纯追求更强模型更能提升输出稳定性。</li>
+<li><strong>「规则写一次就完事。」</strong> 上下文资产需要持续更新和验证。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener noreferrer">Effective context engineering for AI agents</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2307.03172" target="_blank" rel="noopener noreferrer">Lost in the Middle: How Language Models Use Long Contexts</a> <span class="rmeta">· Liu et al. · 2023</span></li><li><span class="rb rb-doc">文档</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-doc">文档</span><a href="https://agents.md/" target="_blank" rel="noopener noreferrer">AGENTS.md</a> <span class="rmeta">· AGENTS.md project · 2025</span></li><li><span class="rb rb-doc">文档</span><a href="https://cursor.com/docs/context/rules" target="_blank" rel="noopener noreferrer">Cursor docs: Rules</a> <span class="rmeta">· Cursor · 2026</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/CopperForgeAI/status/2108830306014998719" target="_blank" rel="noopener noreferrer">Orca 从入门到精通 (Orca from beginner to expert)</a> <span class="rmeta">· @CopperForgeAI · 2026-10-10</span></li></ol></section>

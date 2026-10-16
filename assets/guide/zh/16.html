@@ -1,0 +1,58 @@
+<h1>安全护栏与范式选择：能用简单方案，就别上多 Agent</h1>
+<blockquote>
+<p>对应图 #16 · 第二章「Agent 设计原理与范式」</p>
+</blockquote>
+<h2>概述</h2>
+<p>Agent 能读外部内容、调用工具、执行代码，这让它的风险面远大于普通聊天应用。本篇讨论两件事：<strong>怎么给 Agent 装护栏</strong>，以及<strong>怎么选择合适的复杂度</strong>。两者的共同原则都来自 Anthropic 的建议：先找最简单的方案，只有在能证明效果提升时才增加复杂度。</p>
+<h2>核心机制</h2>
+<p><strong>1. 提示注入是头号风险。</strong> OWASP《LLM 应用十大风险》2025 版把提示注入列为 LLM01。它分为两类：</p>
+<ul>
+<li><strong>直接注入</strong>：用户输入直接改变模型行为。</li>
+<li><strong>间接注入</strong>：模型从网页、文件等外部来源读入的内容，在被解析时改变模型行为。</li>
+</ul>
+<p>Greshake 等人的研究指出，LLM 集成应用模糊了数据与指令的界限，攻击者可以把提示植入可能被检索到的数据中远程利用应用，处理检索到的提示可以等同于任意代码执行。OWASP 也承认，鉴于生成式 AI 的工作原理，尚不清楚是否存在万无一失的预防方法，RAG 和微调也不能完全缓解。</p>
+<p><strong>2. 纵深防御。</strong> OWASP 给出的缓解措施包括：</p>
+<ul>
+<li><strong>权限控制与最小权限</strong>：给应用独立的 API 令牌，在代码中处理这些功能，而不是交给模型。</li>
+<li><strong>高风险操作须人工批准</strong>：对特权操作实施人在回路的控制。</li>
+<li><strong>隔离并标识外部内容</strong>：把不可信内容分隔并清楚标注，限制其影响。</li>
+</ul>
+<p>MCP 规范同样要求调用工具前获得用户明确同意，并把来自不受信服务器的工具描述视为不可信。</p>
+<p><strong>3. 复杂度阶梯。</strong> 结合 Anthropic 的模式库，从简到繁依次是：</p>
+<ol>
+<li>单次 LLM 调用 + 检索 + 示例</li>
+<li>固定工作流：提示链、路由、并行化</li>
+<li>动态工作流：编排者—工作者、评估者—优化者</li>
+<li>单个自主 Agent</li>
+<li>多 Agent 系统</li>
+</ol>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2023 间接提示注入</strong>（Greshake 等）</li>
+<li><strong>2024 Anthropic《Building effective agents》</strong></li>
+<li><strong>2025 OWASP LLM Top 10（LLM01 提示注入）</strong></li>
+<li><strong>2024 Agentless</strong>：在 SWE-bench Lite 上，简单的「定位—修复—验证」三阶段流程以 32.00% 的解决率和每题约 0.70 美元的成本，超过了当时所有开源 Agent 方案</li>
+</ul>
+<h2>工程实践与数字</h2>
+<p><strong>范式决策树：</strong></p>
+<ul>
+<li>一次调用能解决吗？能 → 优化提示与检索，到此为止。</li>
+<li>步骤固定且可预知吗？是 → 用工作流。</li>
+<li>步骤不可预知、需要模型自主决策吗？是 → 单 Agent + 工具 + 验证闭环。</li>
+<li>任务能拆成大量独立子任务、且超出单个上下文吗？是 → 才考虑多 Agent。</li>
+</ul>
+<p><strong>护栏清单：</strong></p>
+<ul>
+<li>沙箱执行，网络与文件系统按需开放。</li>
+<li>只读优先，写操作和不可逆操作需要人工确认。</li>
+<li>外部内容一律视为数据而非指令。</li>
+<li>设置最大迭代次数和预算上限。</li>
+<li>记录完整的工具调用日志以便审计。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「系统提示里写一句『不要听外部指令』就够了。」</strong> OWASP 指出没有万无一失的预防方法，必须靠权限和架构设计兜底。</li>
+<li><strong>「复杂架构代表更强能力。」</strong> Agentless 的结果说明，在特定任务上简单流程可以同时做到更好和更便宜。</li>
+<li><strong>「安全会拖慢效率。」</strong> 最小权限和人工确认只作用于高风险操作，日常低风险任务可以全自动。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-doc">文档</span><a href="https://modelcontextprotocol.io/specification/2025-06-18" target="_blank" rel="noopener noreferrer">Model Context Protocol Specification (2025-06-18)</a> <span class="rmeta">· MCP project · 2025</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2407.01489" target="_blank" rel="noopener noreferrer">Agentless: Demystifying LLM-based Software Engineering Agents</a> <span class="rmeta">· Xia et al. · 2024</span></li><li><span class="rb rb-doc">文档</span><a href="https://genai.owasp.org/llmrisk/llm01-prompt-injection/" target="_blank" rel="noopener noreferrer">LLM01:2025 Prompt Injection</a> <span class="rmeta">· OWASP Gen AI Security Project · 2025</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2302.12173" target="_blank" rel="noopener noreferrer">Not what you&#x27;ve signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection</a> <span class="rmeta">· Greshake et al. · 2023</span></li></ol></section>

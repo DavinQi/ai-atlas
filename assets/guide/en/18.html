@@ -1,0 +1,37 @@
+<h1>The Traditional IDE: Every Tool Is There, but Humans Do the Wiring</h1>
+<blockquote>
+<p>Companion to diagram #18 · Chapter 3 &quot;The Evolution of Programming&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>The integrated development environment (IDE) was meant to put scattered tools — editor, compiler, debugger, build tools — into one interface with a consistent experience, to improve productivity. Mature IDEs today integrate code navigation, refactoring, static checks, test runners, version control and a terminal. But however complete the toolset, <strong>the one who chains them into a complete delivery is still a human</strong>: read the requirement, find the code, change it, run tests, read errors, check logs, commit, wait for CI, address review comments.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. What the IDE solves: tool integration.</strong> Before IDEs, developers used separate tools such as vi, GDB, GCC and make. IDEs put them in one interface and reduced switching costs.</p>
+<p><strong>2. Intelligence driven by static analysis.</strong> Completion, go-to-definition, find-references and safe refactoring are built on static analysis. They are accurate and deterministic, but only answer &quot;what is the code structure&quot;, not &quot;what does this requirement need changed&quot;.</p>
+<p><strong>3. The human is the workflow scheduler.</strong> In a typical bug fix, the developer must:</p>
+<ol>
+<li>Understand the issue and form a hypothesis</li>
+<li>Locate relevant code with search and navigation</li>
+<li>Change the code</li>
+<li>Run tests and read the failures</li>
+<li>Start the debugger or read logs if needed</li>
+<li>Repeat 3–5 until it passes</li>
+<li>Commit, push, wait for CI and code review</li>
+</ol>
+<p>The handoffs, judgments and context transfer between every step are done by a human.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>1996 IntelliSense</strong>: code completion enters mainstream IDEs</li>
+<li>IDEs later commonly integrate refactoring, static checks, unit testing and version control</li>
+<li><strong>Language Server Protocol (LSP)</strong>: standardizes how language support plugs into development tools; the MCP spec explicitly cites it as a reference</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li>Traditional IDE value persists in the AI era: deterministic static analysis, debuggers and refactoring tools are exactly the &quot;reliable tools&quot; agents need most. SWE-agent found that interfaces designed specifically for agents (commands to view, search and edit files and run tests) significantly improve their ability to resolve real issues.</li>
+<li>Because the wiring depends on humans, attention switching is the main cost. That is where AI tools entered first: automate &quot;writing&quot; first, then automate &quot;wiring&quot;.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;IDEs are obsolete.&quot;</strong> Many AI IDEs are built on traditional editors, and agents call the same compile, test and debug tools.</li>
+<li><strong>&quot;More tools means more productivity.&quot;</strong> More tools mean heavier handoff and context-switching burden; the bottleneck is the wiring, not any single tool.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2405.15793" target="_blank" rel="noopener noreferrer">SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering</a> <span class="rmeta">· Yang et al. · 2024</span></li><li><span class="rb rb-doc">Docs</span><a href="https://modelcontextprotocol.io/specification/2025-06-18" target="_blank" rel="noopener noreferrer">Model Context Protocol Specification (2025-06-18)</a> <span class="rmeta">· MCP project · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://en.wikipedia.org/wiki/Code_completion" target="_blank" rel="noopener noreferrer">Code completion (Wikipedia; IntelliSense history)</a> <span class="rmeta">· Wikipedia · </span></li></ol></section>

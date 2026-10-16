@@ -1,0 +1,58 @@
+<h1>Guardrails and Choosing a Paradigm: If a Simple Solution Works, Skip Multi-Agent</h1>
+<blockquote>
+<p>Companion to diagram #16 · Chapter 2 &quot;Agent Design: Principles &amp; Patterns&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>Agents read external content, call tools and execute code, so their risk surface is much larger than a plain chat app. This article covers two things: <strong>how to put guardrails on agents</strong>, and <strong>how to choose the right level of complexity</strong>. Both follow Anthropic's advice: find the simplest solution first, and add complexity only when it demonstrably improves outcomes.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Prompt injection is the top risk.</strong> The OWASP Top 10 for LLM Applications 2025 lists prompt injection as LLM01. It has two forms:</p>
+<ul>
+<li><strong>Direct injection</strong>: user input directly alters model behavior.</li>
+<li><strong>Indirect injection</strong>: content the model ingests from external sources such as websites or files alters its behavior when interpreted.</li>
+</ul>
+<p>Greshake et al. showed that LLM-integrated applications blur the line between data and instructions: attackers can plant prompts in data likely to be retrieved and exploit applications remotely, and processing retrieved prompts can act like arbitrary code execution. OWASP also acknowledges that, given how generative AI works, it is unclear whether fool-proof prevention exists, and RAG and fine-tuning do not fully mitigate it.</p>
+<p><strong>2. Defense in depth.</strong> OWASP's mitigations include:</p>
+<ul>
+<li><strong>Privilege control and least privilege</strong>: give the application its own API tokens and handle these functions in code rather than passing them to the model.</li>
+<li><strong>Human approval for high-risk actions</strong>: implement human-in-the-loop controls for privileged operations.</li>
+<li><strong>Segregate and identify external content</strong>: separate and clearly denote untrusted content to limit its influence.</li>
+</ul>
+<p>The MCP spec likewise requires explicit user consent before invoking tools and treats tool descriptions from untrusted servers as untrusted.</p>
+<p><strong>3. The complexity ladder.</strong> Following Anthropic's patterns, from simple to complex:</p>
+<ol>
+<li>A single LLM call + retrieval + examples</li>
+<li>Fixed workflows: prompt chaining, routing, parallelization</li>
+<li>Dynamic workflows: orchestrator-workers, evaluator-optimizer</li>
+<li>A single autonomous agent</li>
+<li>Multi-agent systems</li>
+</ol>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2023 Indirect prompt injection</strong> (Greshake et al.)</li>
+<li><strong>2024 Anthropic, <em>Building effective agents</em></strong></li>
+<li><strong>2025 OWASP LLM Top 10 (LLM01 Prompt Injection)</strong></li>
+<li><strong>2024 Agentless</strong>: on SWE-bench Lite, a simple three-phase &quot;localize — repair — validate&quot; process reached 32.00% resolution at about $0.70 per issue, beating all open-source agent approaches at the time</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<p><strong>Paradigm decision tree:</strong></p>
+<ul>
+<li>Can one call solve it? Yes → optimize the prompt and retrieval, and stop.</li>
+<li>Are the steps fixed and predictable? Yes → use a workflow.</li>
+<li>Are the steps unpredictable, needing autonomous decisions? Yes → single agent + tools + verification loop.</li>
+<li>Does the task split into many independent subtasks exceeding one context? Yes → only then consider multi-agent.</li>
+</ul>
+<p><strong>Guardrail checklist:</strong></p>
+<ul>
+<li>Sandboxed execution; open network and filesystem only as needed.</li>
+<li>Read-only first; writes and irreversible operations need human confirmation.</li>
+<li>Treat all external content as data, not instructions.</li>
+<li>Set maximum iterations and budget caps.</li>
+<li>Log every tool call for auditing.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;One line in the system prompt saying 'ignore external instructions' is enough.&quot;</strong> OWASP says there is no fool-proof prevention; permissions and architecture must be the backstop.</li>
+<li><strong>&quot;Complex architecture means more capability.&quot;</strong> Agentless shows a simple process can be both better and cheaper on specific tasks.</li>
+<li><strong>&quot;Security slows things down.&quot;</strong> Least privilege and human confirmation apply only to high-risk operations; routine low-risk tasks can be fully automated.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-doc">Docs</span><a href="https://modelcontextprotocol.io/specification/2025-06-18" target="_blank" rel="noopener noreferrer">Model Context Protocol Specification (2025-06-18)</a> <span class="rmeta">· MCP project · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2407.01489" target="_blank" rel="noopener noreferrer">Agentless: Demystifying LLM-based Software Engineering Agents</a> <span class="rmeta">· Xia et al. · 2024</span></li><li><span class="rb rb-doc">Docs</span><a href="https://genai.owasp.org/llmrisk/llm01-prompt-injection/" target="_blank" rel="noopener noreferrer">LLM01:2025 Prompt Injection</a> <span class="rmeta">· OWASP Gen AI Security Project · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2302.12173" target="_blank" rel="noopener noreferrer">Not what you&#x27;ve signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection</a> <span class="rmeta">· Greshake et al. · 2023</span></li></ol></section>

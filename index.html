@@ -17,6 +17,7 @@
  <div class="top"><span id="kick"></span><span class="deck" data-en="From Copilot to Agent Harness">从 Copilot 到 Agent Harness</span><span class="pg" id="pg"></span></div>
  <h2 id="title"></h2>
  <div id="stage" title="点击放大" data-en-title="Click to zoom"></div>
+ <button id="gbtn" type="button" hidden>阅读详解 →</button>
  <div id="src"></div>
  <div class="ctrl"><button class="btn" id="prev" data-en="← Prev">← 上一张</button><span id="count" style="font-family:var(--fl);color:var(--muted)"></span><button class="btn pri" id="next" data-en="Next →">下一张 →</button><span class="sp"></span>
  <button class="btn" id="replay" data-en="Replay">重播动画</button><button class="btn" id="zoom" data-en="Zoom">放大</button><button class="btn" id="fs" data-en="Fullscreen">全屏</button><button class="btn" id="ov" data-en="Overview">总览</button></div>
@@ -24,5 +25,6 @@
 <div id="zoomer" hidden><div class="zbar"><div class="zt" id="zt"></div><button class="btn" id="zprev">←</button><button class="btn" id="znext">→</button><button class="btn" id="zm">−</button><button class="btn" id="zp">＋</button><button class="btn" id="zr" data-en="Reset">复原</button><button class="btn" id="zf" data-en="Fit">适应</button><button class="btn" id="zfs" data-en="Fullscreen">全屏</button><button class="btn pri" id="zx" data-en="Close">关闭</button></div>
  <div id="zview"><div id="zinner"></div><div class="zhint" data-en="Wheel to zoom · drag to pan · double-click to zoom in · Esc to close">滚轮缩放 · 拖拽平移 · 双击放大 · Esc 关闭</div></div></div>
 <div id="overview" hidden></div>
+<div id="guide" hidden><div id="gshade"></div><div id="gpanel" role="dialog" aria-modal="true"><div id="ghead"><button id="gx" type="button">← 返回图</button><span id="gk"></span></div><div id="gscroll"><article id="gbody" class="gcol"></article></div></div></div>
 <script src="assets/atlas.js"></script>
 </body></html>

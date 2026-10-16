@@ -1,0 +1,64 @@
+<h1>两种打法：赛跑挑最优，流水线分工协作</h1>
+<blockquote>
+<p>对应图 #31 · 第五章「多 Agent 编程」</p>
+</blockquote>
+<h2>概述</h2>
+<p>多 Agent 编程有两种基本打法：</p>
+<ul>
+<li><strong>赛跑（race）</strong>：同一个任务交给多个 Agent 同时做，挑最好的结果。</li>
+<li><strong>流水线（pipeline）</strong>：一个任务拆成不同阶段或不同部分，由不同 Agent 分工完成。</li>
+</ul>
+<p>两者分别对应 Anthropic 模式库中「并行化」的两种变体：<strong>投票（voting）</strong>——同一任务多次运行以获得多样化输出；<strong>分段（sectioning）</strong>——把任务拆成独立子任务并行运行。</p>
+<h2>核心机制</h2>
+<p><strong>1. 赛跑：用多样性降低风险。</strong> Orca 官方文档把「让三个 Agent 同时修同一个 bug，挑出赢家」列为典型用法。X 上分享 Orca 用法的开发者转述了官方对这一打法的解释：不同的 Agent 犯不同的错。三个都改成一样的地方，大概率是对的；三个各改各的地方，就是这个问题真正难的部分。等于花一份等待时间，拿到三份答案和一张「哪里有分歧」的地图。</p>
+<p>学术上也有对应的证据：Codex 论文发现，对同一问题重复采样是获得正确解的有效策略（单次采样解决 28.8%，每题 100 次采样时为 70.2%）；多 Agent 辩论研究表明，多个模型实例提出并辩论各自答案，可以提升推理能力和事实准确性。</p>
+<p><strong>2. 流水线：用分工处理复杂任务。</strong> MetaGPT 把标准作业流程（SOP）编码进提示序列，采用流水线范式为不同 Agent 分配角色，把复杂任务拆成多个 Agent 协作的子任务，并让具备领域专长的 Agent 校验中间结果以减少错误。一个常见的编码流水线：</p>
+<pre><code>需求澄清 → 方案设计 → 编码 → 测试 → 交叉审查 → 集成
+</code></pre>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2021 Codex</strong>：重复采样提升通过率</li>
+<li><strong>2023 多 Agent 辩论</strong></li>
+<li><strong>2023 MetaGPT</strong>：SOP 驱动的流水线式多 Agent 协作</li>
+<li><strong>2024 Anthropic《Building effective agents》</strong>：并行化的投票与分段</li>
+</ul>
+<h2>工程实践与数字</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>赛跑</th>
+<th>流水线</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>适合</td>
+<td>改错代价高的单点问题</td>
+<td>可拆分的大任务</td>
+</tr>
+<tr>
+<td>成本</td>
+<td>N 倍 token</td>
+<td>按阶段累加</td>
+</tr>
+<tr>
+<td>人的工作</td>
+<td>比较、挑选、合并</td>
+<td>定义接口与验收</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>赛跑只用在关键处</strong>：前述开发者的建议是，只在支付、权限、数据迁移这类改错了很麻烦的地方赛跑，改文案就别这么干。</li>
+<li><strong>赛跑不会自动合并</strong>：三份结果各对一半时，可以让获胜的 Agent 参考另一份改动再改一轮，或手动挑选好的部分。</li>
+<li><strong>流水线的交接靠文件</strong>：Spec、CONTEXT.md、测试结果等共享产物，让下游 Agent 不必重读上游的全部对话。</li>
+<li><strong>交叉审查</strong>：另一位开发者的做法是编码 Agent 完成后，引入其他厂商的 Agent 做对抗性审查，问题统一反馈给主编码 Agent 修复并重新验证。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「赛跑越多越好。」</strong> 收益递减，而成本线性增长，审阅负担也成倍增加。</li>
+<li><strong>「流水线角色分得越细越好。」</strong> 每次交接都可能丢失信息，Anthropic 也提醒多 Agent 间依赖多的任务目前不适合。</li>
+<li><strong>「三个 Agent 结果一致就一定对。」</strong> 一致性提高了可信度，但仍需测试验证。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2305.14325" target="_blank" rel="noopener noreferrer">Improving Factuality and Reasoning in Language Models through Multiagent Debate</a> <span class="rmeta">· Du et al. · 2023</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2308.00352" target="_blank" rel="noopener noreferrer">MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework</a> <span class="rmeta">· Hong et al. · 2023</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2107.03374" target="_blank" rel="noopener noreferrer">Evaluating Large Language Models Trained on Code</a> <span class="rmeta">· Chen et al. · 2021</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/CopperForgeAI/status/2108830306014998719" target="_blank" rel="noopener noreferrer">Orca 从入门到精通 (Orca from beginner to expert)</a> <span class="rmeta">· @CopperForgeAI · 2026-10-10</span></li><li><span class="rb rb-doc">文档</span><a href="https://onorca.dev/docs" target="_blank" rel="noopener noreferrer">Orca documentation</a> <span class="rmeta">· Stably · 2026</span></li></ol></section>

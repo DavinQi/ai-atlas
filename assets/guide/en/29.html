@@ -1,0 +1,39 @@
+<h1>Why Multi-Agent: Trade Parallelism for Time, Paid in Tokens and Review</h1>
+<blockquote>
+<p>Companion to diagram #29 · Chapter 5 &quot;Multi-Agent Programming&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>A single coding agent does one thing at a time. When a task splits into independent parts, running several agents at once <strong>trades parallelism for time</strong>. But parallelism isn't free: every agent consumes tokens and every output needs human review. The core question of multi-agent programming is when this trade pays off.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Gains come from parallelism and context isolation.</strong> In Anthropic's multi-agent research system, subagents explore different aspects in parallel in their own context windows and condense the most important information for the lead agent. Their internal research eval showed the multi-agent system outperforming a single agent by 90.2%; for complex queries, parallelization cut research time by up to 90%.</p>
+<p><strong>2. The cost is tokens.</strong> The same article says agents use about 4× the tokens of chat and multi-agent systems about 15×; token usage by itself explained 80% of performance variance.</p>
+<p><strong>3. Coding tasks have limited parallelism.</strong> Anthropic states that most coding tasks involve fewer truly parallelizable tasks than research, and LLM agents are not yet great at coordinating and delegating in real time. Tasks requiring all agents to share the same context, or with many dependencies between agents, are not a good fit today.</p>
+<p><strong>4. Human review is the new bottleneck.</strong> The X developer sharing Orca usage summarized four things you hit after running many agents: new copies lack dependencies and secrets and won't run; you can't keep track of which agent is working and which is waiting for confirmation; you can't review it all — generation keeps getting faster and acceptance becomes the bottleneck; and you get locked into one vendor's quota.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2023 MetaGPT, ChatDev, AutoGen</strong>: early multi-agent software development frameworks</li>
+<li><strong>2023 Multiagent debate</strong>: multiple model instances debating over rounds improves reasoning and factuality</li>
+<li><strong>2025 Anthropic's multi-agent research system</strong></li>
+<li><strong>Subagents in Claude Code / Codex / Cursor</strong>: each works in its own context window and returns results to the main agent</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<p><strong>When multi-agent is worth it:</strong></p>
+<ul>
+<li>Independent subtasks: different modules, different pages, separate frontend/backend reviews.</li>
+<li>Mistakes are costly, so comparing multiple solutions is worthwhile (see the &quot;race&quot; approach).</li>
+<li>Information exceeds one context: large-scale research, codebase exploration.</li>
+</ul>
+<p><strong>When not to:</strong></p>
+<ul>
+<li>Small changes, copy edits.</li>
+<li>Highly coupled changes that must be coordinated in one context.</li>
+<li>No automated verification yet, and review capacity can't keep up.</li>
+</ul>
+<p><strong>Do the math:</strong> three agents in parallel means three quotas. The developer above quotes a review: what you save is retry time, but you still pay three times; so only race where mistakes are painful, such as payments, permissions and data migrations.</p>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;Multi-agent is always faster.&quot;</strong> It depends on how parallelizable the task is; coordination and review both cost.</li>
+<li><strong>&quot;Tokens are cheap, no need to count.&quot;</strong> 15× consumption adds up at scale.</li>
+<li><strong>&quot;More agents means reading less code.&quot;</strong> More output needs more automated verification and better review tools.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2308.08155" target="_blank" rel="noopener noreferrer">AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation</a> <span class="rmeta">· Wu et al. · 2023</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2307.07924" target="_blank" rel="noopener noreferrer">ChatDev: Communicative Agents for Software Development</a> <span class="rmeta">· Qian et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener noreferrer">How we built our multi-agent research system</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2305.14325" target="_blank" rel="noopener noreferrer">Improving Factuality and Reasoning in Language Models through Multiagent Debate</a> <span class="rmeta">· Du et al. · 2023</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2308.00352" target="_blank" rel="noopener noreferrer">MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework</a> <span class="rmeta">· Hong et al. · 2023</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/CopperForgeAI/status/2108830306014998719" target="_blank" rel="noopener noreferrer">Orca 从入门到精通 (Orca from beginner to expert)</a> <span class="rmeta">· @CopperForgeAI · 2026-10-10</span></li></ol></section>

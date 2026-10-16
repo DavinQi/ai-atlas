@@ -1,0 +1,39 @@
+<h1>Orca: One Task per Worktree, One Agent per Worktree</h1>
+<blockquote>
+<p>Companion to diagram #30 · Chapter 5 &quot;Multi-Agent Programming&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>When several agents edit the same code at once, the first problem is <strong>stepping on each other</strong>: one agent's files get overwritten by another, and switching branches interrupts running tasks. Git worktree is the infrastructure that solves this, and Orca is a multi-agent development workbench built around it. Orca's docs describe it as a desktop IDE for running multiple AI coding agents side by side, where each task gets its own git worktree, its own agent terminal and its own browser tab.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Git worktree.</strong> Git's docs explain that a repository can support multiple working trees, allowing more than one branch to be checked out at a time; new working trees are called &quot;linked worktrees&quot;, as opposed to the main worktree created by <code>git init</code> or <code>git clone</code>. All worktrees share the repository's objects and history but each has its own working directory and checked-out branch.</p>
+<pre><code>git worktree add ../fix-payment -b fix-payment
+git worktree list
+git worktree remove ../fix-payment
+</code></pre>
+<p><strong>2. Orca's model.</strong> The docs compress the workflow to: add a repo → open a workspace (worktree) → pick an agent → split panes → review changes → commit. Key points:</p>
+<ul>
+<li><strong>No bundled model</strong>: it runs the Claude Code, Codex, Cursor CLI, OpenCode and so on that you already have, with your own subscriptions.</li>
+<li><strong>Every worktree is a real git worktree</strong>; you can enter the directory and use native git at any time.</li>
+<li><strong>Runs locally on your desktop by default</strong>; remote compute uses machines you control (SSH, self-hosted servers or cloud VMs).</li>
+</ul>
+<p><strong>3. Making a new worktree productive immediately.</strong> A new worktree is clean code checked out from Git, so untracked <code>.env</code> files and dependency directories aren't there. The X developer cited earlier explains that Orca can be configured to copy some files into each copy (e.g. <code>.env</code>) and share some directories (e.g. dependency packages).</p>
+<p><strong>4. Shared rules.</strong> Project rules rely on files agents read themselves: Claude Code reads CLAUDE.md, Codex reads AGENTS.md. They must be committed to Git, or agents in new worktrees won't see them.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>git worktree</strong>: Git's native multi-worktree capability</li>
+<li><strong>Orca</strong> (by Stably, open source under MIT): GitHub repo created on March 17, 2026, with about 94k stars at the time this was checked</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>Notifications and review</strong>: per the developer above, Orca pops a notification when an agent goes from working to idle; the changes view supports line-by-line annotations sent back to the agent in one batch, and can mark which lines AI wrote.</li>
+<li><strong>Task naming</strong>: one worktree per clear task and branch, for easy cleanup.</li>
+<li><strong>Delete when done</strong>: remove losing or finished worktrees and their branches promptly.</li>
+<li><strong>Where it fits</strong>: the developer admits that if you use one vendor's agent and do one thing at a time, Orca won't help much and the official client is enough; its value scales with the number of agents running at once and the volume of changes to accept.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;Opening a few more terminals is the same.&quot;</strong> It can be, but you must solve missing dependencies, tracking and review yourself.</li>
+<li><strong>&quot;Worktrees are fully isolated.&quot;</strong> They share repository history and the object store; runtime resources such as ports, databases and external services can still conflict.</li>
+<li><strong>&quot;Orca is a model or hosted service.&quot;</strong> The docs state explicitly it is neither a model nor a hosted VPS product.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://code.claude.com/docs/en/memory" target="_blank" rel="noopener noreferrer">Claude Code docs: Memory (CLAUDE.md)</a> <span class="rmeta">· Anthropic · 2026</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/CopperForgeAI/status/2108830306014998719" target="_blank" rel="noopener noreferrer">Orca 从入门到精通 (Orca from beginner to expert)</a> <span class="rmeta">· @CopperForgeAI · 2026-10-10</span></li><li><span class="rb rb-doc">Docs</span><a href="https://onorca.dev/docs" target="_blank" rel="noopener noreferrer">Orca documentation</a> <span class="rmeta">· Stably · 2026</span></li><li><span class="rb rb-doc">Docs</span><a href="https://git-scm.com/docs/git-worktree" target="_blank" rel="noopener noreferrer">git-worktree documentation</a> <span class="rmeta">· Git project · </span></li><li><span class="rb rb-doc">Docs</span><a href="https://github.com/stablyai/orca" target="_blank" rel="noopener noreferrer">stablyai/orca (GitHub repository)</a> <span class="rmeta">· Stably · 2026</span></li></ol></section>

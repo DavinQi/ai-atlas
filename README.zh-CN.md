@@ -18,7 +18,9 @@
 - **中英切换**：右上角 中文 / EN 按钮。默认跟随浏览器语言，记住你的选择，并同步到网址（`?lang=zh|en`）。
 - **手绘风图示**：草图风格的 SVG，箭头带动画；点击图可放大、拖拽平移。
 - **快捷键**：`←` `→` 翻页 · `Enter` 放大 · `F` 全屏 · `G` 总览 · `R` 重播动画 · `Esc` 关闭。
-- **适配手机**：在手机和平板上，侧栏变成抽屉菜单（☰），竖屏手机上图会自动改成从上到下的竖版排布（启示改为文字卡片），左右滑动翻页，点击图进入放大层（双指缩放、双击切换适应/放大、「复原」按钮），按钮触控区域都不小于 44px。桌面版样式保持不变。
+- **手册详解**：每张图都有「阅读详解」按钮，打开对应的长文（概述、核心机制、关键论文、工程数字、常见误区），公式用 KaTeX 渲染，文末附本篇参考来源。桌面端以侧边阅读面板打开，手机端全屏打开并带返回按钮；跟随中英切换，并可直接链接，例如 [`#7/guide`](https://davinqi.github.io/ai-atlas/?lang=zh#7/guide)。
+- **参考来源页**：最后一页 [`#refs`](https://davinqi.github.io/ai-atlas/?lang=zh#refs)，按章节 → 文章列出全部 111 条来源（论文、文档、X 帖子），带类型标签和链接。
+- **适配手机**：在手机和平板上，侧栏变成抽屉菜单（☰）；竖屏手机上，每张图和章节页都有单独手绘的竖版，放大层和总览也使用竖版；左右滑动翻页，点击图进入放大层（双指缩放、双击切换适应/放大、「复原」按钮），按钮触控区域都不小于 44px。桌面版样式保持不变。
 - **深链接**：`#12` 直达第 12 张图，`#ch3` 直达第 3 章章节页，例如 [`?lang=zh#ch3`](https://davinqi.github.io/ai-atlas/?lang=zh#ch3)；加 `&static` 可关闭动画。
 
 ## 截图
@@ -28,9 +30,15 @@
 | **训练全景流程** | **多 Agent 编排层** |
 | ![训练全景](docs/screenshots/zh-diagram-training.jpg) | ![编排层](docs/screenshots/zh-diagram-orchestration.jpg) |
 
-**手机效果（iPhone 14）：**
+**手册详解（桌面）与参考来源页：**
 
-<img src="docs/screenshots/zh-mobile.jpg" alt="手机版" width="300">
+| 详解 | 参考来源 |
+|---|---|
+| ![详解](docs/screenshots/zh-guide.jpg) | ![参考来源](docs/screenshots/zh-references.jpg) |
+
+**手机效果（iPhone 14）：竖版图与详解**
+
+<img src="docs/screenshots/zh-mobile.jpg" alt="手机竖版图" width="300"> <img src="docs/screenshots/zh-mobile-guide.jpg" alt="手机详解" width="300">
 
 ## 本地运行
 纯静态文件，无需构建。
@@ -39,10 +47,10 @@ git clone https://github.com/DavinQi/ai-atlas.git
 cd ai-atlas
 python3 -m http.server 8000   # 然后打开 http://localhost:8000/?lang=zh
 ```
-也可以直接用浏览器打开 `index.html`。
+直接用浏览器打开 `index.html` 也能看图，但详解通过 `fetch` 加载，阅读详解需要用本地服务器。
 
 ## 文件
-`index.html`（入口）· `assets/atlas.js`（渲染引擎、图、翻译词典）· `assets/style.css` · `assets/fonts/`（字体子集，SIL OFL 许可）
+`index.html`（入口）· `assets/atlas.js`（渲染引擎、图、翻译词典）· `assets/style.css` · `assets/guide/{zh,en}/N.html`（手册文章，由 Markdown 预渲染）· `assets/katex/`（本地打包的 KaTeX CSS 与字体，MIT）· `assets/fonts/`（字体子集，SIL OFL 许可）
 
 ## 作者
 [DavinQi](https://github.com/DavinQi)

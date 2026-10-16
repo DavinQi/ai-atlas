@@ -1,0 +1,35 @@
+<h1>传统 CI/CD：流水线自动跑，判断仍在人</h1>
+<blockquote>
+<p>对应图 #34 · 第六章「AI 改变研发流程」</p>
+</blockquote>
+<h2>概述</h2>
+<p>持续集成与持续交付（CI/CD）把构建、测试、部署变成了自动运行的流水线，是过去十几年软件工程最重要的进步之一。但在传统的 CI/CD 和运维体系中，<strong>执行是自动的，判断仍然在人</strong>：测试失败了谁来看原因？告警响了谁来定位？发布要不要继续？事故之后怎么复盘？这些都依赖工程师的经验。</p>
+<h2>核心机制</h2>
+<p><strong>1. 流水线自动化。</strong> 典型流程：提交 → 构建 → 单元测试 → 集成测试 → 制品 → 预发 → 灰度 → 生产。Google SRE Book 中的发布工程章节强调了两个原则：团队要能自助发布（self-service）；构建要「封闭」（hermetic），不受构建机器上安装的库和软件影响，保证可重复。</p>
+<p><strong>2. 人负责判断的环节：</strong></p>
+<ul>
+<li>测试失败与构建报错的分析</li>
+<li>告警分诊与故障定位</li>
+<li>发布的继续、暂停或回滚决策</li>
+<li>事故复盘与改进措施</li>
+</ul>
+<p><strong>3. 琐事（toil）。</strong> SRE Book 对琐事的定义是：与运行生产服务相关、手动的、重复的、可自动化的、战术性的、没有持久价值的，并且随服务增长线性增加的工作。Google 的目标是把每位 SRE 花在琐事上的时间控制在 50% 以下，至少一半时间用于能减少未来琐事或增加服务功能的工程工作；书中提到季度调查显示 Google SRE 平均约 33% 的时间花在琐事上。</p>
+<p><strong>4. 用数据而不是感觉做决策。</strong> SRE 用基于服务等级目标（SLO）的错误预算决定发布节奏：错误预算给出一个季度内服务允许多不可靠的客观指标。事故复盘则强调「无责」：聚焦找出导致事故的因素，而不是指责个人或团队。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>Google SRE Book</strong>：琐事、错误预算、发布工程、无责复盘</li>
+<li><strong>DORA 指标</strong>：变更前置时间、部署频率、失败部署恢复时间、变更失败率、部署返工率</li>
+</ul>
+<h2>工程实践与数字</h2>
+<ul>
+<li><strong>DORA 的五个指标</strong>是衡量这条流水线的通用语言：吞吐看变更前置时间（从提交到部署到生产）、部署频率和失败部署恢复时间；不稳定性看变更失败率和部署返工率。</li>
+<li><strong>AI 最先切入的是琐事</strong>：重复、可自动化、没有持久价值的工作，正是 Agent 的理想对象。</li>
+<li><strong>阿里巴巴实践手册的观察</strong>：编码 1 小时就能完成的需求，经过多个内部平台、发布流程和环境约束，从代码完成到最终生效仍可能需要数周。流水线之外的人工节点，是端到端效率的主要瓶颈。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「有了 CI/CD 就是 DevOps。」</strong> 自动化执行只是基础，判断环节仍大量依赖人。</li>
+<li><strong>「琐事说明团队不够努力。」</strong> SRE Book 把琐事视为需要用工程手段系统消除的对象，而不是个人问题。</li>
+<li><strong>「AI 会替代流水线。」</strong> 恰恰相反，可靠的流水线是 Agent 获得验证信号的基础设施。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-doc">文档</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-doc">文档</span><a href="https://sre.google/sre-book/postmortem-culture/" target="_blank" rel="noopener noreferrer">Site Reliability Engineering, Ch. 15: Postmortem Culture</a> <span class="rmeta">· Google (Beyer et al., eds.) · 2016</span></li><li><span class="rb rb-doc">文档</span><a href="https://dora.dev/guides/dora-metrics-four-keys/" target="_blank" rel="noopener noreferrer">DORA software delivery metrics</a> <span class="rmeta">· DORA · </span></li><li><span class="rb rb-doc">文档</span><a href="https://sre.google/sre-book/introduction/" target="_blank" rel="noopener noreferrer">Site Reliability Engineering, Ch. 1: Introduction</a> <span class="rmeta">· Google (Beyer et al., eds.) · 2016</span></li><li><span class="rb rb-doc">文档</span><a href="https://sre.google/sre-book/embracing-risk/" target="_blank" rel="noopener noreferrer">Site Reliability Engineering, Ch. 3: Embracing Risk</a> <span class="rmeta">· Google (Beyer et al., eds.) · 2016</span></li><li><span class="rb rb-doc">文档</span><a href="https://sre.google/sre-book/eliminating-toil/" target="_blank" rel="noopener noreferrer">Site Reliability Engineering, Ch. 5: Eliminating Toil</a> <span class="rmeta">· Google (Beyer et al., eds.) · 2016</span></li><li><span class="rb rb-doc">文档</span><a href="https://sre.google/sre-book/release-engineering/" target="_blank" rel="noopener noreferrer">Site Reliability Engineering, Ch. 8: Release Engineering</a> <span class="rmeta">· Google (Beyer et al., eds.) · 2016</span></li></ol></section>

@@ -1,0 +1,61 @@
+<h1>多人 + 多 Agent：人定义与审阅，数字员工执行</h1>
+<blockquote>
+<p>对应图 #33 · 第五章「多 Agent 编程」</p>
+</blockquote>
+<h2>概述</h2>
+<p>当不只一个人、而是一个团队同时与多个 Agent 协作时，问题就从工具变成了组织：谁定义任务？谁审阅？Agent 的身份和权限如何管理？阿里巴巴实践手册中的 AIDC 数字投手团队经历了「超级个体 → 数字员工 → 云上 Scrum」三个时期，是这个问题的一个真实样本。</p>
+<h2>核心机制</h2>
+<p><strong>1. 超级个体的瓶颈。</strong> 据手册记录，团队统一使用一款主流 Agent 工具后，单人指挥 3～5 个会话工作成为常态，夜间也能完成部分长程任务，体感上一人能干两到三人的活，帮助团队完成了首版 MVP。但很快出现了问题：</p>
+<ul>
+<li><strong>消化障碍</strong>：消耗大量 token 产出的中间产物，理解、评审和应用很难靠人完成；和同事沟通方案时，同事也讲不清设计，只能把问题抛给 Agent。</li>
+<li><strong>复用障碍</strong>：一个任务交付后，经验很难被他人复用。</li>
+</ul>
+<p><strong>2. 数字员工。</strong> 手册把 Agent 视为企业系统中的独立行动主体：平台过去只需回答「这个人有没有权限」，现在必须回答「哪个 Agent、在什么运行时、代表哪个用户、基于哪个任务、访问哪个资源、做什么动作、是否需要人批准」。人与 Agent 协同大致经历三个阶段，本质是不断外移信任边界：</p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>信任边界</th>
+<th>人的职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>本地辅助</td>
+<td>人 + 本地工具</td>
+<td>提供上下文、批准命令、检查结果</td>
+</tr>
+<tr>
+<td>云端自主</td>
+<td>人 + 云端运行时 + 仓库</td>
+<td>设定目标、检查 MR、关键审批</td>
+</tr>
+<tr>
+<td>多 Agent 团队</td>
+<td>主 Agent + 专家 Agent + 多系统</td>
+<td>设计协作流程、治理边界、承担最终责任</td>
+</tr>
+</tbody>
+</table>
+<p>手册提醒，用「实习生」理解 Agent 只能用一半：Agent 需要导师、职责、权限边界和 Review，但它没有职业伦理和隐含常识，治理还要靠机器可执行的护栏。</p>
+<p><strong>3. 职责重新划分。</strong> 数字投手团队的结论是：系统负责状态、权限、规则等高确定性事务；AI 负责分析、生成和跨步骤的长程执行；人负责目标设定、关键决策、风险取舍和最终责任。交付单元从「人和人协作完成任务」转向「人定义目标与验收标准、数字员工分工执行」。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>阿里巴巴《AI Native 研发范式实践手册》</strong>：数字员工自主性与信任边界</li>
+<li><strong>OWASP LLM01</strong>：高风险操作须人工批准、最小权限</li>
+<li><strong>MCP 规范</strong>：工具调用前须获得用户明确同意</li>
+</ul>
+<h2>工程实践与数字</h2>
+<ul>
+<li><strong>给 Agent 独立身份</strong>：手册分析，复用人的账号会让审计分不清是人还是 Agent 操作；复用服务账号会看不清谁负责、谁授权、谁能停用。</li>
+<li><strong>审阅是团队级瓶颈</strong>：X 上的开发者经验是保持每个 MR 足够小，人工 Review 聚焦业务逻辑和测试结果是否足以支撑交付。</li>
+<li><strong>把产出变成可复用资产</strong>：手册中的团队建了两条「云上 Scrum」供给线：经验 Loop 由两个数字员工分别负责发现和上线策略，策略交付周期从约 10 天缩短至 2 天；手脚 Loop 把线上失败轨迹转化为能力建设需求，约 80% 的核心能力实现 Skill 化。</li>
+<li><strong>数字员工的边界</strong>：手册明确，增长机会的发现仍高度依赖人的业务理解；目标设定、业务门槛、发布门禁和高风险决策仍需人承担。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「Agent 越多，需要的人越少。」</strong> 定义、审阅和治理的工作量会随 Agent 数量上升。</li>
+<li><strong>「用个人账号跑 Agent 最方便。」</strong> 审计和责任会变得模糊。</li>
+<li><strong>「数字员工能替代组织共识。」</strong> 手册指出，它更适合高质量执行那些已经被想清楚、形成明确标准的工作。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-doc">文档</span><a href="https://modelcontextprotocol.io/specification/2025-06-18" target="_blank" rel="noopener noreferrer">Model Context Protocol Specification (2025-06-18)</a> <span class="rmeta">· MCP project · 2025</span></li><li><span class="rb rb-doc">文档</span><a href="https://genai.owasp.org/llmrisk/llm01-prompt-injection/" target="_blank" rel="noopener noreferrer">LLM01:2025 Prompt Injection</a> <span class="rmeta">· OWASP Gen AI Security Project · 2025</span></li><li><span class="rb rb-doc">文档</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li></ol></section>

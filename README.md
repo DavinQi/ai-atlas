@@ -18,7 +18,9 @@ A hand-drawn style, bilingual (English / 中文) atlas of AI-native software eng
 - **Bilingual toggle:** 中文 / EN switch in the top-right corner. The default follows your browser language, your choice is remembered, and it is reflected in the URL (`?lang=en|zh`).
 - **Hand-drawn diagrams:** sketch-style inline SVG with animated arrows. Click any diagram to zoom and pan.
 - **Keyboard shortcuts:** `←` `→` page · `Enter` zoom · `F` fullscreen · `G` overview grid · `R` replay animation · `Esc` close.
-- **Mobile friendly:** on phones and tablets the sidebar becomes a drawer (☰), diagrams reflow into a top-to-bottom portrait layout on phones held upright (takeaways become text cards), you swipe left/right to change pages, tap a diagram to open the zoom view (pinch, double-tap to toggle fit/zoom, a Reset button), and every button is a ≥44px touch target. The desktop layout is unchanged.
+- **Handbook guides:** every diagram has a **Read the guide** button that opens a long-form article (overview, mechanisms, papers, numbers, common misconceptions) with KaTeX-rendered formulas and the sources it cites. On desktop it opens as a side reading panel; on phones it opens full screen with a back button. It follows the language toggle, and you can link to it directly, e.g. [`#7/guide`](https://davinqi.github.io/ai-atlas/?lang=en#7/guide).
+- **References page:** the last page, [`#refs`](https://davinqi.github.io/ai-atlas/?lang=en#refs), lists all 111 sources (papers, docs, X posts) grouped by chapter and article, with type badges and links.
+- **Mobile friendly:** on phones and tablets the sidebar becomes a drawer (☰). On phones held upright, every diagram and chapter cover has its own hand-drawn portrait version, which is also used in the zoom view and the overview. you swipe left/right to change pages, tap a diagram to open the zoom view (pinch, double-tap to toggle fit/zoom, a Reset button), and every button is a ≥44px touch target. The desktop layout is unchanged.
 - **Deep links:** `#12` opens diagram 12, `#ch3` opens the chapter 3 cover, e.g. [`?lang=en#ch3`](https://davinqi.github.io/ai-atlas/?lang=en#ch3). Add `&static` to disable animations.
 
 ## Screenshots
@@ -28,9 +30,15 @@ A hand-drawn style, bilingual (English / 中文) atlas of AI-native software eng
 | **Training pipeline** | **Multi-agent orchestration** |
 | ![Training pipeline](docs/screenshots/en-diagram-training.jpg) | ![Orchestration](docs/screenshots/en-diagram-orchestration.jpg) |
 
-**On mobile (iPhone 14):**
+**Handbook guide (desktop) and references page:**
 
-<img src="docs/screenshots/en-mobile.jpg" alt="Mobile view" width="300">
+| Guide | References |
+|---|---|
+| ![Guide](docs/screenshots/en-guide.jpg) | ![References](docs/screenshots/en-references.jpg) |
+
+**On mobile (iPhone 14): portrait diagram and guide:**
+
+<img src="docs/screenshots/en-mobile.jpg" alt="Mobile portrait diagram" width="300"> <img src="docs/screenshots/en-mobile-guide.jpg" alt="Mobile guide" width="300">
 
 ## Run locally
 The site is plain static files with no build step.
@@ -39,10 +47,10 @@ git clone https://github.com/DavinQi/ai-atlas.git
 cd ai-atlas
 python3 -m http.server 8000   # then open http://localhost:8000/?lang=en
 ```
-You can also open `index.html` directly in a browser.
+Diagrams also work if you open `index.html` directly, but the guides are loaded with `fetch`, so use a local server to read them.
 
 ## Files
-`index.html` (entry) · `assets/atlas.js` (renderer, diagrams, i18n dictionary) · `assets/style.css` · `assets/fonts/` (subset web fonts, SIL OFL)
+`index.html` (entry) · `assets/atlas.js` (renderer, diagrams, i18n dictionary) · `assets/style.css` · `assets/guide/{zh,en}/N.html` (handbook articles, pre-rendered from Markdown) · `assets/katex/` (bundled KaTeX CSS + fonts, MIT) · `assets/fonts/` (subset web fonts, SIL OFL)
 
 ## Author
 [DavinQi](https://github.com/DavinQi)

@@ -1,0 +1,46 @@
+<h1>Context Engineering: 0→1 Runs on Generation, 1→N Runs on Context</h1>
+<blockquote>
+<p>Companion to diagram #23 · Chapter 4 &quot;AI Coding Today&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>In a new project, AI's code generation speed is stunning; in an existing codebase, the question shifts from &quot;can it write&quot; to &quot;can it understand&quot;. Alibaba's handbook sums it up: <strong>0→1 runs on generation ability, 1→N runs on context engineering.</strong> Anthropic defines context engineering as the set of strategies for curating and maintaining the optimal set of tokens during LLM inference; because the attention budget is finite, good context engineering means finding the smallest set of high-signal tokens that maximizes the likelihood of the desired outcome.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Why context is finite.</strong> Anthropic notes that needle-in-a-haystack style evaluations reveal &quot;context rot&quot;: as the number of tokens grows, the model's ability to accurately recall information decreases, so context is a finite resource with diminishing returns. The &quot;Lost in the Middle&quot; study likewise found that models use information in the middle of long contexts significantly worse.</p>
+<p><strong>2. What context consists of.</strong> For a coding agent, context typically includes:</p>
+<ul>
+<li><strong>Project map</strong>: architecture, module responsibilities, code entry points</li>
+<li><strong>Rules</strong>: stack constraints, coding conventions, prohibitions (CLAUDE.md, AGENTS.md, <code>.cursor/rules</code>)</li>
+<li><strong>Requirements</strong>: Spec, acceptance criteria</li>
+<li><strong>Tools</strong>: Skills, MCP, CLI</li>
+<li><strong>Runtime facts</strong>: logs, test results, database state</li>
+</ul>
+<p><strong>3. &quot;Just-in-time&quot; loading.</strong> Rather than stuffing context upfront, keep lightweight identifiers (file paths, queries, links) and load on demand with tools at runtime. Claude Code navigating a codebase with <code>glob</code> and <code>grep</code> is an example.</p>
+<p><strong>4. Managing long tasks.</strong> Compaction (summarize a conversation nearing the limit and start a new window), structured notes (write progress outside the context), and subagents (each explores and returns only the essentials).</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2023 Lost in the Middle</strong></li>
+<li><strong>2025 Anthropic, <em>Effective context engineering for AI agents</em></strong></li>
+<li><strong>AGENTS.md</strong>: an open format its site says is used by over 60k open-source projects</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<p><strong>The Qwen user-growth agent team's three stages</strong> (Alibaba handbook):</p>
+<ul>
+<li><strong>Stage 1</strong>: about 15 server-side engineers explored AI coding individually; in some scenarios code generation reached several times — even about 10× — the traditional speed.</li>
+<li><strong>Stage 2</strong>: once the 0-to-1 build was done, the marginal return of relying on code generation alone fell; the real challenge became getting AI to accurately understand project structure, business requirements and engineering constraints in an existing codebase.</li>
+<li><strong>Stage 3</strong>: engineering focus shifted to organizing context, defining boundaries and building verification mechanisms.</li>
+</ul>
+<p><strong>The team used three kinds of assets to solve &quot;how AI understands the project&quot;</strong>: code documentation explains &quot;why it is designed this way&quot;, a code graph precisely queries definitions, call relationships and impact scope, and Rules turn team experience into executable constraints.</p>
+<p><strong>The handbook treats context as an organizational asset</strong>: Skills, MCP, Specs, README / runbooks, templates and checklists. Without accumulating these, a team stays at the &quot;everyone asks AI ad hoc&quot; stage.</p>
+<p><strong>Practical tips:</strong></p>
+<ul>
+<li>Commit rules files to Git so new worktrees can read them (the X developer sharing Orca usage stressed this).</li>
+<li>Don't write dozens of rules at once; add one when the agent repeatedly makes the same mistake.</li>
+<li>Once a process has been repeated more than three times, turn it into a reusable Skill.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;More context is better.&quot;</strong> Context rot shows extra tokens dilute attention.</li>
+<li><strong>&quot;A stronger model will fix not understanding legacy code.&quot;</strong> The handbook's experience is that continually building high-quality context, explicit constraints and verifiable feedback often improves output stability more than simply chasing a stronger model.</li>
+<li><strong>&quot;Write the rules once and you're done.&quot;</strong> Context assets need continual updating and verification.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener noreferrer">Effective context engineering for AI agents</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2307.03172" target="_blank" rel="noopener noreferrer">Lost in the Middle: How Language Models Use Long Contexts</a> <span class="rmeta">· Liu et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-doc">Docs</span><a href="https://agents.md/" target="_blank" rel="noopener noreferrer">AGENTS.md</a> <span class="rmeta">· AGENTS.md project · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://cursor.com/docs/context/rules" target="_blank" rel="noopener noreferrer">Cursor docs: Rules</a> <span class="rmeta">· Cursor · 2026</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/CopperForgeAI/status/2108830306014998719" target="_blank" rel="noopener noreferrer">Orca 从入门到精通 (Orca from beginner to expert)</a> <span class="rmeta">· @CopperForgeAI · 2026-10-10</span></li></ol></section>

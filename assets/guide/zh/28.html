@@ -1,0 +1,34 @@
+<h1>7 天落地路线图：个人 / 小团队这周就能开始</h1>
+<blockquote>
+<p>对应图 #28 · 第四章「当前如何做 AI 编程」</p>
+</blockquote>
+<h2>概述</h2>
+<p>前几篇讲了原则，本篇把它们压缩成一份个人或小团队一周内可以执行的清单。路线图本身是讲者基于阿里巴巴实践手册整理的建议，不是某家公司的官方流程。手册给刚起步团队的核心建议是：<strong>不需要一次建设完整体系，先建立项目地图、规范复杂需求、提供可验证反馈，并打通线上事实链，形成基本闭环。</strong></p>
+<h2>核心机制</h2>
+<p><strong>第 1 天：选一个真实小任务，跑通一次。</strong> 选一个边界清晰、有测试的缺陷或小需求，让 Coding Agent 完成，记录耗时和遇到的问题。</p>
+<p><strong>第 2 天：写项目规则文件。</strong> 在仓库根目录写 AGENTS.md 或 CLAUDE.md：技术栈、目录结构、构建与测试命令、禁止事项、需要停下来请示的操作（数据库迁移、密钥、生产环境）。提交到 Git。</p>
+<p><strong>第 3 天：补项目地图。</strong> 关键模块的职责、入口、依赖关系。可以让 Agent 先起草，人来校对。</p>
+<p><strong>第 4 天：把验证命令一键化。</strong> 编译、类型检查、lint、单元测试用一条命令跑完，并写进规则文件，让 Agent 每次改完都执行。</p>
+<p><strong>第 5 天：用 Spec 做一个中等需求。</strong> 先让 Agent 追问澄清，把约束、验收标准和非目标写进 Spec，再实现。</p>
+<p><strong>第 6 天：建立审阅习惯。</strong> 小 MR；先看测试结果和核心逻辑；把意见一次性反馈给 Agent 返工。</p>
+<p><strong>第 7 天：复盘并沉淀。</strong> Agent 在哪些地方反复犯错？补一条规则。哪个流程重复了三次以上？整理成 Skill。记录交付周期和返工次数作为基线。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>Anthropic《Building effective agents》</strong>：从最简单的方案开始，只在能证明效果时增加复杂度</li>
+<li><strong>阿里巴巴《AI Native 研发范式实践手册》</strong>：起步团队的四个基本闭环</li>
+<li><strong>AGENTS.md</strong>：开放的 Agent 指令文件格式</li>
+</ul>
+<h2>工程实践与数字</h2>
+<ul>
+<li><strong>规则逐步增加</strong>：X 上分享 Orca 用法的开发者建议，规矩别一次写成几十条，Agent 在同一件事上反复犯错时再补一条；他的示例规则包括「已有测试只许新增，不许改、不许删」和「碰到数据库迁移、支付密钥、生产环境先停下来问我」。</li>
+<li><strong>三次原则</strong>：另一位开发者的建议是，一个流程重复超过三次，就让 Agent 帮你整理成 Skill。</li>
+<li><strong>先度量基线</strong>：没有第 1 天和第 7 天的对比数据，就无法判断是否真的提效（参见上一篇的 METR 研究）。</li>
+<li><strong>允许分头探索</strong>：手册提到，早期方法尚不成熟时，允许不同成员分头探索并定期交流，比过早统一规范更有利于找到有效路径；实践稳定后再收敛为统一工作流。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「先买最贵的工具、上多 Agent。」</strong> 单 Agent + 规则 + 验证闭环跑通之前，多 Agent 只会放大混乱。</li>
+<li><strong>「一周就能看到 10 倍提效。」</strong> 一周的目标是建立闭环和基线，不是出成绩。</li>
+<li><strong>「规则文件写完就不用管。」</strong> 它应该随项目和团队经验持续演进。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-doc">文档</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-doc">文档</span><a href="https://agents.md/" target="_blank" rel="noopener noreferrer">AGENTS.md</a> <span class="rmeta">· AGENTS.md project · 2025</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2507.09089" target="_blank" rel="noopener noreferrer">Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity</a> <span class="rmeta">· Becker et al. (METR) · 2025</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/CopperForgeAI/status/2108830306014998719" target="_blank" rel="noopener noreferrer">Orca 从入门到精通 (Orca from beginner to expert)</a> <span class="rmeta">· @CopperForgeAI · 2026-10-10</span></li></ol></section>

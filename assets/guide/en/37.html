@@ -1,0 +1,41 @@
+<h1>Roles and Organization: From Writing Code to Defining Problems and Designing Verification</h1>
+<blockquote>
+<p>Companion to diagram #37 · Chapter 6 &quot;How AI Reshapes the Dev Lifecycle&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>As agents take on more coding and execution, the center of gravity of engineers' value moves. The Qwen team in Alibaba's handbook summed up three-plus months of change this way: the biggest change was not &quot;writing code faster&quot; but that <strong>the focus of development work shifted</strong> — engineers must put more energy into problem definition, context organization, boundary design, documentation and result verification.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. How individual roles change.</strong></p>
+<ul>
+<li><strong>From writing code to defining problems</strong>: turn vague business intent into a complete, precise, verifiable Spec.</li>
+<li><strong>From implementation to designing verification</strong>: decide what counts as correct and how to prove it automatically.</li>
+<li><strong>From execution to review and decision</strong>: review agent output and make judgments at key gates.</li>
+<li><strong>From a single stack to end-to-end ownership</strong>: the handbook notes AI broadens individual capability, and teams gradually move from &quot;many people dividing up one requirement&quot; to &quot;one individual owning a requirement end to end&quot;, which cuts some communication cost but raises the bar for systems thinking and accountability for results.</li>
+</ul>
+<p><strong>2. Why organizations must change.</strong> The handbook revisits the premises behind several classic laws: Conway's law (organizational structure determines system structure because communication within a team is far cheaper than across teams), Brooks's &quot;adding people to a late project makes it later&quot; (communication cost grows rapidly with headcount), and Taylor's specialization (human attention is scarce). Its judgment: AI has no communication decay, needs no incentives, doesn't tire and has tiny context-switching cost, so the premises of every &quot;design built on human constraints&quot; are starting to fail.</p>
+<p><strong>3. Organizational directions the handbook proposes</strong> (the authors' views, still being explored):</p>
+<ul>
+<li><strong>Merging specialist roles</strong>: no longer strictly separating product, design, frontend and backend; encouraging problem-focused &quot;super individuals&quot;.</li>
+<li><strong>3–5 person small teams</strong>: with a clear owner, charging at a specific problem, possibly organized as projects.</li>
+<li><strong>A changed role for managers</strong>: motivation, coaching, hiring, exits and culture-building still have to be done by people.</li>
+<li><strong>Divide and conquer</strong>: new businesses win on speed, established ones emphasize stability and safety, so the degree of management change should differ.</li>
+</ul>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>Conway's law</strong>, <em><strong>The Mythical Man-Month</strong></em>: classic accounts of how organization and software structure relate</li>
+<li><strong>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em></strong>: organizational capability (Challenge 5)</li>
+<li><strong>2025 METR randomized controlled trial</strong>: a reminder that perceived individual productivity can be the opposite of measured productivity</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>New core skills</strong>: requirement clarification and Spec writing, building context assets (rules, Skills, project maps), test and verification design, reviewing agent output, risk judgment.</li>
+<li><strong>Evaluation must change too</strong>: the handbook notes that if you say &quot;judgment is worth more than execution&quot; but KPIs still measure output volume, the transformation won't land.</li>
+<li><strong>The real cost of transformation</strong>: the handbook confronts &quot;distillation anxiety&quot; — every SOP an employee writes, every process they teach AI, exports knowledge into organizational assets; when employees realize &quot;the more I say, the faster I'm replaced&quot;, key knowledge gets hidden, yet context-building depends precisely on employees voicing tacit conventions. The handbook also notes entry-level roles face challenges, which in the long run could dry up the pipeline of senior talent.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;AI will put engineers out of work, so why learn?&quot;</strong> The focus moves to defining problems and designing verification, which depend even more on engineering experience.</li>
+<li><strong>&quot;Merging roles means layoffs.&quot;</strong> The handbook stresses being explicit about how AI gains are shared and providing real mechanisms to &quot;catch&quot; people in transition.</li>
+<li><strong>&quot;Organizational change can be copied.&quot;</strong> The handbook says plainly there is no standard answer in this area yet.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2507.09089" target="_blank" rel="noopener noreferrer">Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity</a> <span class="rmeta">· Becker et al. (METR) · 2025</span></li></ol></section>

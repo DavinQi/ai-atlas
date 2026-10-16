@@ -1,0 +1,37 @@
+<h1>Multi-Agent and Harness: Iterate in a Controlled Loop Until Verification Passes</h1>
+<blockquote>
+<p>Companion to diagram #15 · Chapter 2 &quot;Agent Design: Principles &amp; Patterns&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>When one agent runs out of context or time, several agents can split the work; but multi-agent value only pays off reliably inside a <strong>controlled loop (harness)</strong>: tasks are split, executed and verified; failures go back with feedback until verification passes or the work is escalated to a human. &quot;Harness&quot; here means the engineering layer wrapped around the model: tools, permissions, context management, verification and stopping conditions.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Orchestrator-workers.</strong> In Anthropic's pattern catalogue, a central LLM dynamically breaks down tasks, delegates them to worker LLMs and synthesizes their results. Unlike parallelization, subtasks are not predefined but decided by the orchestrator from the input — a good fit for coding tasks where you cannot predict which files need changes.</p>
+<p><strong>2. Anthropic's multi-agent research system.</strong> A lead agent plans the research process, then spawns parallel subagents to search simultaneously; each subagent explores a different aspect in its own context window and condenses the most important information for the lead. Published figures:</p>
+<ul>
+<li>A system with Claude Opus 4 as lead and Claude Sonnet 4 subagents outperformed single-agent Claude Opus 4 by 90.2% on Anthropic's internal research eval.</li>
+<li>In their analysis, token usage by itself explained 80% of performance variance, with the number of tool calls and model choice as the other two factors.</li>
+<li>Agents use about 4× more tokens than chat interactions, and multi-agent systems about 15×.</li>
+</ul>
+<p><strong>3. Closed-loop verification.</strong> Anthropic stresses getting ground truth from the environment at each step. The evaluator-optimizer pattern has one LLM generate and another evaluate and give feedback in a loop, suited to tasks with clear evaluation criteria. In coding, the most reliable &quot;evaluator&quot; is tests, type checks and builds, not another model's subjective opinion.</p>
+<p><strong>4. State and compounding errors.</strong> The same article notes agents are stateful and errors compound; Anthropic uses &quot;rainbow deployments&quot; to shift traffic gradually so updates do not disrupt running agents, and its evaluation focuses on end states rather than turn-by-turn analysis.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2023 MetaGPT</strong>: encoding standardized operating procedures (SOPs) into multi-agent collaboration</li>
+<li><strong>2023 ChatDev</strong>, <strong>AutoGen</strong>: conversational multi-agent frameworks</li>
+<li><strong>2023 Multiagent debate</strong>: multiple model instances debate over rounds to improve reasoning and factuality</li>
+<li><strong>2024 Anthropic, <em>Building effective agents</em></strong></li>
+<li><strong>2025 Anthropic, <em>How we built our multi-agent research system</em></strong></li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>Tasks that suit multi-agent</strong>: heavy parallelization, information exceeding a single context, many tools. Anthropic states that domains requiring all agents to share the same context or involving many dependencies between agents are not a good fit today; <strong>most coding tasks involve fewer truly parallelizable tasks than research</strong>, and LLM agents are not yet great at coordinating and delegating to other agents in real time.</li>
+<li><strong>Cost accounting</strong>: roughly 15× the tokens of chat means only high-value tasks are worth it.</li>
+<li><strong>Minimal harness</strong>: task description with acceptance criteria, isolated execution environment, automated verification, maximum iterations, and rules for escalating to a human on failure.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;More agents means faster.&quot;</strong> Parallel gains depend on whether the task splits into independent parts; coordination has its own cost.</li>
+<li><strong>&quot;Having another model review is enough.&quot;</strong> Model review helps, but executable tests and checks give objective signals.</li>
+<li><strong>&quot;Multi-agent is the default architecture.&quot;</strong> It is an upgrade for when one agent is not enough — see the decision tree in the next article.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2308.08155" target="_blank" rel="noopener noreferrer">AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation</a> <span class="rmeta">· Wu et al. · 2023</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2307.07924" target="_blank" rel="noopener noreferrer">ChatDev: Communicative Agents for Software Development</a> <span class="rmeta">· Qian et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener noreferrer">How we built our multi-agent research system</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2305.14325" target="_blank" rel="noopener noreferrer">Improving Factuality and Reasoning in Language Models through Multiagent Debate</a> <span class="rmeta">· Du et al. · 2023</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2308.00352" target="_blank" rel="noopener noreferrer">MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework</a> <span class="rmeta">· Hong et al. · 2023</span></li></ol></section>

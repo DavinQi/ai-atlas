@@ -1,0 +1,61 @@
+<h1>Common Misconceptions: Looking Like It Isn't Being It</h1>
+<blockquote>
+<p>Companion to diagram #9 · Chapter 1 &quot;How LLMs Are Trained&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>The diagram lists three common misunderstandings: &quot;the model understands and thinks like a human brain&quot;, &quot;the model stores the original text of every book&quot;, and &quot;the model keeps learning new knowledge after training&quot;. This article goes through what the evidence does and does not support. One caveat up front: the first point touches on the definition of &quot;understanding&quot;, which is still debated; this article only states mechanism-level facts that can be tested experimentally and draws no philosophical conclusions.</p>
+<h2>Core Mechanisms</h2>
+<h3>Misconception 1: &quot;It understands and thinks like a human brain&quot;</h3>
+<p><strong>Mechanism.</strong> An LLM is trained to minimize next-token cross-entropy <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1.0497em;vertical-align:-0.2997em;"></span><span class="mord">−</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:0em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1308em;"><span style="top:-2.4003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2997em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mop">lo<span style="margin-right:0.0139em;">g</span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.0278em;">θ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∣</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathnormal">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2806em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mrel mtight">&lt;</span><span class="mord mathnormal mtight">t</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.1774em;"><span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span>. At generation time it outputs a probability distribution over the next token, and a decoding strategy samples from it. &quot;Thinking&quot;, in reasoning models, means generating a chain of thought before the answer. Chain-of-thought prompting substantially improves multi-step reasoning; DeepSeek-R1 used reinforcement learning to make longer chains of thought and self-checking behaviors emerge on their own.</p>
+<p><strong>How to read this.</strong> &quot;It just predicts the next token&quot; describes the training objective and output interface, not how complex the internal representations are: predicting the next token well requires learning a great deal of grammar, facts and reasoning patterns. At the same time, behavior is heavily shaped by training data. Karpathy suggests that instead of mystifying &quot;asking an AI&quot;, think of it as &quot;asking the average data labeler&quot;, since an assistant's answering style is largely imitated from human-labeled data.</p>
+<p><strong>Engineering takeaway.</strong> Don't treat model output as verified fact; for tasks that need correctness, check it in verifiable ways (tests, retrieved evidence, rule-based validation).</p>
+<h3>Misconception 2: &quot;It stores the original text of every book&quot;</h3>
+<p><strong>Mechanism.</strong> Parameter count is far smaller than the training corpus: Llama 3 405B has 405 billion parameters and was trained on 15.6T tokens, so it cannot store the corpus verbatim. The model learns a compressed representation of statistical regularities, which is why it forgets details and &quot;hallucinates&quot; — producing plausible content that contradicts facts or the input.</p>
+<p><strong>But &quot;stores no original text at all&quot; is also wrong.</strong> Carlini et al. extracted hundreds of verbatim training sequences from GPT-2, including personal information such as phone numbers and emails — some of which appeared in only one document in the training data. Follow-up work found memorization grows significantly with model capacity, the number of times an example is duplicated, and the length of the prompt context.</p>
+<p><strong>A more accurate statement:</strong> the model is not a retrievable database of source text, but it does memorize some content verbatim, especially heavily duplicated text. This creates privacy and copyright risk and is one reason to deduplicate training data.</p>
+<h3>Misconception 3: &quot;It keeps learning new knowledge after training&quot;</h3>
+<p><strong>Mechanism.</strong> Deployed weights are fixed. Information given in a conversation lives only in that session's context window (in-context learning); it disappears when the session ends and is never written back to the weights. Product &quot;memory&quot; features store history externally and put it back into the context when needed.</p>
+<p><strong>How to give a model new knowledge:</strong></p>
+<ul>
+<li><strong>RAG (retrieval-augmented generation)</strong>: retrieve external documents into the context at generation time. Lewis et al. note that combining parametric and non-parametric memory provides provenance and makes knowledge easier to update.</li>
+<li><strong>Continued training or fine-tuning</strong>: changes the weights, but is expensive, and a small amount of SFT mainly changes format rather than knowledge.</li>
+</ul>
+<p>Karpathy's summary fits well: pretraining is for knowledge, fine-tuning (supervised or RL) is for habitual behavior, and both change parameters; he argues we are still missing a learning paradigm in which models learn on the job the way people do.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2020 GPT-3: in-context learning</strong></li>
+<li><strong>2020 RAG</strong></li>
+<li><strong>2020 Training-data extraction attacks</strong>, <strong>2022 Quantifying memorization</strong></li>
+<li><strong>2022 Chain-of-thought prompting</strong></li>
+<li><strong>2023 Survey of LLM hallucination</strong></li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li>For time-sensitive, traceable knowledge: prefer RAG and require citations in the output.</li>
+<li>For fine-tuning on private data: mind memorization risk; deduplicate and filter sensitive information.</li>
+<li>For outputs that drive key decisions: add a verification step; don't rely on the model's confident tone.</li>
+</ul>
+<h2>Misconceptions at a Glance</h2>
+<table>
+<thead>
+<tr>
+<th>Misconception</th>
+<th>More accurate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Understands like a human</td>
+<td>Trained to predict the next token; abilities come from patterns in data</td>
+</tr>
+<tr>
+<td>Stores the original text</td>
+<td>Mostly compressed learning, but memorizes some text verbatim</td>
+</tr>
+<tr>
+<td>Learns on its own</td>
+<td>Weights are fixed; new knowledge needs RAG or retraining</td>
+</tr>
+</tbody>
+</table>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2501.12948" target="_blank" rel="noopener noreferrer">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a> <span class="rmeta">· DeepSeek-AI · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2305.11206" target="_blank" rel="noopener noreferrer">LIMA: Less Is More for Alignment</a> <span class="rmeta">· Zhou et al · 2023</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2005.14165" target="_blank" rel="noopener noreferrer">Language Models are Few-Shot Learners</a> <span class="rmeta">· Brown et al · 2020</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2407.21783" target="_blank" rel="noopener noreferrer">The Llama 3 Herd of Models</a> <span class="rmeta">· Llama Team, Meta · 2024</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2201.11903" target="_blank" rel="noopener noreferrer">Chain-of-Thought Prompting Elicits Reasoning in Large Language Models</a> <span class="rmeta">· Wei et al · 2022</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2012.07805" target="_blank" rel="noopener noreferrer">Extracting Training Data from Large Language Models</a> <span class="rmeta">· Carlini et al · 2020</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2202.07646" target="_blank" rel="noopener noreferrer">Quantifying Memorization Across Neural Language Models</a> <span class="rmeta">· Carlini et al · 2022</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a> <span class="rmeta">· Lewis et al · 2020</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2309.01219" target="_blank" rel="noopener noreferrer">Siren&#x27;s Song in the AI Ocean (hallucination survey)</a> <span class="rmeta">· Zhang et al · 2023</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/karpathy/status/1862565643436138619" target="_blank" rel="noopener noreferrer">asking the average data labeler</a> <span class="rmeta">· Andrej Karpathy (@karpathy) · 2024-11-29</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/karpathy/status/1921368644069765486" target="_blank" rel="noopener noreferrer">system prompt learning</a> <span class="rmeta">· Andrej Karpathy (@karpathy) · 2025-05-11</span></li></ol></section>

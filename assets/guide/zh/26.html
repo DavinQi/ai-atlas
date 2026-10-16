@@ -1,0 +1,43 @@
+<h1>排障证据链：先收集证据，再推断根因</h1>
+<blockquote>
+<p>对应图 #26 · 第四章「当前如何做 AI 编程」</p>
+</blockquote>
+<h2>概述</h2>
+<p>线上排障最常见的错误是<strong>先猜根因，再找证据证明</strong>。人会这样做，Agent 更会这样做：模型天生擅长给出「看起来合理」的解释。排障证据链把顺序反过来：<strong>先按固定方式收集事实证据，再基于完整的请求链推断根因；证据不足时升级，而不是硬猜。</strong></p>
+<h2>核心机制</h2>
+<p><strong>千问用增团队的做法</strong>（据阿里巴巴实践手册）：</p>
+<ol>
+<li><strong>统一 TraceId</strong>：打通日志、上下游状态与代码调用关系。</li>
+<li><strong>先采证据</strong>：排障不从猜测根因开始，优先收集 TraceId、结构化日志、上下游状态、代码位置和调用关系等事实。</li>
+<li><strong>基于完整请求链判断</strong>。</li>
+<li><strong>分级诊断</strong>：明显错误由诊断 Agent 直接基于日志定位；证据不足或状态矛盾时，把已有证据交给具备完整代码上下文的 Agent 继续分析。</li>
+<li><strong>标准化</strong>：固定证据采集方式、升级条件和结论格式，让排障从依赖个人经验转向可复用、可验证的工程流程。</li>
+</ol>
+<p>一条最小证据链：</p>
+<pre><code>现象（报错 / 告警 / 用户反馈）
+→ TraceId → 链路上每一跳的日志与状态
+→ 对应的代码位置与最近变更
+→ 假设 → 用证据验证或否定
+→ 结论（根因 + 证据 + 修复 + 回归测试）
+</code></pre>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>ReAct（2022）</strong>：通过与外部环境交互获取信息，缓解纯推理中的幻觉和错误传播——排障证据链是这一原则在运维场景的应用</li>
+<li><strong>Google SRE Book</strong>：系统化的故障处理与事后复盘文化</li>
+<li><strong>阿里巴巴《AI Native 研发范式实践手册》</strong>：TraceId 证据链与分级诊断</li>
+</ul>
+<h2>工程实践与数字</h2>
+<ul>
+<li><strong>可观测性是前提</strong>：没有统一的 TraceId 和结构化日志，Agent 再强也无从下手。</li>
+<li><strong>给 Agent 只读权限</strong>：排障阶段 Agent 应能查日志、查库表、查调用链，但不应直接修改生产。前述 X 上的开发者使用只读数据库 MCP 和日志 Skill。</li>
+<li><strong>结论格式固定</strong>：根因、证据、影响范围、修复方案、回归测试。证据要能被人复核。</li>
+<li><strong>证据沉淀为资产</strong>：手册指出，线上证据链和诊断能力会被后续 Agent 持续读取、验证和更新。</li>
+<li><strong>把多端依赖纳入证据</strong>：手册中的另一个团队提到，统一 Workspace 判断跨工程契约，避免「改了公共能力但消费端没重建」导致在陈旧依赖上误判「已修复」。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「模型给出的根因听起来很合理，应该就是对的。」</strong> 没有证据支持的解释只是假设。</li>
+<li><strong>「修复后测试通过就结束了。」</strong> 应补一个能复现原问题的回归测试。</li>
+<li><strong>「证据收集太慢，直接让 Agent 改。」</strong> 固定的采集流程可以自动化，比反复试错更快。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener noreferrer">ReAct: Synergizing Reasoning and Acting in Language Models</a> <span class="rmeta">· Yao et al. · 2022</span></li><li><span class="rb rb-doc">文档</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li><li><span class="rb rb-doc">文档</span><a href="https://sre.google/sre-book/postmortem-culture/" target="_blank" rel="noopener noreferrer">Site Reliability Engineering, Ch. 15: Postmortem Culture</a> <span class="rmeta">· Google (Beyer et al., eds.) · 2016</span></li></ol></section>

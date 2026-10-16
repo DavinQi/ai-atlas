@@ -1,0 +1,40 @@
+<h1>数据与分词：文本先切成 token，再映射成向量</h1>
+<blockquote>
+<p>对应图 #4 · 第一章「大模型如何训练」</p>
+</blockquote>
+<h2>概述</h2>
+<p>模型从不直接「看」文字。原始文本先经过<strong>清洗与去重</strong>，再由**分词器（tokenizer）<strong>切成离散 token，每个 token 对应一个整数 id，最后通过</strong>嵌入矩阵（embedding）**查表变成向量，进入 Transformer。数据质量决定模型上限，分词方式则决定同样的算力能「读」多少文本、各语言的成本是否公平。</p>
+<h2>核心机制</h2>
+<p><strong>1. 数据管线。</strong> 以 FineWeb 为例：它从 96 个 Common Crawl 快照中构建出 15T token 的数据集，并对去重和过滤策略做了系统消融；从中筛出的 1.3T token 教育类子集 FineWeb-Edu，在 MMLU、ARC 等知识与推理基准上带来显著提升。典型步骤包括：文本抽取 → 语言识别 → 启发式与模型打分的质量过滤 → MinHash 等去重 → 隐私信息与有害内容过滤。</p>
+<p><strong>2. 子词分词（BPE）。</strong> Sennrich 等人把字节对编码（BPE）引入神经机器翻译：从字符（或字节）开始，反复把语料中出现频率最高的相邻符号对合并成新符号，直到词表达到目标大小。这样常见词是一个 token，罕见词被拆成若干子词，不存在「未登录词」。SentencePiece 把原始文本（含空格）直接当作序列处理，不依赖语言相关的预分词，适合中文等不以空格分词的语言。</p>
+<p>Karpathy 在讲解中强调：分词器是 LLM 流水线中<strong>完全独立的一个阶段</strong>，有自己的训练集和训练算法（BPE），训练完后提供 <code>encode()</code> 和 <code>decode()</code> 两个函数。</p>
+<p><strong>3. 嵌入。</strong> 设词表大小为 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.2222em;">V</span></span></span></span>、隐藏维度为 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">d</span></span></span></span>，嵌入矩阵 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord mathnormal" style="margin-right:0.0576em;">E</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∈</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8491em;"></span><span class="mord"><span class="mord mathbb">R</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8491em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.2222em;">V</span><span class="mbin mtight">×</span><span class="mord mathnormal mtight">d</span></span></span></span></span></span></span></span></span></span></span></span>，token id <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6595em;"></span><span class="mord mathnormal">i</span></span></span></span> 的向量就是 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0576em;">E</span></span></span></span> 的第 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6595em;"></span><span class="mord mathnormal">i</span></span></span></span> 行。位置信息由位置编码注入，现代模型多用 RoPE，它对 query/key 按位置施加旋转，使注意力分数只依赖相对位置。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2015 BPE 子词</strong></li>
+<li><strong>2018 SentencePiece</strong></li>
+<li><strong>2021 RoPE</strong></li>
+<li><strong>2024 FineWeb / FineWeb-Edu</strong>：公开 15T token 数据集及其构建流程与消融实验。</li>
+<li><strong>2024 Llama 3</strong>：128K 词表。</li>
+</ul>
+<h2>工程实践与数字</h2>
+<p>Llama 3 报告给出了词表设计的直接证据：</p>
+<ul>
+<li>词表 128K：100K 来自 tiktoken，另加 28K 非英语 token。</li>
+<li>相比 Llama 2 的分词器，英文样本上的压缩率从每 token 3.17 个字符提高到 3.94 个，作者指出这让模型在同样的训练算力下能「读」更多文本。</li>
+<li>增加 28K 非英语 token 改善了这些语言的压缩率和下游表现，对英文分词没有影响。</li>
+<li>RoPE 基频提高到 500,000 以支持更长上下文。</li>
+</ul>
+<p>工程含义：</p>
+<ul>
+<li><strong>API 计费按 token</strong>，同样的中文内容在不同模型上 token 数可能差很多，估算成本前应用对应分词器实测。</li>
+<li><strong>词表越大</strong>，嵌入层和输出层参数越多，但序列越短，注意力的计算和 KV Cache 都更省。</li>
+<li><strong>数据去重</strong>同时影响质量和评测可信度：训练集若混入评测题，分数会虚高。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「模型按字/词理解文本。」</strong> 模型看到的是子词 id。数字、拼写、字符计数类任务出错，很多源于分词粒度。</li>
+<li><strong>「数据越多越好。」</strong> FineWeb-Edu 说明经过筛选的较小子集可以明显优于更大的未筛选数据。</li>
+<li><strong>「分词器可以随便换。」</strong> 嵌入矩阵与词表一一对应，换分词器通常意味着重新训练或大量继续训练。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2407.21783" target="_blank" rel="noopener noreferrer">The Llama 3 Herd of Models</a> <span class="rmeta">· Llama Team, Meta · 2024</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/karpathy/status/1759996549109776702" target="_blank" rel="noopener noreferrer">Let&#x27;s build the GPT Tokenizer</a> <span class="rmeta">· Andrej Karpathy (@karpathy) · 2024-02-20</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/1508.07909" target="_blank" rel="noopener noreferrer">Neural Machine Translation of Rare Words with Subword Units</a> <span class="rmeta">· Sennrich et al · 2015</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2104.09864" target="_blank" rel="noopener noreferrer">RoFormer: Enhanced Transformer with Rotary Position Embedding</a> <span class="rmeta">· Su et al · 2021</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/1808.06226" target="_blank" rel="noopener noreferrer">SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing</a> <span class="rmeta">· Kudo &amp; Richardson · 2018</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2406.17557" target="_blank" rel="noopener noreferrer">The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale</a> <span class="rmeta">· Penedo et al · 2024</span></li></ol></section>

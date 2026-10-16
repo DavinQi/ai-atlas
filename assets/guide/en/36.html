@@ -1,0 +1,46 @@
+<h1>The Future Form: Humans Set Goals and Accept Results, Agent Teams Deliver</h1>
+<blockquote>
+<p>Companion to diagram #36 · Chapter 6 &quot;How AI Reshapes the Dev Lifecycle&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>This article is a <strong>trend judgment, not an established fact</strong>. The future the diagram depicts: humans define goals and acceptance criteria, and agent teams do most of the delivery work from requirement clarification to release and archiving, with humans stepping in only at key points. The judgment extends the practices of Chapters 4 and 5 and matches the evolution path in Alibaba's handbook; the handbook itself admits that many of these directions are &quot;visible as a trend but not yet working end to end&quot;.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Three stages</strong> (per Alibaba's handbook):</p>
+<ul>
+<li><strong>Full assistance</strong>: humans use coding agents to do the work; humans are in charge.</li>
+<li><strong>Cloud autonomy</strong>: a cloud-hosted agent takes a task and independently pulls code, runs environments, produces changes and waits for review.</li>
+<li><strong>Multi-agent collaboration</strong>: multiple agents by role handle clarification, design, coding, testing, release and archiving, with humans stepping in only at key points.</li>
+</ul>
+<p>The handbook observes that this path is really a continual outward shift of the trust boundary: from the human, to the cloud runtime, to the agent team, toolchains, task state and cross-system authorization.</p>
+<p><strong>2. From workflow to agentic.</strong> The handbook distinguishes two routes:</p>
+<ul>
+<li><strong>Workflow retrofit</strong> (today's mainstream): embed AI into existing development processes; each node gets local gains, but the whole still runs along a process designed for humans.</li>
+<li><strong>Agentic direction</strong> (more promising): agents obtain verification signals on their own and keep advancing the task accordingly; processes still exist but mainly handle scheduling, permissions, state, auditing and high-risk checks, rather than prescribing how agents think at each step.</li>
+</ul>
+<p>The handbook draws an analogy to electrification: early factories just replaced steam engines with electric motors, keeping the original line shafts and layouts; the real productivity leap came after each machine had its own motor and production was reorganized.</p>
+<p><strong>3. Prerequisites.</strong> For agent teams to deliver reliably, you need at least:</p>
+<ul>
+<li>Reproducible, callable development environments: agents can build, start services, prepare data, drive browsers, and read logs and metrics on their own.</li>
+<li>A layered verification system.</li>
+<li>Agent identity, delegated authorization and end-to-end observability.</li>
+<li>Structured organizational knowledge.</li>
+</ul>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2024 SWE-agent</strong>: the agent-computer interface sets the ceiling of agent capability</li>
+<li><strong>2025 Anthropic's multi-agent research system</strong>: a production example of a lead agent with parallel subagents</li>
+<li><strong>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em></strong>: three-stage evolution, and &quot;the main battlefield is verification and environments&quot;</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>Today's real constraints</strong>: Anthropic notes most coding tasks have limited parallelizable parts and LLM agents are not yet great at real-time coordination and delegation; the handbook's teams went through a curve from excitement to pragmatism, with four sticking points: environments that wouldn't come up, context that couldn't be assembled, verification that wouldn't run, and releases stuck in process.</li>
+<li><strong>What you can prepare today</strong>: turn internal systems into agent-callable tools (MCP / CLI / Skills), make verification give feedback in seconds and minutes, and give agents their own identity with least privilege.</li>
+<li><strong>Don't wait for a better model</strong>: the handbook advises accepting the uncertainty of rapid technical change while not postponing necessary infrastructure &quot;until better models arrive&quot;.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;The future is unmanned.&quot;</strong> The handbook's teams state explicitly that AI Native is not about eliminating people but about redrawing the responsibility boundaries between systems, AI and humans.</li>
+<li><strong>&quot;A strong enough model makes it happen by itself.&quot;</strong> The handbook sees three gaps between model capability and enterprise R&amp;D productivity: agent infrastructure, context, and organization.</li>
+<li><strong>&quot;This is far off.&quot;</strong> The second stage (cloud autonomy) is already in use in several product forms.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2405.15793" target="_blank" rel="noopener noreferrer">SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering</a> <span class="rmeta">· Yang et al. · 2024</span></li><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener noreferrer">How we built our multi-agent research system</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://github.com/openai/codex" target="_blank" rel="noopener noreferrer">openai/codex (Codex CLI repository)</a> <span class="rmeta">· OpenAI · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-doc">Docs</span><a href="https://docs.github.com/en/copilot/get-started/what-is-github-copilot" target="_blank" rel="noopener noreferrer">What is GitHub Copilot?</a> <span class="rmeta">· GitHub Docs · 2026</span></li></ol></section>

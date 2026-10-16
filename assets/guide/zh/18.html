@@ -1,0 +1,37 @@
+<h1>传统 IDE：工具齐全，但串联全靠人</h1>
+<blockquote>
+<p>对应图 #18 · 第三章「编程的进化」</p>
+</blockquote>
+<h2>概述</h2>
+<p>集成开发环境（IDE）的初衷，是把原本分散的工具——编辑器、编译器、调试器、构建工具——放进一个界面，提供一致的体验，从而提升效率。今天成熟的 IDE 已经集成了代码导航、重构、静态检查、测试运行、版本控制和终端。但无论工具多么齐全，<strong>把它们串成一次完整交付的，仍然是人</strong>：读需求、找代码、改代码、跑测试、看报错、查日志、提交、等 CI、处理评审意见。</p>
+<h2>核心机制</h2>
+<p><strong>1. IDE 解决的问题：工具集成。</strong> 在 IDE 出现之前，开发者分别使用 vi、GDB、GCC、make 等独立工具。IDE 把它们放在统一的界面里，减少切换成本。</p>
+<p><strong>2. 静态分析驱动的智能。</strong> 代码补全、跳转定义、查找引用、安全重构，都建立在对代码的静态分析之上。它们准确、确定，但只能回答「代码结构是什么」，无法理解「这次需求要改什么」。</p>
+<p><strong>3. 人是工作流的调度器。</strong> 一次典型的缺陷修复流程中，开发者需要：</p>
+<ol>
+<li>理解问题描述，在脑中形成假设</li>
+<li>用搜索和跳转定位相关代码</li>
+<li>修改代码</li>
+<li>运行测试，阅读失败信息</li>
+<li>必要时启动调试器、查看日志</li>
+<li>重复 3–5 直到通过</li>
+<li>提交、推送、等待 CI 和代码评审</li>
+</ol>
+<p>每一步之间的衔接、判断和上下文传递，都由人完成。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>1996 IntelliSense</strong>：代码补全进入主流 IDE</li>
+<li>后续 IDE 普遍集成重构、静态检查、单元测试与版本控制</li>
+<li><strong>Language Server Protocol（LSP）</strong>：标准化编程语言支持在各种开发工具中的接入方式，MCP 规范明确以它为参照</li>
+</ul>
+<h2>工程实践与数字</h2>
+<ul>
+<li>传统 IDE 的价值在 AI 时代依然存在：确定性的静态分析、调试器和重构工具，恰好是 Agent 最需要的「可靠工具」。SWE-agent 的研究发现，为 Agent 专门设计的接口（查看、搜索、编辑文件和运行测试的命令）能显著提升其解决真实 issue 的能力。</li>
+<li>正因为串联依赖人，人的注意力切换就是主要成本。这也是 AI 工具首先切入的位置：先自动化「写」，再自动化「串」。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「IDE 已经过时。」</strong> 很多 AI IDE 本身就构建在传统编辑器之上，Agent 也在调用同样的编译、测试和调试工具。</li>
+<li><strong>「工具越多效率越高。」</strong> 工具多了，衔接和上下文切换的负担也更重，瓶颈在串联而非单个工具。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2405.15793" target="_blank" rel="noopener noreferrer">SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering</a> <span class="rmeta">· Yang et al. · 2024</span></li><li><span class="rb rb-doc">文档</span><a href="https://modelcontextprotocol.io/specification/2025-06-18" target="_blank" rel="noopener noreferrer">Model Context Protocol Specification (2025-06-18)</a> <span class="rmeta">· MCP project · 2025</span></li><li><span class="rb rb-doc">文档</span><a href="https://en.wikipedia.org/wiki/Code_completion" target="_blank" rel="noopener noreferrer">Code completion (Wikipedia; IntelliSense history)</a> <span class="rmeta">· Wikipedia · </span></li></ol></section>

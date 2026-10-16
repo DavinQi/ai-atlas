@@ -1,0 +1,37 @@
+<h1>Open Questions, and 5 Things You Can Do Tomorrow</h1>
+<blockquote>
+<p>Companion to diagram #38 · Chapter 6 &quot;How AI Reshapes the Dev Lifecycle&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>The handbook's final article returns to two questions: <strong>what still has no answer, and what can you do tomorrow?</strong> The open questions mainly follow the conclusions of Alibaba's handbook; the &quot;5 things&quot; are the presenter's own suggestions based on the whole handbook.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>Four unsolved problems</strong> (per Alibaba's handbook):</p>
+<ol>
+<li><strong>From writing code to reliable delivery, many technical problems remain.</strong> The last mile of software delivery — builds, integration testing, canary releases, production verification, failure recovery — has very little margin for error and demands sandbox isolation, credential management, guardrails and observability far beyond today's level. The engineering complexity of the infrastructure itself may be no less than that of the agent application layer.</li>
+<li><strong>Enterprise knowledge is not yet agent-friendly.</strong> Much organizational knowledge is scattered across documents, word of mouth and personal experience; even in a knowledge base it often stops at &quot;a human can find it&quot;, far from being efficiently retrieved, accurately understood and reliably cited by agents.</li>
+<li><strong>Organizational design matters enormously and has no settled answer.</strong> New incentives are needed to unlock individual potential, yet &quot;distillation anxiety&quot; is real.</li>
+<li><strong>The pace of technical change keeps disrupting existing architectures.</strong> SWE-bench Verified scores jumped from under 30% to around 80% in two years; the architectures, tools and processes designed today may need revisiting in six months.</li>
+</ol>
+<p>One more often-underestimated problem: <strong>review is the bottleneck</strong>. One developer on X found that as generation gets faster, people stop reading all the code line by line and instead rely on small MRs, end-to-end tests and focused review of core business logic.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2025 METR randomized controlled trial</strong>: AI's real impact on experienced developers still needs careful measurement</li>
+<li><strong>2023 Indirect prompt injection</strong>, <strong>OWASP LLM01</strong>: there is still no fool-proof security solution for agents</li>
+<li><strong>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em></strong>: four unsolved problems</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<p><strong>5 things you can do tomorrow:</strong></p>
+<ol>
+<li><strong>Write a project rules file</strong> (AGENTS.md / CLAUDE.md): tech stack, build and test commands, prohibitions, operations that require asking first — commit it to Git.</li>
+<li><strong>Make verification one command</strong>: compile, type check, lint and unit tests in one command, run by the agent after every change.</li>
+<li><strong>Write a Spec for your next requirement</strong>: let the agent ask clarifying questions, write constraints and assumptions separately, and make acceptance criteria convertible to tests where possible.</li>
+<li><strong>Measure a baseline</strong>: record the cycle time from request to production and the number of rework rounds, rather than counting the share of AI-written code.</li>
+<li><strong>Draw permission boundaries for agents</strong>: read-only first, human confirmation for high-risk operations, external content treated as data rather than instructions.</li>
+</ol>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;Wait until the technology matures.&quot;</strong> The handbook explicitly warns against postponing necessary infrastructure while waiting for better models.</li>
+<li><strong>&quot;These problems must be solved before using AI.&quot;</strong> The open questions concern scaling and high-risk steps; individuals and small teams can build their loops today.</li>
+<li><strong>&quot;Copy one company's approach.&quot;</strong> The handbook calls itself neither a mature methodology nor a standard answer; adapt it to your own constraints.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://genai.owasp.org/llmrisk/llm01-prompt-injection/" target="_blank" rel="noopener noreferrer">LLM01:2025 Prompt Injection</a> <span class="rmeta">· OWASP Gen AI Security Project · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2302.12173" target="_blank" rel="noopener noreferrer">Not what you&#x27;ve signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection</a> <span class="rmeta">· Greshake et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-doc">Docs</span><a href="https://agents.md/" target="_blank" rel="noopener noreferrer">AGENTS.md</a> <span class="rmeta">· AGENTS.md project · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2507.09089" target="_blank" rel="noopener noreferrer">Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity</a> <span class="rmeta">· Becker et al. (METR) · 2025</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li></ol></section>

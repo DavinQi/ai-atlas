@@ -1,0 +1,61 @@
+<h1>Many Humans + Many Agents: People Define and Review, Digital Employees Execute</h1>
+<blockquote>
+<p>Companion to diagram #33 · Chapter 5 &quot;Multi-Agent Programming&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>When not one person but a whole team works with many agents, the problem shifts from tools to organization: who defines tasks? Who reviews? How are agent identities and permissions managed? The AIDC digital ad-buyer team in Alibaba's handbook went through three periods — &quot;super individual → digital employees → cloud Scrum&quot; — and is a real-world sample of this problem.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. The super-individual bottleneck.</strong> According to the handbook, after the team standardized on one mainstream agent tool, one person directing 3–5 sessions became normal, some long-running tasks completed overnight, and one person felt able to do the work of two or three, helping the team ship its first MVP. But problems soon appeared:</p>
+<ul>
+<li><strong>Digestion barrier</strong>: intermediate artifacts produced with heavy token spend were hard for humans to understand, review and apply; when discussing designs with colleagues, the colleague couldn't explain the design either and could only throw the question back to the agent.</li>
+<li><strong>Reuse barrier</strong>: after a task was delivered, the experience was hard for others to reuse.</li>
+</ul>
+<p><strong>2. Digital employees.</strong> The handbook treats agents as independent actors in enterprise systems: platforms used to answer only &quot;does this person have permission&quot;; now they must answer &quot;which agent, in which runtime, on behalf of which user, based on which task, accessing which resource, doing what action, and whether human approval is needed&quot;. Human-agent collaboration goes through roughly three stages, essentially pushing the trust boundary outward:</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Trust boundary</th>
+<th>Human responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local assistance</td>
+<td>Human + local tools</td>
+<td>Provide context, approve commands, check results</td>
+</tr>
+<tr>
+<td>Cloud autonomy</td>
+<td>Human + cloud runtime + repo</td>
+<td>Set goals, review MRs, key approvals</td>
+</tr>
+<tr>
+<td>Multi-agent team</td>
+<td>Lead + specialist agents + many systems</td>
+<td>Design collaboration, govern boundaries, own final responsibility</td>
+</tr>
+</tbody>
+</table>
+<p>The handbook cautions that the &quot;intern&quot; analogy only half works: agents need mentors, responsibilities, permission boundaries and review, but they have no professional ethics or implicit common sense, so governance also needs machine-enforceable guardrails.</p>
+<p><strong>3. Redrawing responsibilities.</strong> The digital ad-buyer team concluded: systems handle high-certainty matters such as state, permissions and rules; AI handles analysis, generation and long-running multi-step execution; humans handle goal setting, key decisions, risk trade-offs and final responsibility. The unit of delivery shifts from &quot;people collaborating to complete tasks&quot; to &quot;people defining goals and acceptance criteria, digital employees executing their parts&quot;.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em></strong>: digital-employee autonomy and trust boundaries</li>
+<li><strong>OWASP LLM01</strong>: human approval for high-risk actions, least privilege</li>
+<li><strong>MCP spec</strong>: explicit user consent before tool invocation</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>Give agents their own identity</strong>: the handbook argues that reusing a person's account makes audits unable to tell human from agent actions; reusing a service account obscures who is responsible, who authorized it and who can disable it.</li>
+<li><strong>Review is a team-level bottleneck</strong>: the X developer's practice is keeping every MR small, with human review focused on business logic and whether test results are sufficient to support delivery.</li>
+<li><strong>Turn output into reusable assets</strong>: the handbook's team built two &quot;cloud Scrum&quot; supply lines: in the experience loop, two digital employees handle strategy discovery and launch respectively, cutting the strategy delivery cycle from about 10 days to 2; the hands-and-feet loop turns production failure traces into capability-building needs, with about 80% of core capabilities turned into Skills.</li>
+<li><strong>Limits of digital employees</strong>: the handbook is explicit that discovering growth opportunities still depends heavily on human business understanding; goal setting, business thresholds, release gates and high-risk decisions remain human responsibilities.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;More agents means fewer people needed.&quot;</strong> The work of definition, review and governance grows with the number of agents.</li>
+<li><strong>&quot;Running agents on a personal account is easiest.&quot;</strong> Audit and accountability become blurred.</li>
+<li><strong>&quot;Digital employees can replace organizational consensus.&quot;</strong> The handbook notes they are better suited to executing, at high quality, work that has already been thought through and has clear standards.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://modelcontextprotocol.io/specification/2025-06-18" target="_blank" rel="noopener noreferrer">Model Context Protocol Specification (2025-06-18)</a> <span class="rmeta">· MCP project · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://genai.owasp.org/llmrisk/llm01-prompt-injection/" target="_blank" rel="noopener noreferrer">LLM01:2025 Prompt Injection</a> <span class="rmeta">· OWASP Gen AI Security Project · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li></ol></section>

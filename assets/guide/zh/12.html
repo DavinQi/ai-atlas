@@ -1,0 +1,65 @@
+<h1>三种范式：边想边做、先规划后执行、做完自我修正</h1>
+<blockquote>
+<p>对应图 #12 · 第二章「Agent 设计原理与范式」</p>
+</blockquote>
+<h2>概述</h2>
+<p>Agent 如何组织「思考」和「行动」，决定了它的可靠性、成本和可解释性。图中归纳了三种最常用的范式：</p>
+<ul>
+<li><strong>ReAct</strong>：思考一步、行动一步、观察结果，再思考下一步。</li>
+<li><strong>Plan-and-Solve / Plan-and-Execute</strong>：先制定完整计划，再按计划逐步执行。</li>
+<li><strong>Reflection（自我反思）</strong>：做完之后评估结果，用语言形式的反馈指导下一次尝试。</li>
+</ul>
+<p>三者并不互斥，实际系统往往组合使用。</p>
+<h2>核心机制</h2>
+<p><strong>1. ReAct（Yao 等，2022）。</strong> 让 LLM 以交错方式生成推理轨迹和具体动作：推理帮助模型归纳、跟踪和更新行动计划并处理异常；动作让模型与知识库或环境交互、获取额外信息。在 HotpotQA 问答和 Fever 事实核查任务上，ReAct 通过调用一个简单的维基百科 API，缓解了纯思维链推理中常见的幻觉和错误传播问题，生成的解题轨迹也比基线更易于人类理解。</p>
+<p>典型循环：</p>
+<pre><code>Thought → Action(tool, args) → Observation → Thought → … → Final Answer
+</code></pre>
+<p><strong>2. Plan-and-Solve（Wang 等，2023）。</strong> 针对零样本思维链「漏步骤」的问题，先制定把任务拆成子任务的计划，再按计划执行子任务；扩展版 PS+ 增加了更细的指令，以减少计算错误。在 GPT-3 上的十个数据集实验中，它稳定优于 Zero-shot-CoT。工程上的 Plan-and-Execute 模式沿用这一思路：规划器产出步骤列表，执行器逐步完成，必要时重新规划。</p>
+<p><strong>3. Reflexion（Shinn 等，2023）。</strong> 不更新权重，而是通过「语言反馈」强化 Agent：Agent 对任务反馈信号进行口头反思，把反思文本存入情景记忆，在后续尝试中据此改进决策。论文报告其在 HumanEval 编程基准上 pass@1 达到 91%，高于当时 GPT-4 的 80%。</p>
+<p>相关的 <strong>Self-Refine</strong> 方法让同一个 LLM 依次担任生成者、反馈者和修改者，迭代优化输出；在 7 类任务上平均绝对提升约 20%。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2022 ReAct</strong></li>
+<li><strong>2023 Plan-and-Solve Prompting</strong></li>
+<li><strong>2023 Reflexion</strong></li>
+<li><strong>2023 Self-Refine</strong></li>
+</ul>
+<h2>工程实践与数字</h2>
+<table>
+<thead>
+<tr>
+<th>范式</th>
+<th>适用场景</th>
+<th>主要代价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ReAct</td>
+<td>步骤不可预知、需边探索边决策</td>
+<td>轮次多，易绕圈</td>
+</tr>
+<tr>
+<td>Plan-and-Execute</td>
+<td>任务结构清晰、可预先拆解</td>
+<td>计划可能过时</td>
+</tr>
+<tr>
+<td>Reflection</td>
+<td>有明确评价标准、可多次尝试</td>
+<td>每轮都要额外调用</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>反思需要可靠的信号</strong>：Reflexion 在编程任务上效果好，部分原因是测试结果提供了客观反馈。没有外部信号时，模型的自我评价可能不可靠。</li>
+<li><strong>对应 Anthropic 的模式库</strong>：Plan-and-Execute 接近「编排者-工作者（orchestrator-workers）」；Reflection 接近「评估者-优化者（evaluator-optimizer）」，后者在有清晰评价标准、迭代确实能带来可衡量提升时效果最好。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「ReAct 已经过时。」</strong> 今天主流的 Coding Agent 本质上仍是「思考—调用工具—观察」的循环，只是模型更强、工具更多。</li>
+<li><strong>「计划越详细越好。」</strong> 环境变化时，详细计划容易失效，需要支持重新规划。</li>
+<li><strong>「自我反思一定能改进。」</strong> 缺乏外部验证时，反思可能强化错误判断。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener noreferrer">ReAct: Synergizing Reasoning and Acting in Language Models</a> <span class="rmeta">· Yao et al. · 2022</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2305.04091" target="_blank" rel="noopener noreferrer">Plan-and-Solve Prompting: Improving Zero-Shot Chain-of-Thought Reasoning by Large Language Models</a> <span class="rmeta">· Wang et al. · 2023</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2303.11366" target="_blank" rel="noopener noreferrer">Reflexion: Language Agents with Verbal Reinforcement Learning</a> <span class="rmeta">· Shinn et al. · 2023</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2303.17651" target="_blank" rel="noopener noreferrer">Self-Refine: Iterative Refinement with Self-Feedback</a> <span class="rmeta">· Madaan et al. · 2023</span></li></ol></section>

@@ -1,0 +1,37 @@
+<h1>多 Agent 与 Harness：在受控闭环里迭代到验证通过</h1>
+<blockquote>
+<p>对应图 #15 · 第二章「Agent 设计原理与范式」</p>
+</blockquote>
+<h2>概述</h2>
+<p>当单个 Agent 的上下文或时间不够用时，可以让多个 Agent 分工；但多 Agent 的价值必须在一个**受控的闭环（harness）**里才能稳定兑现：任务被拆分、执行、验证，不通过就带着反馈回炉，直到验证通过或升级给人。这里的 Harness 指包住模型的那层工程：工具、权限、上下文管理、验证与停止条件。</p>
+<h2>核心机制</h2>
+<p><strong>1. 编排者—工作者模式。</strong> Anthropic 的模式库中，中心 LLM 动态拆解任务、分派给工作者 LLM，再综合结果。它与并行化的区别在于子任务不是预先定义的，而是由编排者根据输入决定，适合「无法预知需要改哪些文件」的编码任务。</p>
+<p><strong>2. Anthropic 多 Agent 研究系统。</strong> 主 Agent 规划研究过程，再创建并行的子 Agent 同时搜索；子 Agent 在各自的上下文窗口中探索问题的不同方面，把最重要的信息压缩后交给主 Agent。公开数据：</p>
+<ul>
+<li>以 Claude Opus 4 为主 Agent、Claude Sonnet 4 为子 Agent 的系统，在其内部研究评测上比单 Agent 的 Claude Opus 4 高出 90.2%。</li>
+<li>在其分析中，token 用量本身就解释了 80% 的性能差异，工具调用次数和模型选择是另外两个因素。</li>
+<li>Agent 的 token 用量约为普通聊天的 4 倍，多 Agent 系统约为 15 倍。</li>
+</ul>
+<p><strong>3. 闭环验证。</strong> Anthropic 强调 Agent 每一步都要从环境获得真实反馈。评估者—优化者模式让一个 LLM 生成、另一个给出评估和反馈，循环改进，适用于有明确评价标准的任务。在编码场景中，最可靠的「评估者」是测试、类型检查和构建结果，而不是另一个模型的主观判断。</p>
+<p><strong>4. 状态与错误累积。</strong> 同一篇文章指出 Agent 是有状态的，错误会累积；他们用「彩虹部署」逐步切流，避免更新打断正在运行的 Agent；评估上更关注最终状态，而不是逐轮分析。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2023 MetaGPT</strong>：把标准作业流程（SOP）编码进多 Agent 协作</li>
+<li><strong>2023 ChatDev</strong>、<strong>AutoGen</strong>：对话式多 Agent 框架</li>
+<li><strong>2023 多 Agent 辩论</strong>：多个模型实例多轮辩论以提升推理与事实性</li>
+<li><strong>2024 Anthropic《Building effective agents》</strong></li>
+<li><strong>2025 Anthropic《How we built our multi-agent research system》</strong></li>
+</ul>
+<h2>工程实践与数字</h2>
+<ul>
+<li><strong>适合多 Agent 的任务</strong>：可高度并行、信息量超出单个上下文、需要调用大量工具。Anthropic 明确指出，需要所有 Agent 共享同一上下文或 Agent 之间依赖很多的领域，目前不适合多 Agent；<strong>大多数编码任务可真正并行的部分比研究任务少</strong>，而且 LLM Agent 还不擅长实时协调和委派。</li>
+<li><strong>成本核算</strong>：约 15 倍于聊天的 token 消耗意味着只有高价值任务才划算。</li>
+<li><strong>Harness 的最小组成</strong>：任务说明与验收标准、隔离的执行环境、自动化验证、最大迭代次数、失败时升级给人的规则。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「Agent 越多越快。」</strong> 并行收益取决于任务能否拆成独立部分，协调本身有成本。</li>
+<li><strong>「让另一个模型审查就够了。」</strong> 模型审查可以补充，但可执行的测试和检查提供的是客观信号。</li>
+<li><strong>「多 Agent 是默认架构。」</strong> 它是在单 Agent 不够时的升级手段，见下一篇的决策树。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2308.08155" target="_blank" rel="noopener noreferrer">AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation</a> <span class="rmeta">· Wu et al. · 2023</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2307.07924" target="_blank" rel="noopener noreferrer">ChatDev: Communicative Agents for Software Development</a> <span class="rmeta">· Qian et al. · 2023</span></li><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener noreferrer">How we built our multi-agent research system</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2305.14325" target="_blank" rel="noopener noreferrer">Improving Factuality and Reasoning in Language Models through Multiagent Debate</a> <span class="rmeta">· Du et al. · 2023</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2308.00352" target="_blank" rel="noopener noreferrer">MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework</a> <span class="rmeta">· Hong et al. · 2023</span></li></ol></section>

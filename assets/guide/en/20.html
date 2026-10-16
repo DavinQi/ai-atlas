@@ -1,0 +1,37 @@
+<h1>Coding Agents: Humans Give Tasks and Review PRs; the Agent Runs the Loop</h1>
+<blockquote>
+<p>Companion to diagram #20 · Chapter 3 &quot;The Evolution of Programming&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>Coding agents free developers from line-by-line direction: the human describes a task, and the agent reads code, edits files, runs commands, checks results, fixes mistakes, and finally delivers a reviewable change. Claude Code's docs define it as an agentic coding tool that reads your codebase, edits files, runs commands and integrates with your development tools, available in the terminal, IDE, desktop app and browser. OpenAI's Codex CLI is a coding agent that runs locally in the terminal, with a cloud version as well.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. The loop.</strong> A typical task cycle:</p>
+<pre><code>Understand task → search and read code → plan
+→ edit files → run build / tests / lint
+→ read output → fix → … → all pass
+→ commit / open PR → human review
+</code></pre>
+<p>This is exactly Anthropic's &quot;LLM using tools based on environmental feedback in a loop&quot;. Environmental feedback (compile errors, failing tests, logs) is the fundamental reason agents can self-correct.</p>
+<p><strong>2. Just-in-time context retrieval.</strong> Anthropic explains that Claude Code drops files such as CLAUDE.md directly into context while using primitives like <code>glob</code> and <code>grep</code> to navigate the environment and retrieve files just in time, sidestepping stale indexes and complex syntax trees.</p>
+<p><strong>3. Subagents and context isolation.</strong> Each Claude Code subagent runs in its own context window with a custom system prompt, specific tool access and independent permissions. For example, in plan mode it delegates codebase research to a read-only Plan subagent so exploration output stays in a separate context. Codex and Cursor also support subagents: spawn specialized agents in parallel, then collect the results.</p>
+<p><strong>4. Permissions and sandboxing.</strong> If an agent can run commands, you must control what it can do: which commands are auto-allowed, which need confirmation, whether it can reach the network, which directories it can write.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2023 SWE-bench</strong>: evaluating &quot;fix the bug&quot; ability on real GitHub issues</li>
+<li><strong>2024 SWE-agent</strong>: showing that agent-computer interface design strongly affects results</li>
+<li><strong>2024 Agentless</strong>: a fixed &quot;localize — repair — validate&quot; process is also highly competitive</li>
+<li><strong>February 2025: Claude Code</strong>; <strong>April 2025: Codex CLI open-sourced</strong></li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>The human role shifts to defining tasks and reviewing results.</strong> A workflow one developer shared on X is typical: hand the agent PRDs, meeting notes and similar material first, align on requirements through repeated questioning, and capture conclusions in a Spec or CONTEXT.md; split complex requirements into independently acceptable issues, and only give genuinely independent parts to subagents developing in parallel in separate worktrees; the coding agent writes tests first, then other agents cross-review; run end-to-end tests before human review, and keep every MR small.</li>
+<li><strong>Give the agent executable verification</strong>: tests, type checks, lint, build. Without them, the agent can only rely on &quot;it seems right&quot;.</li>
+<li><strong>Rules files</strong> should spell out the tech stack, prohibitions, and operations that require stopping to ask (e.g. database migrations, production, secrets).</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;What the agent delivers can be merged directly.&quot;</strong> Agents over-engineer and may declare completion when tests are insufficient; human review is still essential.</li>
+<li><strong>&quot;More context is better.&quot;</strong> One point of subagents is precisely to isolate context and keep the main session clean.</li>
+<li><strong>&quot;Agents can replace tests.&quot;</strong> Quite the opposite: the more autonomous the agent, the more it depends on automated tests.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2405.15793" target="_blank" rel="noopener noreferrer">SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering</a> <span class="rmeta">· Yang et al. · 2024</span></li><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener noreferrer">Effective context engineering for AI agents</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2407.01489" target="_blank" rel="noopener noreferrer">Agentless: Demystifying LLM-based Software Engineering Agents</a> <span class="rmeta">· Xia et al. · 2024</span></li><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/news/claude-3-7-sonnet" target="_blank" rel="noopener noreferrer">Claude 3.7 Sonnet and Claude Code</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2310.06770" target="_blank" rel="noopener noreferrer">SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</a> <span class="rmeta">· Jimenez et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://github.com/openai/codex" target="_blank" rel="noopener noreferrer">openai/codex (Codex CLI repository)</a> <span class="rmeta">· OpenAI · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://code.claude.com/docs/en/overview" target="_blank" rel="noopener noreferrer">Claude Code docs: Overview</a> <span class="rmeta">· Anthropic · 2026</span></li><li><span class="rb rb-doc">Docs</span><a href="https://code.claude.com/docs/en/sub-agents" target="_blank" rel="noopener noreferrer">Claude Code docs: Subagents</a> <span class="rmeta">· Anthropic · 2026</span></li><li><span class="rb rb-doc">Docs</span><a href="https://developers.openai.com/codex/subagents" target="_blank" rel="noopener noreferrer">Codex docs: Subagents</a> <span class="rmeta">· OpenAI · 2026</span></li><li><span class="rb rb-doc">Docs</span><a href="https://cursor.com/docs/subagents" target="_blank" rel="noopener noreferrer">Cursor docs: Subagents</a> <span class="rmeta">· Cursor · 2026</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li></ol></section>

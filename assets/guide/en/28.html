@@ -1,0 +1,34 @@
+<h1>A 7-Day Roadmap: What Individuals and Small Teams Can Start This Week</h1>
+<blockquote>
+<p>Companion to diagram #28 · Chapter 4 &quot;AI Coding Today&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>The previous articles covered principles; this one compresses them into a checklist an individual or small team can execute in a week. The roadmap is the presenter's own suggestion, distilled from Alibaba's handbook, not any company's official process. The handbook's core advice for starting teams: <strong>you don't need to build a complete system at once — first build a project map, standardize complex requirements, provide verifiable feedback, and connect the production fact chain to form a basic loop.</strong></p>
+<h2>Core Mechanisms</h2>
+<p><strong>Day 1: Pick a real small task and run it end to end.</strong> Choose a well-bounded bug or small feature that has tests, let a coding agent complete it, and record the time and problems encountered.</p>
+<p><strong>Day 2: Write a project rules file.</strong> In the repo root write AGENTS.md or CLAUDE.md: tech stack, directory layout, build and test commands, prohibitions, operations that require stopping to ask (database migrations, secrets, production). Commit it to Git.</p>
+<p><strong>Day 3: Add a project map.</strong> Responsibilities, entry points and dependencies of key modules. Let the agent draft it and a human proofread.</p>
+<p><strong>Day 4: Make verification one command.</strong> Compile, type check, lint and unit tests in a single command, recorded in the rules file so the agent runs it after every change.</p>
+<p><strong>Day 5: Do a medium requirement with a Spec.</strong> Let the agent ask clarifying questions first, write constraints, acceptance criteria and non-goals into the Spec, then implement.</p>
+<p><strong>Day 6: Build review habits.</strong> Small MRs; check test results and core logic first; send all feedback to the agent in one batch for rework.</p>
+<p><strong>Day 7: Retrospect and capture.</strong> Where did the agent repeatedly go wrong? Add a rule. Which process repeated three or more times? Turn it into a Skill. Record delivery cycle and rework count as a baseline.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>Anthropic, <em>Building effective agents</em></strong>: start with the simplest solution and add complexity only when it demonstrably helps</li>
+<li><strong>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em></strong>: four basic loops for starting teams</li>
+<li><strong>AGENTS.md</strong>: an open format for agent instruction files</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>Add rules gradually</strong>: the X developer sharing Orca usage advises not writing dozens of rules at once — add one when the agent repeatedly makes the same mistake; his example rules include &quot;existing tests may only be added to, never modified or deleted&quot; and &quot;stop and ask me before touching database migrations, payment keys or production&quot;.</li>
+<li><strong>The rule of three</strong>: another developer suggests that once a process repeats more than three times, have the agent turn it into a Skill.</li>
+<li><strong>Measure the baseline first</strong>: without Day 1 vs Day 7 data you cannot tell whether productivity really improved (see the METR study in the previous article).</li>
+<li><strong>Allow parallel exploration</strong>: the handbook notes that while methods are immature, letting members explore separately and share regularly finds effective paths better than standardizing too early; converge on a unified workflow once practice stabilizes.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;Buy the most expensive tools and go multi-agent first.&quot;</strong> Until a single agent + rules + verification loop works, multi-agent only amplifies chaos.</li>
+<li><strong>&quot;You'll see 10× gains in a week.&quot;</strong> The week's goal is a working loop and a baseline, not results.</li>
+<li><strong>&quot;Once the rules file is written, leave it alone.&quot;</strong> It should evolve with the project and team experience.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-doc">Docs</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-doc">Docs</span><a href="https://agents.md/" target="_blank" rel="noopener noreferrer">AGENTS.md</a> <span class="rmeta">· AGENTS.md project · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2507.09089" target="_blank" rel="noopener noreferrer">Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity</a> <span class="rmeta">· Becker et al. (METR) · 2025</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/CopperForgeAI/status/2108830306014998719" target="_blank" rel="noopener noreferrer">Orca 从入门到精通 (Orca from beginner to expert)</a> <span class="rmeta">· @CopperForgeAI · 2026-10-10</span></li></ol></section>

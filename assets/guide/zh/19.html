@@ -1,0 +1,35 @@
+<h1>从补全到 AI IDE：模型先进了光标，再进了编辑器</h1>
+<blockquote>
+<p>对应图 #19 · 第三章「编程的进化」</p>
+</blockquote>
+<h2>概述</h2>
+<p>AI 进入开发工具的第一步是<strong>光标处的补全</strong>：根据当前文件和光标位置，预测接下来的一行或一段代码。第二步是<strong>AI IDE</strong>：模型不再只盯着光标，而是可以理解整个项目、跨文件修改、在对话中解释和重构代码。两者的共同点是人仍然在编辑器里主导每一次修改，AI 是「副驾驶」。</p>
+<h2>核心机制</h2>
+<p><strong>1. 代码补全模型。</strong> OpenAI 的 Codex 论文介绍了在 GitHub 公开代码上微调的 GPT 模型，并说明其生产版本驱动 GitHub Copilot。论文同时发现，重复采样是获得正确解的有效策略：每题采样 100 次时，能解决 70.2% 的 HumanEval 问题，而单次采样为 28.8%。这也解释了补全工具为什么常常提供多个候选。</p>
+<p><strong>2. 从补全到对话与多文件编辑。</strong> AI IDE 在补全之外加入：</p>
+<ul>
+<li><strong>对话</strong>：针对选中代码或整个项目提问、解释、生成。</li>
+<li><strong>多文件编辑</strong>：一次修改涉及多个文件，以 diff 形式呈现给人审阅。</li>
+<li><strong>项目级上下文</strong>：索引代码库，按需检索相关文件。</li>
+</ul>
+<p><strong>3. 持久化的项目规则。</strong> 让模型持续遵守团队约定，靠的是写进仓库的规则文件。Cursor 文档说明：规则在提示层提供持久、可复用的上下文；项目规则存放在 <code>.cursor/rules</code> 中，纳入版本控制；也支持 <code>AGENTS.md</code> 作为更简单的替代。AGENTS.md 被定位为「给 Agent 看的 README」，官网称已有超过 6 万个开源项目使用。Claude Code 则读取 <code>CLAUDE.md</code>。</p>
+<p><strong>4. 走向 Agent。</strong> GitHub Copilot 的文档如今已覆盖 IDE 中的 agent 模式、CLI 以及在云端异步工作、可以直接开启或更新 PR 供人审阅的编码 Agent。补全工具和 Agent 工具的边界正在模糊。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2021 Codex / HumanEval</strong></li>
+<li><strong>2021 年 6 月 29 日 Copilot 技术预览版</strong>：首批对 Python、JavaScript、TypeScript、Ruby 和 Go 效果尤其好</li>
+<li><strong>2023 Copilot 随机对照实验</strong>：使用 Copilot 的开发者完成一个 JavaScript HTTP 服务器的速度比对照组快 55.8%</li>
+</ul>
+<h2>工程实践与数字</h2>
+<ul>
+<li><strong>生产力证据要看场景</strong>：上述 55.8% 来自一个边界清晰的实验任务。METR 2025 年的随机对照试验发现，16 位经验丰富的开源开发者在自己熟悉的成熟项目中完成 246 个任务，允许使用 AI（主要是 Cursor Pro 和 Claude 3.5/3.7 Sonnet）时完成时间反而<strong>增加了 19%</strong>；而开发者事前预计会缩短 24%，事后仍认为缩短了 20%。两项研究并不矛盾：收益高度依赖任务类型、代码库熟悉度和质量标准。</li>
+<li><strong>规则文件要提交到 Git</strong>，团队共享且可审查。</li>
+<li><strong>把 AI 生成的 diff 当作同事的 PR 来审</strong>，而不是直接接受。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「感觉更快就是更快。」</strong> METR 的研究显示主观感受和实际测量可能相反。</li>
+<li><strong>「补全接受率等于生产力。」</strong> 接受率衡量的是使用量，不是交付结果（见第四章「度量」）。</li>
+<li><strong>「规则写得越多越好。」</strong> 规则占用上下文，应针对反复出现的问题逐条补充。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2107.03374" target="_blank" rel="noopener noreferrer">Evaluating Large Language Models Trained on Code</a> <span class="rmeta">· Chen et al. · 2021</span></li><li><span class="rb rb-doc">文档</span><a href="https://github.blog/news-insights/product-news/introducing-github-copilot-ai-pair-programmer/" target="_blank" rel="noopener noreferrer">Introducing GitHub Copilot: your AI pair programmer</a> <span class="rmeta">· Nat Friedman (GitHub) · 2021</span></li><li><span class="rb rb-doc">文档</span><a href="https://agents.md/" target="_blank" rel="noopener noreferrer">AGENTS.md</a> <span class="rmeta">· AGENTS.md project · 2025</span></li><li><span class="rb rb-doc">文档</span><a href="https://code.claude.com/docs/en/memory" target="_blank" rel="noopener noreferrer">Claude Code docs: Memory (CLAUDE.md)</a> <span class="rmeta">· Anthropic · 2026</span></li><li><span class="rb rb-doc">文档</span><a href="https://cursor.com/docs/context/rules" target="_blank" rel="noopener noreferrer">Cursor docs: Rules</a> <span class="rmeta">· Cursor · 2026</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2507.09089" target="_blank" rel="noopener noreferrer">Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity</a> <span class="rmeta">· Becker et al. (METR) · 2025</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2302.06590" target="_blank" rel="noopener noreferrer">The Impact of AI on Developer Productivity: Evidence from GitHub Copilot</a> <span class="rmeta">· Peng et al. · 2023</span></li><li><span class="rb rb-doc">文档</span><a href="https://docs.github.com/en/copilot/get-started/what-is-github-copilot" target="_blank" rel="noopener noreferrer">What is GitHub Copilot?</a> <span class="rmeta">· GitHub Docs · 2026</span></li></ol></section>

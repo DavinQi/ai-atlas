@@ -1,0 +1,43 @@
+<h1>The Orchestration Layer: One Agent as Project Manager, Humans Guard the Gates</h1>
+<blockquote>
+<p>Companion to diagram #32 · Chapter 5 &quot;Multi-Agent Programming&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>When more agents run at once than a human can track, you need an <strong>orchestration layer</strong>: one agent acts as &quot;project manager&quot;, breaking down tasks, dispatching them to worker agents, tracking progress and aggregating results; humans step in only at key <strong>decision gates</strong>. This is Anthropic's &quot;orchestrator-workers&quot; pattern: a central LLM dynamically breaks down tasks, delegates them to worker LLMs and synthesizes the results, suited to coding tasks whose subtasks can't be predicted.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Subagents: the basic unit of orchestration.</strong> Mainstream tools have them built in:</p>
+<ul>
+<li><strong>Claude Code</strong>: subagents are Markdown files with YAML frontmatter; each runs in its own context window with a custom system prompt, specific tool access and independent permissions.</li>
+<li><strong>Codex</strong>: can spawn specialized agents in parallel and collect their results into one response; current releases enable subagent workflows by default.</li>
+<li><strong>Cursor</strong>: subagents are specialized assistants the main agent can delegate to; each works in its own context and returns results to the parent, used to break down complex tasks, work in parallel and keep the main conversation's context clean.</li>
+</ul>
+<p><strong>2. Orca's orchestration layer.</strong> Orca's docs describe orchestration as a structured multi-agent layer (experimental) whose core model includes:</p>
+<ul>
+<li><strong>Run</strong>: a durable namespace and coordinator inbox</li>
+<li><strong>Task</strong>: a work item with a spec, dependencies and status, composable into a DAG</li>
+<li><strong>Dispatch</strong>: one execution attempt of a task on a terminal</li>
+<li><strong>Message</strong>: messages such as <code>worker_done</code>, <code>escalation</code>, <code>question</code>, <code>heartbeat</code></li>
+<li><strong>Decision gate</strong>: a question created by the coordinator that blocks the related task until a decision is recorded</li>
+</ul>
+<p>The worker contract includes: send exactly one <code>worker_done</code> with the outcome, success or failure; attach a summary of what was done, what was found and what remains; send heartbeats during long work; ask blocking questions through the coordinator instead of waiting locally.</p>
+<p><strong>3. Humans guard the gates.</strong> Put gates on irreversible or high-risk steps: merging shared components, database migrations, releases. The X developer sharing Orca usage gives an example: before release, one agent acts as project manager leading two agents reviewing frontend and backend separately, and the human only reads the final summary; the database migration step has a gate where a human must decide.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2023 AutoGen</strong>: a multi-agent conversation framework</li>
+<li><strong>2024 Anthropic's orchestrator-workers pattern</strong></li>
+<li><strong>2025 Anthropic's multi-agent research system</strong>: a lead agent plans and spawns parallel subagents</li>
+<li><strong>Claude Code / Codex / Cursor subagents</strong>, <strong>Orca Orchestration</strong></li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>Make completion signals structured</strong>: Orca requires completion messages to carry both the task ID and the dispatch ID, so a stale retry can't wrongly complete another task.</li>
+<li><strong>The orchestrator is itself an agent</strong>: the developer above notes Orca serves agents as well as humans — agents can open new workspaces and read errors from other panes, and the &quot;project manager&quot; uses exactly these capabilities to assign work and collect results.</li>
+<li><strong>Start small</strong>: Anthropic warns LLM agents are not yet great at real-time coordination and delegation; pilot with two or three workers on well-bounded tasks.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;With an orchestrator, humans can step out entirely.&quot;</strong> High-risk decisions still need a responsible human; gates are part of the design.</li>
+<li><strong>&quot;The more complex the orchestration, the stronger.&quot;</strong> Every layer adds tokens and failure points; add them as needed.</li>
+<li><strong>&quot;If a worker says it's done, it's done.&quot;</strong> Completion is determined by verification results, not the agent's self-report.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2308.08155" target="_blank" rel="noopener noreferrer">AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation</a> <span class="rmeta">· Wu et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener noreferrer">How we built our multi-agent research system</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://code.claude.com/docs/en/sub-agents" target="_blank" rel="noopener noreferrer">Claude Code docs: Subagents</a> <span class="rmeta">· Anthropic · 2026</span></li><li><span class="rb rb-doc">Docs</span><a href="https://developers.openai.com/codex/subagents" target="_blank" rel="noopener noreferrer">Codex docs: Subagents</a> <span class="rmeta">· OpenAI · 2026</span></li><li><span class="rb rb-doc">Docs</span><a href="https://cursor.com/docs/subagents" target="_blank" rel="noopener noreferrer">Cursor docs: Subagents</a> <span class="rmeta">· Cursor · 2026</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/CopperForgeAI/status/2108830306014998719" target="_blank" rel="noopener noreferrer">Orca 从入门到精通 (Orca from beginner to expert)</a> <span class="rmeta">· @CopperForgeAI · 2026-10-10</span></li><li><span class="rb rb-doc">Docs</span><a href="https://onorca.dev/docs/cli/orchestration" target="_blank" rel="noopener noreferrer">Orca CLI: Orchestration</a> <span class="rmeta">· Stably · 2026</span></li></ol></section>

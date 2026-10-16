@@ -1,0 +1,40 @@
+<h1>Metrics: Measure Delivery Outcomes, Not the Share of AI-Written Code</h1>
+<blockquote>
+<p>Companion to diagram #27 · Chapter 4 &quot;AI Coding Today&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>When teams roll out AI development, the first instinct is to watch two numbers: <strong>how many people use AI, and how much code AI writes.</strong> Alibaba's handbook notes these are useful during cold start, but a measurement system built only around them goes astray: code written by AI isn't necessarily committed, committed code isn't necessarily released successfully, and released code doesn't necessarily deliver requirement value. The real question measurement must answer is not &quot;how much AI was used&quot; but &quot;what AI changed&quot;.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. A three-layer system</strong> (per Alibaba's handbook):</p>
+<ul>
+<li><strong>L3 Value delivery</strong>: requirement delivery cycle, change cycle, release frequency, AI vs non-AI delivery comparison. Verifies whether AI makes the business faster and more stable.</li>
+<li><strong>L2 Engineering quality</strong>: AI defect rate, rollbacks and rework, self-fixed defects, risk events. Ensures L1 growth doesn't come at the cost of quality.</li>
+<li><strong>L1 AI efficiency</strong>: coverage, sessions, tokens, AI lines, Skills, MCP, context assets. Drives real adoption and pinpoints tooling and context-engineering problems.</li>
+</ul>
+<p>The layers can't be read alone: L1 alone encourages &quot;AI for AI's sake&quot;; L2 alone becomes a quality audit; L3 alone can't explain where change came from. L1 proves AI entered the process, L2 proves quality risk is contained, L3 proves business results improved — together they form a complete evidence chain.</p>
+<p><strong>2. Alignment with DORA.</strong> L3 and L2 closely match the industry-standard DORA software delivery metrics:</p>
+<ul>
+<li><strong>Throughput</strong>: change lead time (commit to production deployment), deployment frequency, failed deployment recovery time.</li>
+<li><strong>Instability</strong>: change failure rate, deployment rework rate (the share of unplanned deployments caused by production incidents).</li>
+</ul>
+<p><strong>3. Attribution.</strong> The handbook describes lightweight hooks adapting various AI tools, normalizing into standard events, and attributing along Session → Commit → Change → Workitem.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>DORA metrics</strong>: the most widely used software delivery performance measures</li>
+<li><strong>2023 Copilot randomized controlled experiment</strong>: 55.8% faster on a well-bounded experimental task</li>
+<li><strong>2025 METR randomized controlled trial</strong>: experienced developers on familiar mature projects took 19% longer when allowed AI, yet afterwards still estimated they had been 20% faster</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>Single metrics create perverse incentives</strong>: the handbook notes install rate counts users who installed but show no effective development activity; sessions mistake ad hoc Q&amp;A for productivity; AI code share incentivizes useless generation.</li>
+<li><strong>No individual rankings</strong>: once you rank, teams optimize the metric rather than the real collaboration process.</li>
+<li><strong>Measure context assets too</strong>: whether Skills, MCP, Specs, README / runbooks, templates and checklists are reused, updated and verified.</li>
+<li><strong>Perception is unreliable</strong>: in METR's study developers expected a 24% speedup, estimated 20% afterwards, and were measured 19% slower. Use objective data.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;The higher the AI code share, the better.&quot;</strong> It measures usage, not value, and can incentivize useless generation.</li>
+<li><strong>&quot;A shorter delivery cycle proves AI works.&quot;</strong> It may also come from process changes or simpler requirements; attribution needs process evidence.</li>
+<li><strong>&quot;Surveys are enough.&quot;</strong> Perception and measurement can point in opposite directions.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2507.09089" target="_blank" rel="noopener noreferrer">Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity</a> <span class="rmeta">· Becker et al. (METR) · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2302.06590" target="_blank" rel="noopener noreferrer">The Impact of AI on Developer Productivity: Evidence from GitHub Copilot</a> <span class="rmeta">· Peng et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://dora.dev/guides/dora-metrics-four-keys/" target="_blank" rel="noopener noreferrer">DORA software delivery metrics</a> <span class="rmeta">· DORA · </span></li></ol></section>

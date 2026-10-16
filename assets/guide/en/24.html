@@ -1,0 +1,41 @@
+<h1>Spec-Driven: Clarify Before Building; Write Constraints and Assumptions Separately</h1>
+<blockquote>
+<p>Companion to diagram #24 · Chapter 4 &quot;AI Coding Today&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>The faster an agent writes code, the more a misunderstood requirement costs: in the wrong direction, more code means more rework. The spec-driven approach is to <strong>clarify the requirement into a verifiable specification first, then let the agent build</strong>. Alibaba's handbook offers one key technique: <strong>write &quot;constraints&quot; and &quot;assumptions&quot; separately</strong> — the Spec draws the boundary of &quot;what counts as correct&quot;, not the implementation path.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Don't assume the requirement is complete.</strong> The handbook notes that people writing requirements often omit default knowledge such as permission boundaries, concurrency handling and idempotency strategy, while AI lacks that organizational memory and can only guess or ignore it. A simple requirement like &quot;generate a public share link&quot; involves decisions on revocation, access control and data consistency. The team has AI actively ask about implicit business and technical decisions and records the answers as traceable Specs and Tasks, exposing risk at the cheapest stage of development.</p>
+<p><strong>2. Constraints vs assumptions.</strong></p>
+<ul>
+<li><strong>Constraints</strong>: data must not leave the domain, APIs must stay backward compatible, latency must not exceed a threshold. Keep them long-term and check them automatically where possible.</li>
+<li><strong>Assumptions</strong>: microservices or monolith, which caching strategy. These are hypotheses to be validated, and AI should be allowed to adjust them based on implementation and runtime feedback.</li>
+</ul>
+<p><strong>3. What a sufficient Spec contains.</strong> Combining the handbook and practitioner experience:</p>
+<ul>
+<li>The problem to solve and <strong>non-goals</strong></li>
+<li>Scope and priorities</li>
+<li>Constraints (written as checks where they can be automated)</li>
+<li>Key decisions and rationale</li>
+<li><strong>Acceptance criteria</strong> (ideally directly convertible to tests)</li>
+<li>Open questions</li>
+</ul>
+<p><strong>4. Know when to stop clarifying.</strong> One developer on X shared: use repeated questioning to pin down goals, constraints and trade-offs, and record them in a Spec or CONTEXT.md; once the remaining questions would no longer significantly change the implementation direction or acceptance result, start building — don't require planning every implementation detail upfront, or requirement alignment becomes a heavy process of its own. He also noted that heavy Spec- and TDD-centric Skills such as Superpowers consume a lot of tokens, and as models get stronger some once-useful constraints and processes are turning into noise.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>Plan-and-Solve (2023)</strong>: planning before executing reduces missing-step errors — the model-level counterpart of &quot;clarify before building&quot;</li>
+<li><strong>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em></strong>: Specs that separate constraints from assumptions</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>The Spec is also shared context for multiple agents</strong>: implementing and reviewing agents read the same Spec without rereading the whole previous conversation.</li>
+<li><strong>Acceptance criteria first</strong>: the Qwen user-growth team adopted TDD — fix requirement boundaries with failing tests, make them pass with a minimal implementation, then refactor under test protection.</li>
+<li><strong>Split complex requirements into independently acceptable issues</strong>; only parallelize parts that can proceed independently.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;The more detailed the Spec, the better.&quot;</strong> Hard-coding the implementation path removes the agent's room to adjust from feedback and makes the process heavy.</li>
+<li><strong>&quot;Clear requirements are the product manager's job.&quot;</strong> The handbook has AI ask proactively, moving clarification upfront as a team process.</li>
+<li><strong>&quot;With a Spec you don't need tests.&quot;</strong> The Spec defines what is correct; tests prove it was done correctly.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2305.04091" target="_blank" rel="noopener noreferrer">Plan-and-Solve Prompting: Improving Zero-Shot Chain-of-Thought Reasoning by Large Language Models</a> <span class="rmeta">· Wang et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li></ol></section>

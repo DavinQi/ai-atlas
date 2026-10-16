@@ -1,0 +1,39 @@
+<h1>Agent Components: LLM + Planning + Memory + Tools, Looping on Environment Feedback</h1>
+<blockquote>
+<p>Companion to diagram #11 · Chapter 2 &quot;Agent Design: Principles &amp; Patterns&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>There is no single agreed definition of &quot;agent&quot;. In <em>Building effective agents</em>, Anthropic calls every LLM-based automation an agentic system and draws one key distinction: <strong>workflows</strong> orchestrate LLMs and tools through predefined code paths, while <strong>agents</strong> let the LLM dynamically direct its own process and tool use, keeping control over how it accomplishes the task.</p>
+<p>Lilian Weng's 2023 survey <em>LLM Powered Autonomous Agents</em> gives a widely cited framework: the LLM acts as the agent's &quot;brain&quot;, complemented by three key components — <strong>Planning</strong>, <strong>Memory</strong> and <strong>Tool Use</strong>.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Planning.</strong> Break a large task into manageable subgoals, and use self-reflection to learn from past actions and correct mistakes.</p>
+<p><strong>2. Memory.</strong> Weng's split:</p>
+<ul>
+<li><strong>Short-term memory</strong>: everything in context (in-context learning), bounded by the context window.</li>
+<li><strong>Long-term memory</strong>: an external vector store with fast retrieval to retain and recall information over long periods.</li>
+</ul>
+<p><strong>3. Tools.</strong> Call external APIs for information missing from the weights: live data, code execution, private databases. Toolformer showed a model can teach itself, in a self-supervised way, when and how to call APIs; CodeAct proposed executable Python code as a unified action space, reporting up to 20% higher success rate than JSON/text actions on its benchmark.</p>
+<p><strong>4. The environment feedback loop.</strong> Anthropic stresses that during execution an agent must get &quot;ground truth&quot; from the environment at each step (tool results, code execution) to assess progress, and may pause for human feedback at checkpoints or when blocked; stopping conditions such as a maximum number of iterations should be set. Their conclusion: agents are usually simple to implement — <strong>they are essentially LLMs using tools based on environmental feedback in a loop</strong> — so designing the toolset and its documentation is crucial.</p>
+<p>The CoALA framework gives a more formal, cognitive-science view: modular memory components, a structured action space for interacting with internal memory and the external environment, and a generalized decision process for choosing actions.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2022 ReAct</strong>: interleaving reasoning and acting</li>
+<li><strong>2023 Toolformer</strong>: models teach themselves to use tools</li>
+<li><strong>2023 Generative Agents</strong>: simulated agents with memory streams, reflection and planning</li>
+<li><strong>2023 Lilian Weng's survey</strong>: the planning / memory / tools framework</li>
+<li><strong>2023 CoALA</strong>: cognitive architectures for language agents</li>
+<li><strong>2024 Anthropic, <em>Building effective agents</em></strong>: workflow vs agent, and a pattern catalogue</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>Start with the simplest solution</strong>: Anthropic advises finding the simplest solution and adding complexity only when needed; many applications only need a single optimized LLM call with retrieval and in-context examples. Agentic systems typically trade latency and cost for better task performance.</li>
+<li><strong>Use frameworks with care</strong>: they add abstraction layers that obscure the underlying prompts and responses and make debugging harder. Start by calling LLM APIs directly — many patterns take a few lines of code.</li>
+<li><strong>Three principles</strong>: keep the design simple; make the agent's planning steps explicit for transparency; carefully craft the agent-computer interface (ACI) through thorough tool documentation and testing. SWE-agent likewise showed that interfaces designed specifically for agents significantly improve performance on software-engineering tasks.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;An agent is a chatbot with tools.&quot;</strong> The real difference is who decides control flow: code in a workflow, the model in an agent.</li>
+<li><strong>&quot;More autonomy is always better.&quot;</strong> Autonomy means higher cost and compounding errors; Anthropic recommends extensive testing in sandboxes with guardrails.</li>
+<li><strong>&quot;Memory means stuffing all history into context.&quot;</strong> Context is short-term memory; long-term memory needs external storage and retrieval.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2309.02427" target="_blank" rel="noopener noreferrer">Cognitive Architectures for Language Agents</a> <span class="rmeta">· Sumers et al. · 2023</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2402.01030" target="_blank" rel="noopener noreferrer">Executable Code Actions Elicit Better LLM Agents</a> <span class="rmeta">· Wang et al. · 2024</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2304.03442" target="_blank" rel="noopener noreferrer">Generative Agents: Interactive Simulacra of Human Behavior</a> <span class="rmeta">· Park et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://lilianweng.github.io/posts/2023-06-23-agent/" target="_blank" rel="noopener noreferrer">LLM Powered Autonomous Agents</a> <span class="rmeta">· Lilian Weng · 2023</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener noreferrer">ReAct: Synergizing Reasoning and Acting in Language Models</a> <span class="rmeta">· Yao et al. · 2022</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2405.15793" target="_blank" rel="noopener noreferrer">SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering</a> <span class="rmeta">· Yang et al. · 2024</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2302.04761" target="_blank" rel="noopener noreferrer">Toolformer: Language Models Can Teach Themselves to Use Tools</a> <span class="rmeta">· Schick et al. · 2023</span></li></ol></section>

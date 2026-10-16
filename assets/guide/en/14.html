@@ -1,0 +1,37 @@
+<h1>Memory and RAG: Put the Right Knowledge into Context at the Right Time</h1>
+<blockquote>
+<p>Companion to diagram #14 · Chapter 2 &quot;Agent Design: Principles &amp; Patterns&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>Model weights are fixed after deployment and the context window is finite. For an agent to use private knowledge, fresh information and long-term experience, it must solve one problem: <strong>put the right content into context at the right time.</strong> Retrieval-augmented generation (RAG) and layered memory are the two main tools. Anthropic frames this as &quot;context engineering&quot;: context is a finite resource with diminishing marginal returns, and good context engineering means finding the smallest set of high-signal tokens that maximizes the likelihood of the desired outcome.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Basic RAG.</strong> Lewis et al. (2020) combined pre-trained parametric memory (model weights) with non-parametric memory (a retrievable document index) for generation. The paper notes this helps provide provenance for answers and makes knowledge easier to update. Typical flow:</p>
+<pre><code>Docs → chunk → embed → index
+Query → retrieve Top-K → rerank → insert into prompt → generate
+</code></pre>
+<p><strong>2. Evolution.</strong> The survey by Gao et al. divides RAG into three generations: Naive RAG (retrieve-then-generate), Advanced RAG (pre- and post-retrieval optimizations such as query rewriting and reranking) and Modular RAG (composable pipelines). For global questions like &quot;what are the main themes in this corpus?&quot;, plain retrieval does poorly; Microsoft's GraphRAG first uses an LLM to build an entity knowledge graph, pre-generates community summaries for groups of related entities, and at query time aggregates partial answers from each community.</p>
+<p><strong>3. Layered memory.</strong> MemGPT borrows hierarchical memory management from operating systems, moving data between fast and slow tiers to give an agent the effect of &quot;more memory&quot; within a limited window — for analyzing documents far larger than the window and for long multi-session chat. Generative Agents store a complete record of experiences in natural language, synthesize them over time into higher-level reflections, and retrieve them dynamically to plan.</p>
+<p><strong>4. Long context does not remove the need for retrieval.</strong> The &quot;Lost in the Middle&quot; study found performance is highest when relevant information is at the beginning or end of the input and degrades significantly when it sits in the middle of long contexts — even for explicitly long-context models. Anthropic also notes the &quot;context rot&quot; seen in needle-in-a-haystack style evaluations: as the number of tokens in context grows, the model's ability to accurately recall information from it decreases.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2020 RAG</strong> (Lewis et al.)</li>
+<li><strong>2023 Lost in the Middle</strong></li>
+<li><strong>2023 MemGPT</strong>, <strong>Generative Agents</strong></li>
+<li><strong>2023 RAG survey</strong> (Naive / Advanced / Modular)</li>
+<li><strong>2024 GraphRAG</strong></li>
+<li><strong>2025 Anthropic, <em>Effective context engineering for AI agents</em></strong></li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>&quot;Just-in-time&quot; context</strong>: Anthropic observes that more agents no longer pre-process all relevant data upfront; they keep lightweight identifiers (file paths, stored queries, links) and load data at runtime with tools. Coding agents navigating a codebase with <code>grep</code> and <code>glob</code> are the typical example.</li>
+<li><strong>Three techniques for long tasks</strong>: compaction (summarize a conversation nearing the limit and restart with a new window), structured note-taking (the agent writes progress to files outside the context), and multi-agent architectures (subagents explore in their own contexts and return only the distilled essentials).</li>
+<li><strong>Retrieval quality sets the ceiling</strong>: chunk size, metadata filtering and reranking often matter more than a bigger model.</li>
+<li><strong>Put key content at the start and end</strong>, exploiting the &quot;Lost in the Middle&quot; pattern.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;With a big enough window, RAG is unnecessary.&quot;</strong> Long contexts suffer mid-context degradation and context rot, and cost grows with length.</li>
+<li><strong>&quot;RAG eliminates hallucination.&quot;</strong> It reduces ungrounded generation but still fails when retrieval is wrong or the documents themselves are wrong.</li>
+<li><strong>&quot;Memory means a vector store.&quot;</strong> Memory also includes summaries, structured notes and rules files; what to select and when to put it in context is what matters.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a> <span class="rmeta">· Lewis et al · 2020</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2304.03442" target="_blank" rel="noopener noreferrer">Generative Agents: Interactive Simulacra of Human Behavior</a> <span class="rmeta">· Park et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener noreferrer">Effective context engineering for AI agents</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2404.16130" target="_blank" rel="noopener noreferrer">From Local to Global: A Graph RAG Approach to Query-Focused Summarization</a> <span class="rmeta">· Edge et al. · 2024</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2307.03172" target="_blank" rel="noopener noreferrer">Lost in the Middle: How Language Models Use Long Contexts</a> <span class="rmeta">· Liu et al. · 2023</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2310.08560" target="_blank" rel="noopener noreferrer">MemGPT: Towards LLMs as Operating Systems</a> <span class="rmeta">· Packer et al. · 2023</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2312.10997" target="_blank" rel="noopener noreferrer">Retrieval-Augmented Generation for Large Language Models: A Survey</a> <span class="rmeta">· Gao et al. · 2023</span></li></ol></section>

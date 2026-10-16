@@ -1,0 +1,62 @@
+<h1>Layered Verification: Agents Pass the Machine Gates Before Reaching Humans</h1>
+<blockquote>
+<p>Companion to diagram #25 · Chapter 4 &quot;AI Coding Today&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>When agents produce far faster than humans can review, humans become the bottleneck. The fix is not making people read faster but <strong>letting machines judge everything they can</strong>, leaving to humans only what machines cannot reliably decide. Alibaba's handbook calls this a &quot;layered verification system&quot; and holds that &quot;our main battlefield is verification and environments&quot;.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>Three feedback layers</strong> (per Alibaba's handbook):</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Content</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Seconds</td>
+<td>Compile, type check, unit tests</td>
+<td>High-frequency autonomous iteration</td>
+</tr>
+<tr>
+<td>Minutes</td>
+<td>Integration, contract tests, browser automation</td>
+<td>More realistic behavior</td>
+</tr>
+<tr>
+<td>Human</td>
+<td>Business value, UX, ethical boundaries</td>
+<td>What machines can't reliably judge</td>
+</tr>
+</tbody>
+</table>
+<p>Lower in the pyramid is faster, cheaper and more frequent; higher is slower, costlier and rarer. Agents should self-correct in the bottom loops and move up only after passing the lower layers.</p>
+<p><strong>Why it works.</strong> Anthropic notes agents need ground truth from the environment at every step to assess progress. DeepSeek-R1 likewise used only rule-based rewards in training (answer checking, compilation and tests) because neural reward models are prone to reward hacking. The same logic applies at usage time: executable checks are objective signals; a model's self-assessment is not.</p>
+<p><strong>What you test matters more than how much.</strong> The Qwen team in the handbook focuses tests on requirement boundaries, key branches and known failure modes rather than chasing coverage. They found reliability is rarely a single-point issue: with concurrent requests creating duplicate agent sandboxes, they needed not just API-level idempotency but &quot;chain-level idempotency&quot; spanning the request entry, database transactions, message publishing and consumption.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2021 HumanEval</strong>: measuring functional correctness with unit tests</li>
+<li><strong>2023 Reflexion</strong>: using test feedback to improve the next attempt</li>
+<li><strong>2024 SWE-agent</strong>: making it easy for the agent to run tests is a key design element</li>
+<li><strong>2025 DeepSeek-R1</strong>: verifiable rewards</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<p><strong>Build an end-to-end test environment for agents.</strong> One developer on X shared four things:</p>
+<ol>
+<li>Familiarize the agent with the environment: one-command test environment startup and test data creation, explicit versions, test accounts and permissions, plus cleanup and reset.</li>
+<li>Let the agent operate business systems: run real business flows through the browser, APIs or CLI.</li>
+<li>Let the agent easily query tables and logs: a read-only database MCP to confirm persisted results, and a log Skill and traces to check chain state.</li>
+<li>Turn tedious but stable processes into scripts and Skills.</li>
+</ol>
+<p>His conclusion: AI is good at writing test cases, but without an end-to-end environment you still hit unexpected errors after release.</p>
+<p><strong>Results.</strong> The Qwen user-growth team's longitudinal comparison from May to August 2026: average delivery cycle halved, defects per thousand lines down 70%, change failure rate down more than 90%. The handbook's commentary notes quality improved more than speed, suggesting the main gains came from verification mechanisms rather than generation speed.</p>
+<p><strong>What humans review.</strong> The developer above no longer reads all generated code line by line; he mainly checks test results and core business logic — on the condition that each MR is small and the full business path is verified step by step.</p>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;High coverage means safe.&quot;</strong> Chasing coverage makes AI generate lots of meaningless assertions; covering failure modes is what matters.</li>
+<li><strong>&quot;Another model's review counts as verification.&quot;</strong> Model review supplements but cannot replace executable checks.</li>
+<li><strong>&quot;More human review is safer.&quot;</strong> Human attention is limited and should focus on what machines cannot judge.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2501.12948" target="_blank" rel="noopener noreferrer">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a> <span class="rmeta">· DeepSeek-AI · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2405.15793" target="_blank" rel="noopener noreferrer">SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering</a> <span class="rmeta">· Yang et al. · 2024</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2303.11366" target="_blank" rel="noopener noreferrer">Reflexion: Language Agents with Verbal Reinforcement Learning</a> <span class="rmeta">· Shinn et al. · 2023</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2107.03374" target="_blank" rel="noopener noreferrer">Evaluating Large Language Models Trained on Code</a> <span class="rmeta">· Chen et al. · 2021</span></li><li><span class="rb rb-doc">Docs</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-x">X post</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li></ol></section>

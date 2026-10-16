@@ -1,0 +1,62 @@
+<h1>分层验证：让 Agent 先过机器的关，再来找人</h1>
+<blockquote>
+<p>对应图 #25 · 第四章「当前如何做 AI 编程」</p>
+</blockquote>
+<h2>概述</h2>
+<p>当 Agent 的产出速度远超人的审阅速度时，人就成了瓶颈。解决办法不是让人看得更快，而是<strong>让机器先把能判断的都判断掉</strong>，只把机器无法可靠裁决的问题留给人。阿里巴巴实践手册把这称为「分层验证体系」，并认为「我们的主战场在验证与环境」。</p>
+<h2>核心机制</h2>
+<p><strong>三层反馈</strong>（据阿里巴巴实践手册）：</p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>内容</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>秒级</td>
+<td>编译、类型检查、单元测试</td>
+<td>高频自主迭代</td>
+</tr>
+<tr>
+<td>分钟级</td>
+<td>集成测试、契约测试、浏览器自动化</td>
+<td>覆盖更真实的行为</td>
+</tr>
+<tr>
+<td>人工</td>
+<td>业务价值、用户体验、伦理边界</td>
+<td>机器无法可靠裁决的部分</td>
+</tr>
+</tbody>
+</table>
+<p>金字塔越往下越快、越便宜、越频繁；越往上越慢、越贵、越少。Agent 应该在底层循环中自我纠错，只有通过了下层，才进入上层。</p>
+<p><strong>为什么有效？</strong> Anthropic 指出 Agent 每一步都需要从环境获得「真实反馈」来评估进展。DeepSeek-R1 在训练中也明确只用规则奖励（答案核对、编译和测试），因为神经网络奖励模型容易被钻空子。同样的道理适用于使用阶段：可执行的检查是客观信号，模型的自我评价不是。</p>
+<p><strong>测什么比测多少更重要。</strong> 手册中千问团队的经验：测试重点覆盖需求边界、关键分支和已知故障模式，而不是单纯追求覆盖率。他们发现可靠性往往不是单点问题：并发场景下 Agent 沙箱重复创建，需要保证的不只是接口层幂等，还包括请求入口、数据库事务、消息发布和消费执行共同形成的「链路幂等」。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2021 HumanEval</strong>：用单元测试衡量代码功能正确性</li>
+<li><strong>2023 Reflexion</strong>：利用测试反馈改进下一次尝试</li>
+<li><strong>2024 SWE-agent</strong>：让 Agent 能方便地运行测试是关键设计之一</li>
+<li><strong>2025 DeepSeek-R1</strong>：可验证奖励</li>
+</ul>
+<h2>工程实践与数字</h2>
+<p><strong>为 Agent 搭建端到端测试环境。</strong> 一位开发者在 X 上分享了四件事：</p>
+<ol>
+<li>让 Agent 熟悉环境：一键启动测试环境、创建测试数据，明确版本、测试账号和权限，并提供清理与重置能力。</li>
+<li>让 Agent 能操作业务系统：通过浏览器、API 或 CLI 执行真实业务流程。</li>
+<li>让 Agent 方便地查库表和日志：只读数据库 MCP 确认落库结果，日志 Skill 和 Trace 查询链路状态。</li>
+<li>把繁琐但稳定的流程写成脚本和 Skill。</li>
+</ol>
+<p>他的结论是：AI 很擅长写测试用例，但没有端到端环境时，上线后仍会遇到预期之外的错误。</p>
+<p><strong>成效。</strong> 千问用增团队 2026 年 5 月至 8 月的纵向对比：平均交付周期缩短一半，千行代码缺陷率下降 70%，变更失败率下降 90% 以上。手册的解读指出，质量指标改善幅度大于速度指标，说明主要收益来自验证机制而非生成速度。</p>
+<p><strong>人审阅什么。</strong> 前述开发者不再逐行阅读所有生成的代码，而是主要看测试结果和核心业务逻辑，前提是每次 MR 范围足够小，并逐步验证完整业务路径。</p>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「覆盖率高就安全。」</strong> 追求覆盖率会让 AI 生成大量无意义断言，覆盖故障模式才是关键。</li>
+<li><strong>「让另一个模型审查就算验证。」</strong> 模型审查是补充，不能替代可执行的检查。</li>
+<li><strong>「人工审查越多越安全。」</strong> 人的注意力有限，应集中在机器无法判断的部分。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2501.12948" target="_blank" rel="noopener noreferrer">DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</a> <span class="rmeta">· DeepSeek-AI · 2025</span></li><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2405.15793" target="_blank" rel="noopener noreferrer">SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering</a> <span class="rmeta">· Yang et al. · 2024</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2303.11366" target="_blank" rel="noopener noreferrer">Reflexion: Language Agents with Verbal Reinforcement Learning</a> <span class="rmeta">· Shinn et al. · 2023</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2107.03374" target="_blank" rel="noopener noreferrer">Evaluating Large Language Models Trained on Code</a> <span class="rmeta">· Chen et al. · 2021</span></li><li><span class="rb rb-doc">文档</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li></ol></section>

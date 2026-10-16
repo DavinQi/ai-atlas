@@ -1,0 +1,43 @@
+<h1>编排层：一个 Agent 当项目经理，人只守关卡</h1>
+<blockquote>
+<p>对应图 #32 · 第五章「多 Agent 编程」</p>
+</blockquote>
+<h2>概述</h2>
+<p>当同时运行的 Agent 多到人盯不过来时，就需要<strong>编排层</strong>：让一个 Agent 担任「项目经理」，负责拆解任务、分派给工作者 Agent、跟踪进度、汇总结果；人只在关键的<strong>决策关卡</strong>介入。这正是 Anthropic 所说的「编排者—工作者」模式：中心 LLM 动态拆解任务、委派给工作者 LLM 并综合结果，适合无法预知子任务的编码任务。</p>
+<h2>核心机制</h2>
+<p><strong>1. 子 Agent：编排的基本单元。</strong> 主流工具都已内置：</p>
+<ul>
+<li><strong>Claude Code</strong>：子 Agent 是带 YAML 前置元数据的 Markdown 文件；每个子 Agent 在自己的上下文窗口中运行，有自定义系统提示、特定工具权限和独立权限设置。</li>
+<li><strong>Codex</strong>：可以并行派生专门的 Agent，再把结果汇总到一个响应中；当前版本默认启用子 Agent 工作流。</li>
+<li><strong>Cursor</strong>：子 Agent 是主 Agent 可以委派任务的专门助手，每个都在自己的上下文中工作并把结果返回给父 Agent，用于拆解复杂任务、并行工作和保持主会话上下文干净。</li>
+</ul>
+<p><strong>2. Orca 的编排层。</strong> Orca 文档把编排描述为结构化的多 Agent 层（实验性功能），核心模型包括：</p>
+<ul>
+<li><strong>Run</strong>：持久的命名空间和协调者收件箱</li>
+<li><strong>Task</strong>：带规格说明、依赖和状态的工作项，可组成 DAG</li>
+<li><strong>Dispatch</strong>：任务在某个终端上的一次执行尝试</li>
+<li><strong>Message</strong>：<code>worker_done</code>、<code>escalation</code>、<code>question</code>、<code>heartbeat</code> 等消息</li>
+<li><strong>Decision gate</strong>：由协调者创建的问题，在决策记录之前阻塞相应任务</li>
+</ul>
+<p>工作者的契约包括：无论成败都必须恰好发送一次 <code>worker_done</code> 并注明结果；附上做了什么、发现了什么、还剩什么的摘要；长时间工作时发送心跳；有阻塞问题时通过协调者提问，而不是在本地等待。</p>
+<p><strong>3. 人守关卡。</strong> 关卡放在不可逆或高风险的步骤上：合并共享组件、数据库迁移、发布。X 上分享 Orca 用法的开发者举例：上线前让一个 Agent 当项目经理，带两个 Agent 分头审查前后端，人只看最后的汇总；数据库迁移那一步设一道关卡，必须人拍板。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2023 AutoGen</strong>：多 Agent 对话框架</li>
+<li><strong>2024 Anthropic 编排者—工作者模式</strong></li>
+<li><strong>2025 Anthropic 多 Agent 研究系统</strong>：主 Agent 规划并派生并行子 Agent</li>
+<li><strong>Claude Code / Codex / Cursor 子 Agent</strong>、<strong>Orca Orchestration</strong></li>
+</ul>
+<h2>工程实践与数字</h2>
+<ul>
+<li><strong>完成信号要结构化</strong>：Orca 要求完成消息同时带任务 ID 和执行 ID，避免过期的重试错误地完成别的任务。</li>
+<li><strong>编排者本身也是 Agent</strong>：前述开发者指出，Orca 不光给人用也给 Agent 用，Agent 可以自己开新工作区、读别的窗口的报错，派活的「项目经理」就是靠这套能力分配任务、收集结果。</li>
+<li><strong>从小处开始</strong>：Anthropic 提醒 LLM Agent 还不擅长实时协调和委派，先用两三个工作者、边界清晰的任务试点。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「有了编排者，人可以完全退出。」</strong> 高风险决策仍需人负责，关卡是设计的一部分。</li>
+<li><strong>「编排层越复杂越强。」</strong> 每层编排都增加 token 和出错点，按需增加。</li>
+<li><strong>「工作者说完成了就是完成了。」</strong> 完成要以验证结果为准，而不是 Agent 的自我报告。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2308.08155" target="_blank" rel="noopener noreferrer">AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation</a> <span class="rmeta">· Wu et al. · 2023</span></li><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener noreferrer">How we built our multi-agent research system</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-doc">文档</span><a href="https://code.claude.com/docs/en/sub-agents" target="_blank" rel="noopener noreferrer">Claude Code docs: Subagents</a> <span class="rmeta">· Anthropic · 2026</span></li><li><span class="rb rb-doc">文档</span><a href="https://developers.openai.com/codex/subagents" target="_blank" rel="noopener noreferrer">Codex docs: Subagents</a> <span class="rmeta">· OpenAI · 2026</span></li><li><span class="rb rb-doc">文档</span><a href="https://cursor.com/docs/subagents" target="_blank" rel="noopener noreferrer">Cursor docs: Subagents</a> <span class="rmeta">· Cursor · 2026</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/CopperForgeAI/status/2108830306014998719" target="_blank" rel="noopener noreferrer">Orca 从入门到精通 (Orca from beginner to expert)</a> <span class="rmeta">· @CopperForgeAI · 2026-10-10</span></li><li><span class="rb rb-doc">文档</span><a href="https://onorca.dev/docs/cli/orchestration" target="_blank" rel="noopener noreferrer">Orca CLI: Orchestration</a> <span class="rmeta">· Stably · 2026</span></li></ol></section>

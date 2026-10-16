@@ -1,0 +1,44 @@
+<h1>The Evolution of Programming: From Syntax, to Code, to Tasks</h1>
+<blockquote>
+<p>Companion to diagram #17 · Chapter 3 &quot;The Evolution of Programming&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>The history of programming can be read as a history of &quot;what humans hand over to machines&quot;. Each leap removes a layer of detail from human attention: high-level languages freed people from machine instructions, IDEs and code completion reduced API memorization, AI completion cut boilerplate typing, and coding agents begin to shift people from &quot;writing code&quot; to &quot;defining tasks and accepting results&quot;.</p>
+<h2>Core Mechanisms</h2>
+<p>The timeline falls into three stages, each with a different human focus:</p>
+<p><strong>1. Focus on syntax (high-level languages and IDEs).</strong></p>
+<ul>
+<li><strong>1957, FORTRAN</strong>: Backus et al. published <em>The FORTRAN Automatic Coding System</em>; a high-level language translated formulas into machine instructions.</li>
+<li><strong>1995, Java</strong>: released in May 1995 as a core component of Sun's Java platform — &quot;write once, run anywhere&quot;, with the JVM hiding platform differences.</li>
+<li><strong>1996, IntelliSense</strong>: Microsoft's code completion first appeared in a mainstream Microsoft product in 1996 (Visual Basic 5.0 Control Creation Edition), using static analysis to suggest members and parameters.</li>
+</ul>
+<p><strong>2. Focus on code (AI completion and AI IDEs).</strong></p>
+<ul>
+<li><strong>2021, Codex and Copilot</strong>: OpenAI's Codex paper reports that on the newly released HumanEval benchmark Codex solved 28.8% of problems versus 0% for GPT-3; the paper also says GitHub Copilot is powered by a production version of Codex. On June 29 of that year GitHub launched the Copilot technical preview as an &quot;AI pair programmer&quot;.</li>
+<li>AI IDEs such as Cursor followed, extending the model from &quot;completion at the cursor&quot; to deep integration with the whole editor, multiple files and chat.</li>
+</ul>
+<p><strong>3. Focus on tasks (coding agents).</strong></p>
+<ul>
+<li><strong>February 24, 2025</strong>: Anthropic released the command-line agentic coding tool Claude Code alongside Claude 3.7 Sonnet.</li>
+<li><strong>April 2025</strong>: OpenAI open-sourced Codex CLI, a lightweight coding agent that runs in the local terminal.</li>
+<li>Agents no longer sit in the editor waiting for line-by-line instructions; they advance tasks autonomously in an &quot;act — verify — correct&quot; loop.</li>
+</ul>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2021 Codex / HumanEval</strong></li>
+<li><strong>2023 SWE-bench</strong>: 2,294 tasks from real GitHub issues across 12 popular Python repositories; the best model at release, Claude 2, solved only 1.96%</li>
+<li><strong>2024 SWE-agent</strong>: a computer interface designed for agents, reaching 12.5% pass@1 on SWE-bench</li>
+<li><strong>November 2024: MCP announced</strong></li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>Benchmark evolution mirrors the shift in focus</strong>: HumanEval tests &quot;write a function from a docstring&quot;; SWE-bench tests &quot;fix an issue in a real codebase&quot;, requiring coordinated changes across functions and files, interaction with an execution environment, and very long contexts.</li>
+<li>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em> (annotated edition) records that by mid-2026 mainstream models' pass rate on SWE-bench Verified had risen from under 30% two years earlier to around 80%; industry consensus shifted accordingly — the bottleneck is no longer generating code but requirements understanding, environment setup, testing and verification, release and operations, which make up 70%–80% of the development lifecycle.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;AI makes programming skills unimportant.&quot;</strong> Each rise in abstraction moves the weight to higher-level abilities: problem definition, architectural judgment and verification design.</li>
+<li><strong>&quot;High benchmark scores mean it can deliver.&quot;</strong> The handbook states plainly that high benchmark scores do not equal real delivery capability in production.</li>
+<li><strong>&quot;An agent is just an enhanced Copilot.&quot;</strong> The interaction models differ: completion is human-led, accepted line by line; with an agent, the human gives a task and reviews the result.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2405.15793" target="_blank" rel="noopener noreferrer">SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering</a> <span class="rmeta">· Yang et al. · 2024</span></li><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/news/model-context-protocol" target="_blank" rel="noopener noreferrer">Introducing the Model Context Protocol</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/news/claude-3-7-sonnet" target="_blank" rel="noopener noreferrer">Claude 3.7 Sonnet and Claude Code</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://en.wikipedia.org/wiki/Code_completion" target="_blank" rel="noopener noreferrer">Code completion (Wikipedia; IntelliSense history)</a> <span class="rmeta">· Wikipedia · </span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2107.03374" target="_blank" rel="noopener noreferrer">Evaluating Large Language Models Trained on Code</a> <span class="rmeta">· Chen et al. · 2021</span></li><li><span class="rb rb-doc">Docs</span><a href="https://en.wikipedia.org/wiki/Fortran" target="_blank" rel="noopener noreferrer">Fortran (Wikipedia)</a> <span class="rmeta">· Wikipedia · </span></li><li><span class="rb rb-doc">Docs</span><a href="https://github.blog/news-insights/product-news/introducing-github-copilot-ai-pair-programmer/" target="_blank" rel="noopener noreferrer">Introducing GitHub Copilot: your AI pair programmer</a> <span class="rmeta">· Nat Friedman (GitHub) · 2021</span></li><li><span class="rb rb-doc">Docs</span><a href="https://en.wikipedia.org/wiki/Java_(programming_language)" target="_blank" rel="noopener noreferrer">Java (programming language) (Wikipedia)</a> <span class="rmeta">· Wikipedia · </span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2310.06770" target="_blank" rel="noopener noreferrer">SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</a> <span class="rmeta">· Jimenez et al. · 2023</span></li><li><span class="rb rb-doc">Docs</span><a href="https://github.com/openai/codex" target="_blank" rel="noopener noreferrer">openai/codex (Codex CLI repository)</a> <span class="rmeta">· OpenAI · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li></ol></section>

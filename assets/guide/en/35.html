@@ -1,0 +1,65 @@
+<h1>The AIOps Self-Healing Loop: Low Risk Runs Automatically, High Risk Goes to a Human</h1>
+<blockquote>
+<p>Companion to diagram #35 · Chapter 6 &quot;How AI Reshapes the Dev Lifecycle&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>Plugging agents into operations can form a self-healing loop: <strong>detect → collect evidence → diagnose → generate a fix → verify → release → observe</strong>. The key design question is not how much agents can fix but <strong>tiering by risk</strong>: low-risk, quickly reversible actions can run automatically; high-risk, irreversible actions must go through a human.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Each step of the loop:</strong></p>
+<ul>
+<li><strong>Detect</strong>: alerts, error rates, user reports, or CI failures.</li>
+<li><strong>Evidence</strong>: following the troubleshooting evidence chain, collect the TraceId, logs, upstream/downstream state, code location and recent changes first (see Chapter 4).</li>
+<li><strong>Diagnose</strong>: obvious errors are located directly by a diagnostic agent; escalate when evidence is insufficient or conflicting.</li>
+<li><strong>Fix</strong>: generate a patch together with a regression test that reproduces the problem.</li>
+<li><strong>Verify</strong>: layered verification, passing the machine gates first.</li>
+<li><strong>Release and observe</strong>: progressive rollout, watch key metrics, roll back on anomalies.</li>
+</ul>
+<p><strong>2. Risk tiers.</strong> OWASP's mitigations explicitly call for human-in-the-loop controls on privileged operations, with human approval for high-risk actions, and for giving the application its own tokens under least privilege. The MCP spec likewise requires explicit user consent before tools are invoked. A practical tiering:</p>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Examples</th>
+<th>Handling</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Low</td>
+<td>Restart stateless instances, scale out, roll back to previous version</td>
+<td>Auto-execute and notify</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>Config changes, small code fixes</td>
+<td>Auto-generate, one-click human approval</td>
+</tr>
+<tr>
+<td>High</td>
+<td>DB migrations, permission changes, money-related</td>
+<td>Human must decide</td>
+</tr>
+</tbody>
+</table>
+<p><strong>3. Progressive rollout.</strong> In its multi-agent system Anthropic uses &quot;rainbow deployments&quot;: old and new versions run side by side and traffic shifts gradually from old to new, so updates don't disrupt running agents. The same idea applies to agent-generated fixes: canary, observe, then widen.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>ReAct (2022)</strong>: interacting with the environment to gather information mitigates hallucination</li>
+<li><strong>Google SRE Book</strong>: error budgets, blameless postmortems</li>
+<li><strong>OWASP LLM01 (2025)</strong>: least privilege and human approval</li>
+<li><strong>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em></strong>: TraceId evidence chains and tiered diagnosis</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>Human nodes swallow automation gains</strong>: the handbook records that auto-fixed bugs exceeded 60%, yet the same-day bug resolution rate rose only from 53% to at most 63%, because triggering and checking depended on people. To truly close the loop, triggering and low-risk checks must be automated too.</li>
+<li><strong>The last mile has little margin for error</strong>: the handbook notes that builds, integration testing, canary releases, production verification and failure recovery involve real environments, real data and real users, demanding sandbox isolation, credential management, guardrails and observability far beyond today's level.</li>
+<li><strong>Give agents read-only access first</strong>: build trust in diagnosis, then gradually open low-risk write operations.</li>
+<li><strong>Leave a trace for every automated action</strong>: who (which agent), on whose behalf, based on which task, did what.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;Self-healing means fully automatic.&quot;</strong> Risk tiers and human gates are core components of a self-healing system.</li>
+<li><strong>&quot;Once tests pass after the fix, roll it out to everyone.&quot;</strong> Production verification needs progressive rollout and observation.</li>
+<li><strong>&quot;Agents err too often to use in operations.&quot;</strong> The key is limiting their scope so errors are reversible and auditable.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener noreferrer">ReAct: Synergizing Reasoning and Acting in Language Models</a> <span class="rmeta">· Yao et al. · 2022</span></li><li><span class="rb rb-doc">Docs</span><a href="https://modelcontextprotocol.io/specification/2025-06-18" target="_blank" rel="noopener noreferrer">Model Context Protocol Specification (2025-06-18)</a> <span class="rmeta">· MCP project · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank" rel="noopener noreferrer">How we built our multi-agent research system</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://genai.owasp.org/llmrisk/llm01-prompt-injection/" target="_blank" rel="noopener noreferrer">LLM01:2025 Prompt Injection</a> <span class="rmeta">· OWASP Gen AI Security Project · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-doc">Docs</span><a href="https://sre.google/sre-book/postmortem-culture/" target="_blank" rel="noopener noreferrer">Site Reliability Engineering, Ch. 15: Postmortem Culture</a> <span class="rmeta">· Google (Beyer et al., eds.) · 2016</span></li><li><span class="rb rb-doc">Docs</span><a href="https://sre.google/sre-book/embracing-risk/" target="_blank" rel="noopener noreferrer">Site Reliability Engineering, Ch. 3: Embracing Risk</a> <span class="rmeta">· Google (Beyer et al., eds.) · 2016</span></li></ol></section>

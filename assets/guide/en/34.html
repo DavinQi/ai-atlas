@@ -1,0 +1,35 @@
+<h1>Traditional CI/CD: Pipelines Run Automatically, Judgment Stays with Humans</h1>
+<blockquote>
+<p>Companion to diagram #34 · Chapter 6 &quot;How AI Reshapes the Dev Lifecycle&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>Continuous integration and continuous delivery (CI/CD) turned build, test and deploy into automatically running pipelines — one of the most important advances in software engineering over the past decade and more. But in traditional CI/CD and operations, <strong>execution is automatic while judgment stays with humans</strong>: who looks into why a test failed? Who locates the fault when an alert fires? Should a release continue? How is an incident reviewed afterwards? All of these depend on engineers' experience.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Pipeline automation.</strong> A typical flow: commit → build → unit tests → integration tests → artifact → staging → canary → production. The release engineering chapter of Google's SRE Book stresses two principles: teams should be able to release on their own (self-service), and builds should be &quot;hermetic&quot; — insensitive to the libraries and software installed on the build machine — so they are reproducible.</p>
+<p><strong>2. Where humans provide judgment:</strong></p>
+<ul>
+<li>Analyzing test failures and build errors</li>
+<li>Alert triage and fault localization</li>
+<li>Deciding to continue, pause or roll back a release</li>
+<li>Incident retrospectives and improvement actions</li>
+</ul>
+<p><strong>3. Toil.</strong> The SRE Book defines toil as work tied to running a production service that is manual, repetitive, automatable, tactical, devoid of enduring value, and that scales linearly as the service grows. Google's goal is to keep each SRE's toil below 50% of their time, with at least half spent on engineering work that reduces future toil or adds service features; the book cites quarterly surveys showing Google SREs spend about 33% of their time on toil on average.</p>
+<p><strong>4. Decide with data, not gut feeling.</strong> SRE uses error budgets based on service level objectives (SLOs) to set release pace: the error budget provides an objective metric of how unreliable the service is allowed to be within a quarter. Postmortems are &quot;blameless&quot;: they focus on identifying the contributing causes of an incident rather than blaming individuals or teams.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>Google SRE Book</strong>: toil, error budgets, release engineering, blameless postmortems</li>
+<li><strong>DORA metrics</strong>: change lead time, deployment frequency, failed deployment recovery time, change failure rate, deployment rework rate</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<ul>
+<li><strong>DORA's five metrics</strong> are the common language for measuring this pipeline: throughput is change lead time (from commit to production deployment), deployment frequency and failed deployment recovery time; instability is change failure rate and deployment rework rate.</li>
+<li><strong>AI enters through toil first</strong>: repetitive, automatable work with no enduring value is the ideal target for agents.</li>
+<li><strong>An observation from Alibaba's handbook</strong>: a requirement whose coding takes an hour can still take weeks from code complete to live after passing through multiple internal platforms, release processes and environment constraints. Human nodes outside the pipeline are the main bottleneck of end-to-end efficiency.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;Having CI/CD means doing DevOps.&quot;</strong> Automated execution is only the foundation; judgment still relies heavily on humans.</li>
+<li><strong>&quot;Toil means the team isn't working hard enough.&quot;</strong> The SRE Book treats toil as something to eliminate systematically through engineering, not a personal failing.</li>
+<li><strong>&quot;AI will replace the pipeline.&quot;</strong> Quite the opposite: a reliable pipeline is the infrastructure from which agents get verification signals.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-doc">Docs</span><a href="https://sre.google/sre-book/postmortem-culture/" target="_blank" rel="noopener noreferrer">Site Reliability Engineering, Ch. 15: Postmortem Culture</a> <span class="rmeta">· Google (Beyer et al., eds.) · 2016</span></li><li><span class="rb rb-doc">Docs</span><a href="https://dora.dev/guides/dora-metrics-four-keys/" target="_blank" rel="noopener noreferrer">DORA software delivery metrics</a> <span class="rmeta">· DORA · </span></li><li><span class="rb rb-doc">Docs</span><a href="https://sre.google/sre-book/introduction/" target="_blank" rel="noopener noreferrer">Site Reliability Engineering, Ch. 1: Introduction</a> <span class="rmeta">· Google (Beyer et al., eds.) · 2016</span></li><li><span class="rb rb-doc">Docs</span><a href="https://sre.google/sre-book/embracing-risk/" target="_blank" rel="noopener noreferrer">Site Reliability Engineering, Ch. 3: Embracing Risk</a> <span class="rmeta">· Google (Beyer et al., eds.) · 2016</span></li><li><span class="rb rb-doc">Docs</span><a href="https://sre.google/sre-book/eliminating-toil/" target="_blank" rel="noopener noreferrer">Site Reliability Engineering, Ch. 5: Eliminating Toil</a> <span class="rmeta">· Google (Beyer et al., eds.) · 2016</span></li><li><span class="rb rb-doc">Docs</span><a href="https://sre.google/sre-book/release-engineering/" target="_blank" rel="noopener noreferrer">Site Reliability Engineering, Ch. 8: Release Engineering</a> <span class="rmeta">· Google (Beyer et al., eds.) · 2016</span></li></ol></section>

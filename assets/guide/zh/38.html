@@ -1,0 +1,37 @@
+<h1>未解问题，和明天就能做的 5 件事</h1>
+<blockquote>
+<p>对应图 #38 · 第六章「AI 改变研发流程」</p>
+</blockquote>
+<h2>概述</h2>
+<p>本手册的最后一篇，回到两个问题：<strong>哪些事情还没有答案？明天能做什么？</strong> 未解问题部分主要依据阿里巴巴实践手册的总结；「5 件事」是讲者基于全书内容给出的建议。</p>
+<h2>核心机制</h2>
+<p><strong>四个尚未解决的问题</strong>（据阿里巴巴实践手册）：</p>
+<ol>
+<li><strong>从写代码到可靠交付，仍有较多技术问题。</strong> 软件交付的最后一公里——构建、集成测试、灰度发布、生产验证、故障恢复——容错空间极小，对 Sandbox 隔离、凭证管理、Guardrail 和可观测能力的要求远超当前水平。基础设施本身的工程复杂度，可能不亚于 Agent 应用层。</li>
+<li><strong>企业知识还没有做到 Agent 友好。</strong> 大量组织知识散落在文档、口头传递和个人经验中，即便进了知识库，也往往停留在「人能查到」，距离被 Agent 高效检索、准确理解和可靠引用还有很大差距。</li>
+<li><strong>组织设计影响深远，尚无确定答案。</strong> 一方面需要新的激励机制释放个体潜力，另一方面「蒸馏焦虑」真实存在。</li>
+<li><strong>技术迭代速度持续冲击现有架构。</strong> SWE-bench Verified 成绩两年间从不足 30% 跳到 80% 左右，今天设计的架构、工具和流程，可能半年后就要重新审视。</li>
+</ol>
+<p>此外还有一个常被低估的问题：<strong>审阅是瓶颈</strong>。X 上一位开发者的经验是，生成越来越快，人不再逐行阅读所有代码，而是依靠小 MR、端到端测试和对核心业务逻辑的重点审查。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2025 METR 随机对照试验</strong>：AI 对资深开发者的实际影响仍需谨慎测量</li>
+<li><strong>2023 间接提示注入</strong>、<strong>OWASP LLM01</strong>：Agent 安全仍无万无一失的方案</li>
+<li><strong>阿里巴巴《AI Native 研发范式实践手册》</strong>：四个未解问题</li>
+</ul>
+<h2>工程实践与数字</h2>
+<p><strong>明天就能做的 5 件事：</strong></p>
+<ol>
+<li><strong>写一份项目规则文件</strong>（AGENTS.md / CLAUDE.md）：技术栈、构建与测试命令、禁止事项、需要请示的操作，提交到 Git。</li>
+<li><strong>把验证一键化</strong>：编译、类型检查、lint、单元测试一条命令跑完，让 Agent 每次改完都执行。</li>
+<li><strong>下一个需求先写 Spec</strong>：让 Agent 追问澄清，分开写约束和假设，验收标准尽量能转成测试。</li>
+<li><strong>测量一个基线</strong>：记录需求从提出到上线的周期和返工次数，而不是统计 AI 代码占比。</li>
+<li><strong>给 Agent 划权限边界</strong>：只读优先，高风险操作必须人工确认，外部内容视为数据而非指令。</li>
+</ol>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「等技术成熟再开始。」</strong> 手册明确提醒，不要因为等更好的模型而推迟必要的基础设施建设。</li>
+<li><strong>「这些问题解决了才能用 AI。」</strong> 未解问题是关于规模化和高风险环节的；个人和小团队的闭环今天就能建立。</li>
+<li><strong>「照搬某家公司的做法。」</strong> 手册自称不是成熟的方法论，更不是标准答案，应根据自己的约束取舍。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-doc">文档</span><a href="https://genai.owasp.org/llmrisk/llm01-prompt-injection/" target="_blank" rel="noopener noreferrer">LLM01:2025 Prompt Injection</a> <span class="rmeta">· OWASP Gen AI Security Project · 2025</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2302.12173" target="_blank" rel="noopener noreferrer">Not what you&#x27;ve signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection</a> <span class="rmeta">· Greshake et al. · 2023</span></li><li><span class="rb rb-doc">文档</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-doc">文档</span><a href="https://agents.md/" target="_blank" rel="noopener noreferrer">AGENTS.md</a> <span class="rmeta">· AGENTS.md project · 2025</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2507.09089" target="_blank" rel="noopener noreferrer">Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity</a> <span class="rmeta">· Becker et al. (METR) · 2025</span></li><li><span class="rb rb-x">X 帖子</span><a href="https://x.com/huangtongxueh/status/2108577165306687938" target="_blank" rel="noopener noreferrer">入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)</a> <span class="rmeta">· @huangtongxueh · 2026-10-09</span></li></ol></section>

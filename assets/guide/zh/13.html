@@ -1,0 +1,54 @@
+<h1>MCP：用同一协议，把工具与数据接入任意 Agent</h1>
+<blockquote>
+<p>对应图 #13 · 第二章「Agent 设计原理与范式」</p>
+</blockquote>
+<h2>概述</h2>
+<p>**Model Context Protocol（MCP）**是一个开放协议，用于在 LLM 应用与外部数据源和工具之间建立标准化的集成。官方规范说明，MCP 借鉴了 Language Server Protocol（LSP）：正如 LSP 统一了编程语言支持在各种开发工具中的接入方式，MCP 统一了上下文和工具接入 AI 应用生态的方式。在 MCP 出现之前，每个 AI 应用都要为每个工具单独写集成，形成「M 个应用 × N 个工具」的组合爆炸；有了统一协议，就变成「M + N」。</p>
+<h2>核心机制</h2>
+<p><strong>1. 三种角色。</strong> 协议使用 JSON-RPC 2.0 消息，在以下角色之间通信：</p>
+<ul>
+<li><strong>Host（宿主）</strong>：发起连接的 LLM 应用，例如 IDE 或聊天客户端。</li>
+<li><strong>Client（客户端）</strong>：宿主内部的连接器，每个客户端对应一个服务器。</li>
+<li><strong>Server（服务器）</strong>：提供上下文和能力的服务。</li>
+</ul>
+<p><strong>2. 服务器提供的三种能力。</strong></p>
+<ul>
+<li><strong>Resources</strong>：上下文和数据，供用户或模型使用。</li>
+<li><strong>Prompts</strong>：面向用户的模板化消息和工作流。</li>
+<li><strong>Tools</strong>：供模型执行的函数。</li>
+</ul>
+<p><strong>3. 客户端可提供给服务器的能力。</strong> Sampling（服务器发起的 LLM 调用）、Roots（服务器询问可操作的 URI 或文件系统边界）、Elicitation（服务器向用户请求补充信息）。</p>
+<p><strong>4. 两层架构。</strong> 数据层定义基于 JSON-RPC 的协议，包括生命周期管理、能力协商和上述原语；传输层负责通信。常见传输方式有两种：</p>
+<ul>
+<li><strong>STDIO</strong>：本地服务器，通常只服务一个客户端。</li>
+<li><strong>Streamable HTTP</strong>：客户端用 HTTP POST 发消息，可选用 Server-Sent Events 流式返回；远程服务器通常同时服务多个客户端。</li>
+</ul>
+<p>连接是有状态的，双方在初始化时协商各自支持的能力；工具列表变化时服务器可以主动通知客户端，无需轮询。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>LSP</strong>：MCP 规范明确提到的设计参照</li>
+<li><strong>2024 年 11 月 MCP 发布</strong>（Anthropic）</li>
+<li><strong>规范版本 2025-06-18</strong>：本文所依据的版本，包含 Elicitation 等客户端能力</li>
+</ul>
+<h2>工程实践与数字</h2>
+<p><strong>安全是规范的核心部分。</strong> 规范明确指出 MCP 提供了任意数据访问和代码执行的能力，实现者必须重视：</p>
+<ul>
+<li>用户必须明确同意并理解所有数据访问和操作。</li>
+<li>宿主在把用户数据暴露给服务器前必须获得明确同意。</li>
+<li>工具代表任意代码执行，必须谨慎对待；来自不受信服务器的工具描述（如注解）应视为不可信。</li>
+<li>调用任何工具前，宿主必须获得用户的明确同意；用户必须批准任何 Sampling 请求。</li>
+</ul>
+<p>规范同时承认，协议本身无法强制执行这些原则，需要实现者在应用中构建同意与授权流程。</p>
+<p><strong>落地建议：</strong></p>
+<ul>
+<li>内部系统先做只读服务器（查库、查日志），再逐步开放写操作。</li>
+<li>工具描述要清晰、具体，这直接影响模型能否正确选用工具。</li>
+<li>远程服务器用 Streamable HTTP，并接入统一的身份认证。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「MCP 就是函数调用。」</strong> 函数调用是模型层的能力；MCP 是应用与服务之间的协议，还包括资源、提示、能力协商和通知。</li>
+<li><strong>「接了 MCP 就安全了。」</strong> 规范明确说协议无法强制安全原则，授权和审计都要自己做。</li>
+<li><strong>「工具越多越好。」</strong> 工具描述会占用上下文，过多相似工具还会让模型选错。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/news/model-context-protocol" target="_blank" rel="noopener noreferrer">Introducing the Model Context Protocol</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-doc">文档</span><a href="https://modelcontextprotocol.io/docs/learn/architecture" target="_blank" rel="noopener noreferrer">MCP Architecture overview</a> <span class="rmeta">· MCP project · 2025</span></li><li><span class="rb rb-doc">文档</span><a href="https://modelcontextprotocol.io/specification/2025-06-18" target="_blank" rel="noopener noreferrer">Model Context Protocol Specification (2025-06-18)</a> <span class="rmeta">· MCP project · 2025</span></li></ol></section>

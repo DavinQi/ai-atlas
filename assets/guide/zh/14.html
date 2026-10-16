@@ -1,0 +1,37 @@
+<h1>记忆与 RAG：在对的时候，把对的知识放进上下文</h1>
+<blockquote>
+<p>对应图 #14 · 第二章「Agent 设计原理与范式」</p>
+</blockquote>
+<h2>概述</h2>
+<p>模型权重在部署后是固定的，上下文窗口又是有限的。Agent 要用上私有知识、最新信息和长期经验，就必须解决一个问题：<strong>在对的时候，把对的内容放进上下文。</strong> 检索增强生成（RAG）和分层记忆是两类主要手段。Anthropic 把这个问题概括为「上下文工程」：上下文是有限资源，边际收益递减，好的上下文工程就是找到最小的高信号 token 集合，最大化得到期望结果的可能性。</p>
+<h2>核心机制</h2>
+<p><strong>1. RAG 的基本形态。</strong> Lewis 等人在 2020 年提出把预训练的参数化记忆（模型权重）与非参数化记忆（可检索的文档索引）结合起来生成答案。论文指出，这种结合有助于提供答案来源，并便于更新知识。典型流程：</p>
+<pre><code>文档 → 切块 → 向量化 → 建索引
+查询 → 检索 Top-K → 重排 → 拼入提示 → 生成
+</code></pre>
+<p><strong>2. 演进。</strong> Gao 等人的综述把 RAG 分为三代：Naive RAG（检索—生成直连）、Advanced RAG（在检索前后加入查询改写、重排等优化）和 Modular RAG（可组合的模块化流水线）。针对「这批文档的主要主题是什么」这类面向全局的问题，普通检索效果差；微软的 GraphRAG 先用 LLM 从文档构建实体知识图谱，再为相关实体群预生成社区摘要，回答时汇总各社区的部分答案。</p>
+<p><strong>3. 分层记忆。</strong> MemGPT 借鉴操作系统的分层内存管理，在快慢存储之间移动数据，让 Agent 在有限的上下文窗口中获得「更大内存」的效果，用于分析远超窗口的大文档和长期多轮对话。Generative Agents 则用自然语言保存完整的经历记录，随时间合成为更高层次的反思，并在规划时动态检索。</p>
+<p><strong>4. 长上下文不等于不需要检索。</strong> 「Lost in the Middle」研究发现，相关信息位于输入的开头或结尾时表现最好，位于长上下文中间时显著下降，即使是专门的长上下文模型也是如此。Anthropic 也提到 needle-in-a-haystack 类评测揭示的「context rot」现象：上下文中的 token 越多，模型准确回忆其中信息的能力越弱。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2020 RAG</strong>（Lewis 等）</li>
+<li><strong>2023 Lost in the Middle</strong></li>
+<li><strong>2023 MemGPT</strong>、<strong>Generative Agents</strong></li>
+<li><strong>2023 RAG 综述</strong>（Naive / Advanced / Modular）</li>
+<li><strong>2024 GraphRAG</strong></li>
+<li><strong>2025 Anthropic《Effective context engineering for AI agents》</strong></li>
+</ul>
+<h2>工程实践与数字</h2>
+<ul>
+<li><strong>「即时」上下文</strong>：Anthropic 观察到，越来越多的 Agent 不再预先把所有相关数据处理好塞进去，而是只保存轻量的标识（文件路径、查询语句、链接），在运行时用工具按需加载。Coding Agent 用 <code>grep</code>、<code>glob</code> 浏览代码库就是典型例子。</li>
+<li><strong>长任务的三种技术</strong>：压缩（compaction，对接近上限的对话做摘要后开新窗口）、结构化笔记（Agent 把进度写到上下文之外的文件里）、多 Agent 架构（子 Agent 在各自的上下文中探索，只把精华返回）。</li>
+<li><strong>检索质量决定上限</strong>：切块粒度、元数据过滤和重排往往比换更大的模型更有效。</li>
+<li><strong>把关键内容放在首尾</strong>，利用「Lost in the Middle」的规律组织提示。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「上下文窗口够大就不需要 RAG。」</strong> 长上下文会出现中段信息利用率下降和 context rot，成本也随长度上升。</li>
+<li><strong>「RAG 能消除幻觉。」</strong> 它降低了无依据生成的概率，但检索错误或文档本身有误时仍会出错。</li>
+<li><strong>「记忆就是向量库。」</strong> 记忆还包括摘要、结构化笔记和规则文件，选择什么、何时放入上下文才是关键。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener noreferrer">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</a> <span class="rmeta">· Lewis et al · 2020</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2304.03442" target="_blank" rel="noopener noreferrer">Generative Agents: Interactive Simulacra of Human Behavior</a> <span class="rmeta">· Park et al. · 2023</span></li><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank" rel="noopener noreferrer">Effective context engineering for AI agents</a> <span class="rmeta">· Anthropic · 2025</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2404.16130" target="_blank" rel="noopener noreferrer">From Local to Global: A Graph RAG Approach to Query-Focused Summarization</a> <span class="rmeta">· Edge et al. · 2024</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2307.03172" target="_blank" rel="noopener noreferrer">Lost in the Middle: How Language Models Use Long Contexts</a> <span class="rmeta">· Liu et al. · 2023</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2310.08560" target="_blank" rel="noopener noreferrer">MemGPT: Towards LLMs as Operating Systems</a> <span class="rmeta">· Packer et al. · 2023</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2312.10997" target="_blank" rel="noopener noreferrer">Retrieval-Augmented Generation for Large Language Models: A Survey</a> <span class="rmeta">· Gao et al. · 2023</span></li></ol></section>

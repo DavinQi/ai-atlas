@@ -1,0 +1,65 @@
+<h1>Three Paradigms: Think While Acting, Plan Then Execute, Self-Correct Afterwards</h1>
+<blockquote>
+<p>Companion to diagram #12 · Chapter 2 &quot;Agent Design: Principles &amp; Patterns&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>How an agent organizes &quot;thinking&quot; and &quot;acting&quot; determines its reliability, cost and interpretability. The diagram summarizes the three most common paradigms:</p>
+<ul>
+<li><strong>ReAct</strong>: think a step, act a step, observe, then think about the next step.</li>
+<li><strong>Plan-and-Solve / Plan-and-Execute</strong>: make a full plan first, then execute it step by step.</li>
+<li><strong>Reflection</strong>: evaluate the result afterwards and use verbal feedback to guide the next attempt.</li>
+</ul>
+<p>They are not mutually exclusive; real systems often combine them.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. ReAct (Yao et al., 2022).</strong> The LLM generates reasoning traces and task-specific actions in an interleaved manner: reasoning helps the model induce, track and update action plans and handle exceptions; actions let it interact with knowledge bases or environments to gather more information. On HotpotQA question answering and Fever fact verification, ReAct — using a simple Wikipedia API — mitigated the hallucination and error propagation common in pure chain-of-thought reasoning, and produced trajectories that are more interpretable to humans than baselines.</p>
+<p>Typical loop:</p>
+<pre><code>Thought → Action(tool, args) → Observation → Thought → … → Final Answer
+</code></pre>
+<p><strong>2. Plan-and-Solve (Wang et al., 2023).</strong> Targeting the &quot;missing-step&quot; errors of zero-shot chain-of-thought, it first devises a plan that splits the task into subtasks, then carries them out; the extended PS+ adds more detailed instructions to reduce calculation errors. Across ten datasets with GPT-3, it consistently outperformed Zero-shot-CoT. The engineering Plan-and-Execute pattern follows the same idea: a planner emits a step list, an executor completes it step by step, re-planning when needed.</p>
+<p><strong>3. Reflexion (Shinn et al., 2023).</strong> Instead of updating weights, it reinforces agents through linguistic feedback: the agent verbally reflects on task feedback signals, stores the reflection text in an episodic memory buffer, and uses it to make better decisions in later trials. The paper reports 91% pass@1 on the HumanEval coding benchmark, above the 80% of GPT-4 at the time.</p>
+<p>The related <strong>Self-Refine</strong> method has the same LLM act as generator, feedback provider and refiner, iteratively improving output; across 7 tasks it reports roughly 20% absolute improvement on average.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>2022 ReAct</strong></li>
+<li><strong>2023 Plan-and-Solve Prompting</strong></li>
+<li><strong>2023 Reflexion</strong></li>
+<li><strong>2023 Self-Refine</strong></li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<table>
+<thead>
+<tr>
+<th>Paradigm</th>
+<th>Fits</th>
+<th>Main cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ReAct</td>
+<td>Unpredictable steps, explore as you go</td>
+<td>Many turns, may loop</td>
+</tr>
+<tr>
+<td>Plan-and-Execute</td>
+<td>Clear structure, decomposable upfront</td>
+<td>Plan may go stale</td>
+</tr>
+<tr>
+<td>Reflection</td>
+<td>Clear criteria, multiple attempts allowed</td>
+<td>Extra call per round</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Reflection needs a reliable signal</strong>: Reflexion works well on coding partly because test results give objective feedback. Without an external signal, a model's self-assessment can be unreliable.</li>
+<li><strong>Mapping to Anthropic's patterns</strong>: Plan-and-Execute resembles &quot;orchestrator-workers&quot;; Reflection resembles &quot;evaluator-optimizer&quot;, which works best when there are clear evaluation criteria and iteration provides measurable value.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;ReAct is obsolete.&quot;</strong> Today's mainstream coding agents are still essentially &quot;think — call tool — observe&quot; loops, just with stronger models and more tools.</li>
+<li><strong>&quot;The more detailed the plan, the better.&quot;</strong> Detailed plans break when the environment changes; re-planning must be supported.</li>
+<li><strong>&quot;Self-reflection always improves results.&quot;</strong> Without external verification, reflection can reinforce wrong judgments.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener noreferrer">ReAct: Synergizing Reasoning and Acting in Language Models</a> <span class="rmeta">· Yao et al. · 2022</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2305.04091" target="_blank" rel="noopener noreferrer">Plan-and-Solve Prompting: Improving Zero-Shot Chain-of-Thought Reasoning by Large Language Models</a> <span class="rmeta">· Wang et al. · 2023</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2303.11366" target="_blank" rel="noopener noreferrer">Reflexion: Language Agents with Verbal Reinforcement Learning</a> <span class="rmeta">· Shinn et al. · 2023</span></li><li><span class="rb rb-paper">Paper</span><a href="https://arxiv.org/abs/2303.17651" target="_blank" rel="noopener noreferrer">Self-Refine: Iterative Refinement with Self-Feedback</a> <span class="rmeta">· Madaan et al. · 2023</span></li></ol></section>

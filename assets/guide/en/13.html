@@ -1,0 +1,54 @@
+<h1>MCP: One Protocol to Connect Tools and Data to Any Agent</h1>
+<blockquote>
+<p>Companion to diagram #13 · Chapter 2 &quot;Agent Design: Principles &amp; Patterns&quot;</p>
+</blockquote>
+<h2>Overview</h2>
+<p>The <strong>Model Context Protocol (MCP)</strong> is an open protocol for standardized integration between LLM applications and external data sources and tools. The official specification says MCP takes inspiration from the Language Server Protocol (LSP): just as LSP standardized how programming-language support plugs into development tools, MCP standardizes how context and tools plug into the AI application ecosystem. Before MCP, every AI app needed a custom integration for every tool — an &quot;M apps × N tools&quot; explosion; with a shared protocol it becomes &quot;M + N&quot;.</p>
+<h2>Core Mechanisms</h2>
+<p><strong>1. Three roles.</strong> The protocol uses JSON-RPC 2.0 messages between:</p>
+<ul>
+<li><strong>Host</strong>: the LLM application that initiates connections, such as an IDE or chat client.</li>
+<li><strong>Client</strong>: a connector inside the host; each client maps to one server.</li>
+<li><strong>Server</strong>: a service that provides context and capabilities.</li>
+</ul>
+<p><strong>2. Three server features.</strong></p>
+<ul>
+<li><strong>Resources</strong>: context and data for the user or model.</li>
+<li><strong>Prompts</strong>: templated messages and workflows for users.</li>
+<li><strong>Tools</strong>: functions for the model to execute.</li>
+</ul>
+<p><strong>3. Client features offered to servers.</strong> Sampling (server-initiated LLM calls), Roots (servers asking which URI or filesystem boundaries they may operate in), and Elicitation (servers requesting additional information from users).</p>
+<p><strong>4. Two layers.</strong> The data layer defines the JSON-RPC protocol, including lifecycle management, capability negotiation and the primitives above; the transport layer handles communication. Two common transports:</p>
+<ul>
+<li><strong>STDIO</strong>: local servers, typically serving a single client.</li>
+<li><strong>Streamable HTTP</strong>: the client sends messages via HTTP POST, optionally receiving streamed responses via Server-Sent Events; remote servers typically serve many clients.</li>
+</ul>
+<p>Connections are stateful and both sides negotiate supported capabilities at initialization; when its tool list changes, a server can notify clients without polling.</p>
+<h2>Key Papers and Milestones</h2>
+<ul>
+<li><strong>LSP</strong>: the design reference named in the MCP specification</li>
+<li><strong>November 2024: MCP announced</strong> (Anthropic)</li>
+<li><strong>Spec revision 2025-06-18</strong>: the version this article follows, including client features such as Elicitation</li>
+</ul>
+<h2>Engineering Practice and Numbers</h2>
+<p><strong>Security is a core part of the spec.</strong> It states plainly that MCP enables arbitrary data access and code execution, and implementers must take this seriously:</p>
+<ul>
+<li>Users must explicitly consent to and understand all data access and operations.</li>
+<li>Hosts must obtain explicit consent before exposing user data to servers.</li>
+<li>Tools represent arbitrary code execution and must be treated with caution; tool descriptions such as annotations from untrusted servers should be considered untrusted.</li>
+<li>Hosts must obtain explicit user consent before invoking any tool; users must approve any sampling request.</li>
+</ul>
+<p>The spec also admits the protocol itself cannot enforce these principles; implementers must build consent and authorization flows into their applications.</p>
+<p><strong>Practical advice:</strong></p>
+<ul>
+<li>For internal systems, start with read-only servers (query DBs, read logs), then open write operations gradually.</li>
+<li>Make tool descriptions clear and specific — this directly affects whether the model picks the right tool.</li>
+<li>Use Streamable HTTP for remote servers and plug them into unified authentication.</li>
+</ul>
+<h2>Common Misconceptions</h2>
+<ul>
+<li><strong>&quot;MCP is just function calling.&quot;</strong> Function calling is a model-level capability; MCP is an application-to-service protocol that also covers resources, prompts, capability negotiation and notifications.</li>
+<li><strong>&quot;Using MCP makes it secure.&quot;</strong> The spec says the protocol cannot enforce security principles; authorization and auditing are on you.</li>
+<li><strong>&quot;More tools is better.&quot;</strong> Tool descriptions consume context, and many similar tools make the model choose wrongly.</li>
+</ul>
+<section class="gref"><h2>Sources for this article</h2><ol><li><span class="rb rb-doc">Docs</span><a href="https://www.anthropic.com/news/model-context-protocol" target="_blank" rel="noopener noreferrer">Introducing the Model Context Protocol</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-doc">Docs</span><a href="https://modelcontextprotocol.io/docs/learn/architecture" target="_blank" rel="noopener noreferrer">MCP Architecture overview</a> <span class="rmeta">· MCP project · 2025</span></li><li><span class="rb rb-doc">Docs</span><a href="https://modelcontextprotocol.io/specification/2025-06-18" target="_blank" rel="noopener noreferrer">Model Context Protocol Specification (2025-06-18)</a> <span class="rmeta">· MCP project · 2025</span></li></ol></section>

@@ -1,0 +1,40 @@
+<h1>度量：看交付结果，不看 AI 代码占比</h1>
+<blockquote>
+<p>对应图 #27 · 第四章「当前如何做 AI 编程」</p>
+</blockquote>
+<h2>概述</h2>
+<p>很多团队推进 AI 研发时，第一反应是看两个数：**有多少人用了 AI，AI 写了多少代码。**阿里巴巴实践手册指出，这两个数在冷启动阶段有用，但如果度量体系只围着它们转，后面基本都会跑偏：AI 写了代码不等于进了提交，进了提交不等于成功发布，发布了也不等于需求价值真正交付。度量真正要回答的问题，不是「AI 用了多少」，而是「AI 改变了什么」。</p>
+<h2>核心机制</h2>
+<p><strong>1. 三层度量体系</strong>（据阿里巴巴实践手册）：</p>
+<ul>
+<li><strong>L3 价值交付层</strong>：需求交付周期、变更周期、发布频率、AI 与非 AI 交付对比。验证 AI 是否让业务跑得更快、更稳。</li>
+<li><strong>L2 工程质量层</strong>：AI 缺陷率、回滚返工、自修复缺陷、风险事件。约束 L1 的增长不能以质量恶化为代价。</li>
+<li><strong>L1 AI 效能层</strong>：覆盖率、Session、Token、AI 行、Skill、MCP、上下文资产。牵引团队真正用起来，并定位工具和上下文工程问题。</li>
+</ul>
+<p>三层不能拆开看：只看 L1 会鼓励「为了 AI 而 AI」；只看 L2 会变成质量审计；只看 L3 解释不了变化来自哪里。L1 证明 AI 进入过程，L2 证明质量风险守得住，L3 证明业务结果有改善，合起来才是完整证据链。</p>
+<p><strong>2. 与 DORA 指标对齐。</strong> L3 和 L2 与业界通用的 DORA 软件交付指标高度一致：</p>
+<ul>
+<li><strong>吞吐</strong>：变更前置时间（从提交到生产部署）、部署频率、失败部署恢复时间。</li>
+<li><strong>不稳定性</strong>：变更失败率、部署返工率（由生产事故引发的非计划部署占比）。</li>
+</ul>
+<p><strong>3. 归因链路。</strong> 手册描述的采集方式是：用轻量 Hook 适配各种 AI 工具，统一转成标准事件，再沿 Session → Commit → Change → Workitem 做归因。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>DORA 指标</strong>：业界最常用的软件交付效能度量</li>
+<li><strong>2023 Copilot 随机对照实验</strong>：边界清晰的实验任务上快 55.8%</li>
+<li><strong>2025 METR 随机对照试验</strong>：经验丰富的开发者在熟悉的成熟项目中，允许使用 AI 时完成时间增加 19%，而他们事后仍估计缩短了 20%</li>
+</ul>
+<h2>工程实践与数字</h2>
+<ul>
+<li><strong>单项指标会反向激励</strong>：手册指出，安装率会把装了但没有有效研发行为的用户算进去；Session 会把临时问答误认为生产力提升；AI 代码占比会反过来激励无效生成。</li>
+<li><strong>别做个人排名</strong>：一旦排名，团队会优化指标本身，而不是优化真实协作流程。</li>
+<li><strong>上下文资产也要度量</strong>：Skill、MCP、Spec、README / runbook、模板与 checklist 是否被复用、更新和验证。</li>
+<li><strong>主观感受不可靠</strong>：METR 的研究中，开发者事前预计 AI 能缩短 24%，事后估计缩短 20%，实测却是变慢 19%。必须用客观数据。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「AI 代码占比越高越好。」</strong> 它衡量使用量，不衡量价值，还可能激励无效生成。</li>
+<li><strong>「交付周期缩短就说明 AI 有效。」</strong> 也可能是流程调整或需求变简单，需要过程证据做归因。</li>
+<li><strong>「问卷调查就够了。」</strong> 主观感受与实测可能相反。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-doc">文档</span><a href="https://kejun.github.io/ai-native-dev-handbook/" target="_blank" rel="noopener noreferrer">《AI Native 研发范式实践手册》解读版 (AI Native R&amp;D Paradigm Practice Handbook, annotated)</a> <span class="rmeta">· Alibaba (handbook); annotated by kejun · 2026</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2507.09089" target="_blank" rel="noopener noreferrer">Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity</a> <span class="rmeta">· Becker et al. (METR) · 2025</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2302.06590" target="_blank" rel="noopener noreferrer">The Impact of AI on Developer Productivity: Evidence from GitHub Copilot</a> <span class="rmeta">· Peng et al. · 2023</span></li><li><span class="rb rb-doc">文档</span><a href="https://dora.dev/guides/dora-metrics-four-keys/" target="_blank" rel="noopener noreferrer">DORA software delivery metrics</a> <span class="rmeta">· DORA · </span></li></ol></section>

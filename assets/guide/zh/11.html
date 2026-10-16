@@ -1,0 +1,39 @@
+<h1>Agent 的组成：LLM + 规划 + 记忆 + 工具，在环境反馈中循环</h1>
+<blockquote>
+<p>对应图 #11 · 第二章「Agent 设计原理与范式」</p>
+</blockquote>
+<h2>概述</h2>
+<p>「Agent」一词的定义并不统一。Anthropic 在《Building effective agents》中把所有基于 LLM 的自动化系统统称为 agentic systems，并做了一个关键区分：**工作流（workflow）**是由预先写好的代码路径编排 LLM 和工具；<strong>Agent</strong> 则由 LLM 自己动态决定流程和工具调用，自主掌控完成任务的方式。</p>
+<p>Lilian Weng 在 2023 年的综述《LLM Powered Autonomous Agents》中给出了被广泛引用的组成框架：LLM 充当 Agent 的「大脑」，配合三个关键组件——<strong>规划（Planning）</strong>、<strong>记忆（Memory）<strong>和</strong>工具使用（Tool Use）</strong>。</p>
+<h2>核心机制</h2>
+<p><strong>1. 规划。</strong> 把大任务拆成可管理的子目标；并通过自我反思（self-reflection）从过去的行动中总结经验、修正错误。</p>
+<p><strong>2. 记忆。</strong> Weng 的划分是：</p>
+<ul>
+<li><strong>短期记忆</strong>：上下文中的全部内容（in-context learning），受上下文窗口限制。</li>
+<li><strong>长期记忆</strong>：借助外部向量库和快速检索，在长时间跨度内保存与召回信息。</li>
+</ul>
+<p><strong>3. 工具。</strong> 调用外部 API 获取模型权重中没有的信息：实时数据、代码执行、私有数据库等。Toolformer 证明模型可以自监督地学会何时、如何调用 API；CodeAct 则提出用可执行的 Python 代码作为统一的动作空间，在其基准上成功率比 JSON / 文本格式的动作最高提升 20%。</p>
+<p><strong>4. 环境反馈循环。</strong> Anthropic 强调，Agent 执行时每一步都要从环境中获得「真实反馈」（工具调用结果、代码执行结果）来评估进展，并在检查点或遇到阻碍时停下来等人反馈；同时应设置停止条件（如最大迭代次数）。它们的结论是：Agent 在实现上通常很简单，<strong>本质就是 LLM 在循环中根据环境反馈使用工具</strong>，因此工具集及其文档的设计至关重要。</p>
+<p>CoALA 框架从认知科学角度给出更形式化的描述：模块化的记忆组件、与内部记忆和外部环境交互的结构化动作空间，以及选择动作的通用决策过程。</p>
+<h2>关键论文与里程碑</h2>
+<ul>
+<li><strong>2022 ReAct</strong>：推理与行动交替进行</li>
+<li><strong>2023 Toolformer</strong>：模型自学调用工具</li>
+<li><strong>2023 Generative Agents</strong>：带记忆流、反思和规划的模拟智能体</li>
+<li><strong>2023 Lilian Weng 综述</strong>：规划 / 记忆 / 工具三组件框架</li>
+<li><strong>2023 CoALA</strong>：语言智能体的认知架构</li>
+<li><strong>2024 Anthropic《Building effective agents》</strong>：workflow 与 agent 的区分及模式库</li>
+</ul>
+<h2>工程实践与数字</h2>
+<ul>
+<li><strong>从最简单的方案开始</strong>：Anthropic 建议先找最简单的解法，必要时才增加复杂度；很多应用只需优化单次 LLM 调用、配上检索和示例就足够。Agentic 系统通常是用延迟和成本换取更好的任务表现。</li>
+<li><strong>框架要慎用</strong>：框架会增加抽象层，掩盖底层的提示和响应，增加调试难度。建议先直接调用 LLM API，很多模式几行代码就能实现。</li>
+<li><strong>三条原则</strong>：保持设计简单；明确展示 Agent 的规划步骤以保证透明度；通过完善的工具文档和测试精心设计 Agent-计算机接口（ACI）。SWE-agent 的研究也表明，专门为 Agent 设计的接口能显著提升其在软件工程任务上的表现。</li>
+</ul>
+<h2>常见误区</h2>
+<ul>
+<li><strong>「Agent 就是加了工具的聊天机器人。」</strong> 关键差别在于由谁决定控制流：工作流由代码决定，Agent 由模型决定。</li>
+<li><strong>「越自主越好。」</strong> 自主性意味着更高成本和错误累积的风险，Anthropic 建议在沙箱中充分测试并配备护栏。</li>
+<li><strong>「记忆就是把所有历史塞进上下文。」</strong> 上下文是短期记忆，长期记忆需要外部存储和检索。</li>
+</ul>
+<section class="gref"><h2>本篇参考来源</h2><ol><li><span class="rb rb-doc">文档</span><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Building effective agents</a> <span class="rmeta">· Anthropic · 2024</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2309.02427" target="_blank" rel="noopener noreferrer">Cognitive Architectures for Language Agents</a> <span class="rmeta">· Sumers et al. · 2023</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2402.01030" target="_blank" rel="noopener noreferrer">Executable Code Actions Elicit Better LLM Agents</a> <span class="rmeta">· Wang et al. · 2024</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2304.03442" target="_blank" rel="noopener noreferrer">Generative Agents: Interactive Simulacra of Human Behavior</a> <span class="rmeta">· Park et al. · 2023</span></li><li><span class="rb rb-doc">文档</span><a href="https://lilianweng.github.io/posts/2023-06-23-agent/" target="_blank" rel="noopener noreferrer">LLM Powered Autonomous Agents</a> <span class="rmeta">· Lilian Weng · 2023</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener noreferrer">ReAct: Synergizing Reasoning and Acting in Language Models</a> <span class="rmeta">· Yao et al. · 2022</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2405.15793" target="_blank" rel="noopener noreferrer">SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering</a> <span class="rmeta">· Yang et al. · 2024</span></li><li><span class="rb rb-paper">论文</span><a href="https://arxiv.org/abs/2302.04761" target="_blank" rel="noopener noreferrer">Toolformer: Language Models Can Teach Themselves to Use Tools</a> <span class="rmeta">· Schick et al. · 2023</span></li></ol></section>
