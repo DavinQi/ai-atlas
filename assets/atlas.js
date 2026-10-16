@@ -1063,10 +1063,10 @@ function portraitize(svg){
   pn.textContent=notes.map(n=>[...n.querySelectorAll('text')].map(t=>t.textContent).join(LANG==='en'?' ':'')).join('\n');
   notes.forEach(n=>n.remove());
   const kids=[...svg.children];const atoms=[];
-  kids.forEach(el=>{
+  kids.forEach((el,ki)=>{
     if(el.classList.contains('arr')||el.tagName==='path'||el.tagName==='line')return;
     const add=(e,blocker)=>{let b;try{b=e.getBBox();}catch(_){return;}if(!b.width&&!b.height)return;
-      if(!blocker&&b.width>700)return;atoms.push({i:atoms.length,x:b.x,y:b.y,w:b.width,h:b.height});};
+      if(!blocker&&b.width>700)return;atoms.push({i:atoms.length,k:ki,node:!!blocker,x:b.x,y:b.y,w:b.width,h:b.height});};
     if(el.classList.contains('frame')){el.querySelectorAll('text').forEach(t=>add(t,false));return;}
     add(el,el.classList.contains('node'));
   });
@@ -1086,16 +1086,44 @@ function portraitize(svg){
     if(!opts.length){const vg2=gaps(a,'x','w');if(vg2.length){const c=vg2[0];opts.push([...split(a.filter(t=>t.x+t.w/2<c),depth+1),...split(a.filter(t=>t.x+t.w/2>=c),depth+1)]);}}
     if(!opts.length)return[mk(a)];
     return opts.reduce((p,q)=>cost(q)<cost(p)?q:p);}
-  const tiles=split(atoms).map(t=>({x:t.x-PAD,y:t.y-PAD,w:t.w+2*PAD,h:t.h+2*PAD}));
+  const tiles=split(atoms).map(t=>({x:t.x-PAD,y:t.y-PAD,w:t.w+2*PAD,h:t.h+2*PAD,ids:t.ids,arrs:[]}));
+  /* edges: assign arrows to tiles, or re-route across tiles */
+  const tileOf={};tiles.forEach((t,ti)=>t.ids.forEach(i=>tileOf[i]=ti));
+  const nearest=(pt)=>{let best=null,bd=1e9;atoms.forEach(a=>{const dx=Math.max(a.x-pt[0],0,pt[0]-a.x-a.w),dy=Math.max(a.y-pt[1],0,pt[1]-a.y-a.h);const d=Math.hypot(dx,dy)-(a.node?6:0);if(d<bd){bd=d;best=a;}});return bd<45?best:null;};
+  const ends=d=>{const n=(d.match(/-?\d+(?:\.\d+)?/g)||[]).map(Number);return n.length>=4?[[n[0],n[1]],[n[n.length-2],n[n.length-1]]]:null;};
+  const cross=[];const base=[];
+  kids.forEach(el=>{if(!el.classList.contains('arr')){base.push(el.outerHTML);return;}
+    const ln=el.querySelector('.ln');const e=ln&&ends(ln.getAttribute('d'));let bb;try{bb=el.getBBox();}catch(_){bb=null;}
+    const A=e&&nearest(e[0]),B=e&&nearest(e[1]);
+    const ta=A?tileOf[A.i]:undefined,tb=B?tileOf[B.i]:undefined;
+    if(ta!==undefined&&ta===tb){tiles[ta].arrs.push(el.outerHTML);if(bb){const t=tiles[ta];const x2=Math.max(t.x+t.w,bb.x+bb.width+4),y2=Math.max(t.y+t.h,bb.y+bb.height+4);t.x=Math.min(t.x,bb.x-4);t.y=Math.min(t.y,bb.y-4);t.w=x2-t.x;t.h=y2-t.y;}}
+    else if(A&&B&&A!==B)cross.push({A,B,col:ln.getAttribute('stroke')||'#2B2B2B',dash:el.classList.contains('dashed'),both:el.querySelectorAll('.hd').length>1});
+    else if(bb){const mid=nearest([bb.x+bb.width/2,bb.y+bb.height/2]);const tt=mid?tileOf[mid.i]:(ta??tb);if(tt!==undefined)tiles[tt].arrs.push(el.outerHTML);}
+  });
   tiles.forEach(t=>{t.s=Math.min(1,W/t.w);t.dw=t.w*t.s;t.dh=t.h*t.s;});
   const rows=[];let row=[];
   tiles.forEach(t=>{const sw=row.reduce((s,q)=>s+q.dw,0)+GAP*row.length;if(row.length&&sw+t.dw<=W)row.push(t);else{if(row.length)rows.push(row);row=[t];}});
   if(row.length)rows.push(row);
-  const inner=svg.innerHTML;let y=0,out='',defs='',k=0;const uid='p'+Math.random().toString(36).slice(2,7);
+  const baseHTML=base.join('');let y=0,out='',defs='',k=0;const uid='p'+Math.random().toString(36).slice(2,7);
   rows.forEach((r,ri)=>{const rw=r.reduce((s,q)=>s+q.dw,0)+GAP*(r.length-1),rh=Math.max(...r.map(q=>q.dh));let x=(W-rw)/2;
     if(ri)out+=`<path d="M40 ${y-GAP/2}H${W-40}" stroke="#2B2B2B" stroke-opacity=".15" stroke-width="1.5" stroke-dasharray="6 6"/>`;
-    r.forEach(t=>{const id=uid+(k++);defs+=`<clipPath id="${id}" clipPathUnits="userSpaceOnUse"><rect x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}"/></clipPath>`;
-      out+=`<g transform="translate(${x} ${y+(rh-t.dh)/2}) scale(${t.s}) translate(${-t.x} ${-t.y})" data-s="${t.s}"><g clip-path="url(#${id})">${inner}</g></g>`;x+=t.dw+GAP;});
+    r.forEach(t=>{const id=uid+(k++);t.ox=x;t.oy=y+(rh-t.dh)/2;defs+=`<clipPath id="${id}" clipPathUnits="userSpaceOnUse"><rect x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}"/></clipPath>`;
+      out+=`<g transform="translate(${t.ox} ${t.oy}) scale(${t.s}) translate(${-t.x} ${-t.y})" data-s="${t.s}"><g clip-path="url(#${id})">${baseHTML}${t.arrs.join('')}</g></g>`;x+=t.dw+GAP;});
     y+=rh+GAP;});
+  /* re-routed connectors in portrait space */
+  const map=a=>{const t=tiles[tileOf[a.i]];return{x:t.ox+(a.x-t.x)*t.s,y:t.oy+(a.y-t.y)*t.s,w:a.w*t.s,h:a.h*t.s};};
+  const f1=v=>Math.round(v*10)/10;let rail=0,lrail=0;const MR=atoms.map(a=>Object.assign(map(a),{a}));
+  const head=(tip,dx,dy,col)=>{const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;const h=10,sp=0.45,c=Math.cos(sp),s=Math.sin(sp);
+    const a1=[tip[0]-h*(dx*c-dy*s),tip[1]-h*(dy*c+dx*s)],a2=[tip[0]-h*(dx*c+dy*s),tip[1]-h*(dy*c-dx*s)];
+    return `<path class="hd" d="M${f1(a1[0])} ${f1(a1[1])}L${f1(tip[0])} ${f1(tip[1])}L${f1(a2[0])} ${f1(a2[1])}" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;};
+  cross.forEach((c,ci)=>{const S=map(c.A),T=map(c.B);let d,tip,dir,st,sdir;
+    const blocked=(x1,x2,y1,y2)=>MR.some(m=>m.a!==c.A&&m.a!==c.B&&m.x<x2&&m.x+m.w>x1&&m.y<y2&&m.y+m.h>y1);
+    const sx=S.x+S.w/2,tx=T.x+T.w/2;
+    if(T.y>=S.y+S.h-2&&blocked(Math.min(sx,tx)-4,Math.max(sx,tx)+4,S.y+S.h+1,T.y-1)){const lx=6+(lrail++%3)*5;st=[S.x,S.y+S.h/2];tip=[T.x,T.y+T.h/2];
+      d=`M${f1(st[0])} ${f1(st[1])}H${f1(lx+6)}Q${f1(lx)} ${f1(st[1])} ${f1(lx)} ${f1(st[1]+6)}V${f1(tip[1]-6)}Q${f1(lx)} ${f1(tip[1])} ${f1(lx+6)} ${f1(tip[1])}H${f1(tip[0])}`;dir=[1,0];sdir=[-1,0];}
+    else if(T.y>=S.y+S.h-2){st=[S.x+S.w/2,S.y+S.h];tip=[T.x+T.w/2,T.y];const m=Math.max(18,(tip[1]-st[1])/2);d=`M${f1(st[0])} ${f1(st[1])}C${f1(st[0])} ${f1(st[1]+m)} ${f1(tip[0])} ${f1(tip[1]-m)} ${f1(tip[0])} ${f1(tip[1])}`;dir=[0,1];sdir=[0,-1];}
+    else if(T.x>=S.x+S.w-2&&Math.abs((T.y+T.h/2)-(S.y+S.h/2))<Math.max(S.h,T.h)){st=[S.x+S.w,S.y+S.h/2];tip=[T.x,T.y+T.h/2];const m=(tip[0]-st[0])/2;d=`M${f1(st[0])} ${f1(st[1])}C${f1(st[0]+m)} ${f1(st[1])} ${f1(tip[0]-m)} ${f1(tip[1])} ${f1(tip[0])} ${f1(tip[1])}`;dir=[1,0];sdir=[-1,0];}
+    else{const rx=W-6-(rail++%3)*5;st=[S.x+S.w,S.y+S.h/2];tip=[T.x+T.w,T.y+T.h/2];d=`M${f1(st[0])} ${f1(st[1])}H${f1(rx-6)}Q${f1(rx)} ${f1(st[1])} ${f1(rx)} ${f1(st[1]-6)}V${f1(tip[1]+6)}Q${f1(rx)} ${f1(tip[1])} ${f1(rx-6)} ${f1(tip[1])}H${f1(tip[0])}`;dir=[-1,0];sdir=[1,0];}
+    out+=`<g class="arr pr${c.dash?' dashed':''}" style="--d:${(0.3+ci*0.08).toFixed(2)}s"><path class="ln" d="${d}" pathLength="1" fill="none" stroke="${c.col}" stroke-width="2" stroke-linecap="round"${c.dash?' stroke-dasharray="0.018 0.014"':''}/>${head(tip,dir[0],dir[1],c.col)}${c.both?head(st,sdir[0],sdir[1],c.col):''}</g>`;});
   svg.dataset.p=1;svg.setAttribute('viewBox',`0 0 ${W} ${y-GAP}`);svg.innerHTML=`<defs>${defs}</defs>`+out;
 }
