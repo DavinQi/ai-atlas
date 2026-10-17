@@ -644,6 +644,31 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <li><strong>失败了怎么办。</strong> 前后端字段对不上 → 回 <code>SPEC.md</code> 看是谁偏离，不许两边各改一半凑齐；e2e 不稳 → 先让它定位是时序还是真 Bug，不要直接重跑装没看见。</li>
 <li><strong>完成定义：</strong> 契约、后端、前端、e2e 四层测试全绿；<code>git diff --stat</code> 里没有契约之外的文件；PR 描述贴了测试命令与输出。</li>
 </ol>
+<p><strong>关键代码（对应上面第 2–3 步，先红后绿）：</strong></p>
+<pre><code class="language-ts">// orders.api.test.ts —— 先写它：接口还不支持 status 时应当先红
+it(&quot;按状态筛选，非法状态返回 400&quot;, async () =&gt; {
+  const ok = await request(app).get(&quot;/api/orders?status=PAID&quot;);
+  expect(ok.status).toBe(200);
+  expect(ok.body.items.every((o: { status: string }) =&gt; o.status === &quot;PAID&quot;)).toBe(true);
+
+  const bad = await request(app).get(&quot;/api/orders?status=NOPE&quot;);
+  expect(bad.status).toBe(400);
+  expect(bad.body.code).toBe(&quot;INVALID_STATUS&quot;);
+});
+</code></pre>
+<pre><code class="language-ts">// orders.routes.ts —— 最小实现：先校验枚举，再把筛选下推到查询层
+const ORDER_STATUSES = [&quot;PENDING&quot;, &quot;PAID&quot;, &quot;SHIPPED&quot;, &quot;CANCELLED&quot;] as const;
+
+app.get(&quot;/api/orders&quot;, async (req, res) =&gt; {
+  const status = typeof req.query.status === &quot;string&quot; ? req.query.status : undefined;
+  if (status !== undefined &amp;&amp; !(ORDER_STATUSES as readonly string[]).includes(status)) {
+    return res.status(400).json({ code: &quot;INVALID_STATUS&quot; });
+  }
+  const items = await orders.list({ status });
+  return res.json({ items });
+});
+</code></pre>
+<p>断言的意义不在“测个热闹”：<code>every(...status === &quot;PAID&quot;)</code> 挡的是“参数传了但查询没用上”，<code>INVALID_STATUS</code> 挡的是前端把非法值吞掉、后端默默返回全量。</p>
 <h3>30.2 案例 B 手把手：结算接口偶发 500</h3>
 <ol>
 <li><strong>先收证据。</strong> 把一小时错误日志和一个 traceId 准备好，粘 §7 例子 B 的提示。硬性要求：它只能输出证据链和排序假设，<strong>不能改代码</strong>。</li>
@@ -654,6 +679,25 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <li><strong>失败了怎么办。</strong> 修完又红在别处 → 大概率是症状修复或顺手改了公共逻辑，回看 diff，把无关改动拆出去。</li>
 <li><strong>完成定义：</strong> 回归测试红→绿可演示；全量绿；PR 里写明根因、证据链链接、以及“下次如何五分钟定位”（新增的日志/告警在哪）。</li>
 </ol>
+<p><strong>关键代码（对应第 3–5 步：先把复现变成红灯，再修根因）：</strong>假设证据链最后指向“没传优惠券时 <code>couponCode</code> 为 null、折扣查询直接解引用”这一处（你的根因以证据为准，这里只是把修法写成形）：</p>
+<pre><code class="language-java">// 先红的回归测试：不带优惠券的结算不该 500
+@Test
+void checkoutWithoutCouponDoesNot500() throws Exception {
+    mockMvc.perform(post(&quot;/api/checkout&quot;)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(&quot;{\&quot;items\&quot;:[{\&quot;skuId\&quot;:\&quot;SKU-1\&quot;,\&quot;quantity\&quot;:1}],\&quot;couponCode\&quot;:null}&quot;))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath(&quot;$.payable&quot;).value(1999));
+}
+</code></pre>
+<pre><code class="language-java">// 最小修复：空优惠券就是零折扣，不要让 null 流进折扣查询
+int discount = Optional.ofNullable(req.couponCode())
+    .filter(code -&gt; !code.isBlank())
+    .map(coupons::discountFor)
+    .orElse(0);
+int payable = Math.max(0, subtotal - discount);
+</code></pre>
+<p>注意修复只动了空值这一条路径：不要顺手给整个结算加 try/catch 吞异常——那会让下一次 500 连证据都没有。</p>
 <h3>30.3 案例 C 手把手：<code>status</code> → <code>state</code> 跨层改名</h3>
 <ol>
 <li><strong>摸清引用面。</strong> 先让只读 Agent 全仓搜索 <code>status</code> 的读写点，输出文件清单，你圈定哪些属于本次、哪些是同名无关字段。</li>
@@ -664,6 +708,24 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <li><strong>失败了怎么办。</strong> 双写不一致 → 停在 PR1 修写路径（重点查定时任务与另一个服务），不许跳到 PR2 用前端“适配”掩盖。</li>
 <li><strong>完成定义：</strong> 三个 PR 可独立回滚；旧字段有零流量证据才删除；最终全仓搜不到旧字段的业务引用。</li>
 </ol>
+<p><strong>关键代码（对应第 2–4 步：扩展、双写、切换）：</strong></p>
+<pre><code class="language-sql">-- PR1 扩展：只加列、回填，不删任何东西
+ALTER TABLE orders ADD COLUMN state varchar(32);
+UPDATE orders SET state = status WHERE state IS NULL;
+-- PR3 收缩（拿到旧字段零流量证据之后才执行）：
+-- ALTER TABLE orders DROP COLUMN status;
+</code></pre>
+<pre><code class="language-java">// PR1/PR2 期间所有写路径都双写，包括定时任务调用的那个入口
+public void changeState(Order order, String next) {
+    order.setStatus(next); // 旧字段继续同步，直到 PR3
+    order.setState(next);
+    orders.save(order);
+}
+</code></pre>
+<pre><code class="language-java">// 双写一致性断言：切换前每个写入口都要有这样一条
+assertThat(saved.getState()).isEqualTo(&quot;PAID&quot;);
+assertThat(saved.getStatus()).isEqualTo(saved.getState());
+</code></pre>
 <h3>30.4 案例 D 手把手：前后端契约漂移</h3>
 <ol>
 <li><strong>出差异表。</strong> 粘 §15 例子 D 的提示，要求只输出表，不改代码。逐行看它标的“哪边错”。</li>
@@ -674,6 +736,27 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <li><strong>失败了怎么办。</strong> “为了绿”放宽 schema → 打回；契约测试必须能抓住你刚刚故意弄坏的那类错误。</li>
 <li><strong>完成定义：</strong> 差异表清零、契约测试在 CI 里能红能绿、生成命令写进 <code>AGENTS.md</code>。</li>
 </ol>
+<p><strong>关键代码（对应第 1、4 步：先把漂移钉成红灯）：</strong></p>
+<pre><code class="language-yaml"># OpenAPI 里冻结的那一段（节选）
+OrderSummary:
+  type: object
+  required: [id, totalAmount]
+  properties:
+    id: { type: string }
+    totalAmount: { type: number }
+</code></pre>
+<pre><code class="language-ts">// 契约测试：后端把 totalAmount 改名成 total 时，这里先红
+it(&quot;订单响应符合 OpenAPI 的必填字段与类型&quot;, async () =&gt; {
+  const res = await fetch(`${baseUrl}/api/orders/42`);
+  expect(res.status).toBe(200);
+  const body = await res.json();
+  expect(typeof body.id).toBe(&quot;string&quot;);
+  expect(typeof body.totalAmount).toBe(&quot;number&quot;);
+});
+</code></pre>
+<pre><code class="language-ts">// 最小修复在响应构造处对齐契约，不手改生成的前端类型
+res.json({ id: order.id, totalAmount: order.totalAmountCents / 100 });
+</code></pre>
 <h3>30.5 案例 E 手把手：运行时 / 框架大版本升级</h3>
 <ol>
 <li><strong>列命中点。</strong> 粘 §15 例子 E 的提示，让它先读官方迁移指南，输出 breaking changes × 仓库命中点清单。</li>
@@ -684,6 +767,34 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <li><strong>失败了怎么办。</strong> 用“一处一 commit”二分定位到具体改动；禁止靠到处加 <code>any</code>、关校验、吞异常混过去，看见就打回。</li>
 <li><strong>完成定义：</strong> 双矩阵全绿、冒烟通过、锁定文件只含必要变更、回滚说明可执行。</li>
 </ol>
+<p><strong>关键代码（对应第 1、3 步：双矩阵 + 一处兼容修复的样子）：</strong></p>
+<pre><code class="language-yaml"># CI 双矩阵（节选）：切默认版本之前，两个版本都必须绿
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm test
+</code></pre>
+<pre><code class="language-python"># 兼容修复示例（以 Django 大版本升级为例）：被移除的 url() 换成 path()
+# 改前：url(r&quot;^orders/$&quot;, views.orders)
+from django.urls import path
+
+urlpatterns = [
+    path(&quot;orders/&quot;, views.orders, name=&quot;orders&quot;),
+]
+</code></pre>
+<pre><code class="language-python"># 冒烟断言：一处兼容修复一个提交，靠它二分定位
+def test_orders_route_survives_upgrade(client):
+    assert client.get(&quot;/orders/&quot;).status_code == 200
+</code></pre>
 <h3>30.6 三工位（A/B/C）手把手：从派工到清理走一遍</h3>
 <p>（与 §17、§18 配合使用；这里是操作顺序。）</p>
 <ol>
@@ -699,6 +810,21 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <li><strong>失败分支速查：</strong> 两窗改同文件 → 停一窗、先验目录；B 测试被 A 的新签名弄红 → B 先 rebase 再改测试，禁止给测试加 <code>@Disabled</code> 蒙混；Agent 在 worktree 里自行 merge → 解开它的合并、回到你手里重合。</li>
 <li><strong>完成定义：</strong> 主线全绿、三个工位分支都已删、审查问题清零或已记为债、临时 worktree 目录不存在。</li>
 </ol>
+<p><strong>关键代码（对应第 5–6 步：B 工位的验收长这样，合并前你亲手重跑）：</strong></p>
+<pre><code class="language-java">// B 工位交付的测试必须断言业务码，不许只有 assertNotNull
+mockMvc.perform(post(&quot;/api/orders&quot;)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(&quot;{\&quot;skuId\&quot;:\&quot;SKU-1\&quot;,\&quot;quantity\&quot;:0}&quot;))
+    .andExpect(status().isBadRequest())
+    .andExpect(jsonPath(&quot;$.code&quot;).value(&quot;INVALID_QUANTITY&quot;));
+</code></pre>
+<pre><code class="language-bash"># 每个工位收工时在自己的目录里跑：先看改动面，再重跑验收
+git status --short
+git diff --stat
+# 然后逐字跑工位票上的验收命令（即正文里的 &lt;test&gt; 占位符）
+# B 工位若出现下面这种输出，就是越界，当场打回：
+#   src/main/java/... （B 只许加测试）
+</code></pre>
 <h3>30.7 OpenAI Harness 案例的自用迷你版（在你的项目里一周搭起骨架）</h3>
 <p>大团队的全自动你学不来，但机制可以缩小：</p>
 <ol>
@@ -808,6 +934,49 @@ git log --oneline -5
 <p><strong>教学版契约长这样（你的项目可替换命名，但要素别少）：</strong>表 <code>invitations</code> 至少含 <code>id</code>、<code>team_id</code>、<code>email</code>（存小写规范化后的）、<code>role</code>、<code>token_hash</code>、<code>expires_at</code>、<code>accepted_at</code>、<code>revoked_at</code>、<code>created_by</code>、<code>created_at</code>；接口为 <code>POST /api/teams/&lt;teamId&gt;/invitations</code>（管理员，成功 201，重复待接受邀请 409）、<code>GET /api/teams/&lt;teamId&gt;/invitations</code>（只列待接受）、<code>DELETE /api/teams/&lt;teamId&gt;/invitations/&lt;id&gt;</code>（撤销）、<code>GET /api/invitations/&lt;token&gt;</code>（预览，返回团队名与是否仍有效，失效原因不区分得太细以免被探测）、<code>POST /api/invitations/&lt;token&gt;/accept</code>（需登录且邮箱一致，成功后成为该团队普通成员）；令牌用项目已有的安全随机能力生成、服务端只存哈希、原始令牌只出现在生成时的响应和链接里；任何按 <code>teamId</code> 查数据的接口都必须同时校验「当前用户是该团队管理员」，只校验登录态不够。</p>
 <p><strong>验证信号：</strong>方案里每个接口都写了错误码；状态流转能回答「过期且被撤销的邀请点开是什么画面」；安全一节明确出现「只存哈希、日志不出现原始令牌」。</p>
 <p><strong>失败了怎么办：</strong>它提出先不做唯一约束「应用层判一下就行」→ 要求写明并发下两个人同时邀请同一邮箱会发生什么，写不清就老老实实加数据库层约束（具体写法按你的数据库方言）；接口想把 <code>teamId</code> 从登录态里推断、路径里不给 → 保留路径参数并写明校验规则，契约要可从外部测试。</p>
+<p><strong>契约对应的代码长这样（教学栈：PostgreSQL + TypeScript，先看形状，细节按你的 ORM 改）：</strong></p>
+<pre><code class="language-sql">-- migrations/20261017_create_invitations.sql
+-- Up：只加新表，不动任何旧表（这是 §31.10 回滚能只退应用的根本原因）
+CREATE TABLE invitations (
+    id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    team_id     uuid NOT NULL REFERENCES teams (id) ON DELETE CASCADE,
+    email       text NOT NULL,              -- 入库前统一小写、去空格
+    role        text NOT NULL DEFAULT 'member' CHECK (role IN ('member')),
+    token_hash  text NOT NULL UNIQUE,       -- 只存哈希，原始令牌永不入库
+    expires_at  timestamptz NOT NULL,
+    accepted_at timestamptz,
+    revoked_at  timestamptz,
+    created_by  uuid NOT NULL REFERENCES users (id),
+    created_at  timestamptz NOT NULL DEFAULT now()
+);
+-- 同一团队对同一邮箱只允许一条待处理邀请；过期未接受的由服务层先置为失效再新建
+CREATE UNIQUE INDEX invitations_one_pending_per_email
+    ON invitations (team_id, email)
+    WHERE accepted_at IS NULL AND revoked_at IS NULL;
+CREATE INDEX invitations_team_pending_idx
+    ON invitations (team_id)
+    WHERE accepted_at IS NULL AND revoked_at IS NULL;
+-- Down：DROP TABLE invitations;
+</code></pre>
+<pre><code class="language-ts">// invitations.dto.ts —— 请求/响应形状与 §31.3 的文字契约一一对应
+export interface CreateInvitationRequest {
+  email: string;
+  role: &quot;member&quot;; // v1 只授普通成员，字面量类型先把越权挡在类型层
+}
+
+export interface CreateInvitationResponse {
+  id: string;
+  email: string;
+  role: &quot;member&quot;;
+  expiresAt: string; // ISO 8601
+  inviteUrl: string; // 原始令牌只在这里出现一次
+}
+
+export interface InvitationPreview {
+  teamName: string;
+  usable: boolean; // 失效不细分原因，避免被逐项探测
+}
+</code></pre>
 <p><strong>完成定义：</strong>你逐条审完，在 <code>SPEC.md</code> 顶部写「契约冻结 + 日期」，单独 commit。冻结后改契约只能走「先改 <code>SPEC.md</code>、再改代码」的顺序，不许代码先行。</p>
 <h3>31.4 拆任务与计划：分清串行主线和可并行支线</h3>
 <p><strong>你做什么：</strong>让 Agent 把方案拆成 <code>PLAN.md</code>，每张任务卡固定五件事：目标、允许改的路径、禁止事项、验收命令、交付格式。本例子的拆法是：</p>
@@ -883,6 +1052,215 @@ git log --oneline -5
 <p>每完成一个任务：你亲自重跑该任务的验收命令，再 commit，一次提交只含一个任务的改动，提交信息写清任务号。</p>
 <p><strong>验证信号：</strong>每个任务的会话记录里都是先见红、后见绿；<code>git diff --stat</code> 的文件都落在任务卡允许路径内；原始令牌从不出现在日志、测试快照和提交内容里（自己搜一遍提交内容里的令牌样例字符串能佐证）。</p>
 <p><strong>失败了怎么办：</strong>它改测试迁就实现 → 用契约原文打回，测试冻结（呼应 §30.12 的先提交测试）；它顺手改了登录模块 → 当场 <code>git diff</code> 指出越界文件、只回退那个文件重做；同一处连纠两轮还不对 → 停，会话推倒，按 §5 的办法带着失败输出重开并把提示写得更小（只给一个失败用例）。</p>
+<p><strong>实现的核心代码（节选，<code>db</code>、日志与错误类型换成你仓库已有的）：</strong></p>
+<pre><code class="language-ts">// invitations.token.ts —— 生成、哈希、可用性判断
+import { createHash, randomBytes } from &quot;node:crypto&quot;;
+
+export function newInviteToken(): string {
+  return randomBytes(32).toString(&quot;base64url&quot;); // 原始令牌只进链接与创建响应
+}
+
+export function hashInviteToken(token: string): string {
+  return createHash(&quot;sha256&quot;).update(token, &quot;utf8&quot;).digest(&quot;hex&quot;); // 入库与查询都用它
+}
+
+export interface InvitationRow {
+  id: string;
+  teamId: string;
+  email: string;
+  tokenHash: string;
+  expiresAt: Date;
+  acceptedAt: Date | null;
+  revokedAt: Date | null;
+}
+
+export function isUsable(inv: InvitationRow, now = new Date()): boolean {
+  return inv.acceptedAt === null &amp;&amp; inv.revokedAt === null &amp;&amp; inv.expiresAt.getTime() &gt; now.getTime();
+}
+</code></pre>
+<pre><code class="language-ts">// invitations.guard.ts —— 租户隔离与权限：只校验登录态视为未完成
+export class HttpError extends Error {
+  constructor(public status: number, public code: string) {
+    super(code);
+  }
+}
+
+export function normalizeEmail(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+
+export async function requireTeamAdmin(userId: string, teamId: string): Promise&lt;void&gt; {
+  const membership = await db.oneOrNone&lt;{ role: &quot;admin&quot; | &quot;member&quot; }&gt;(
+    &quot;SELECT role FROM team_members WHERE team_id = $1 AND user_id = $2&quot;,
+    [teamId, userId],
+  );
+  if (membership === null) throw new HttpError(403, &quot;NOT_TEAM_MEMBER&quot;); // 不是成员：连存在性都不多给
+  if (membership.role !== &quot;admin&quot;) throw new HttpError(403, &quot;ADMIN_REQUIRED&quot;);
+}
+</code></pre>
+<pre><code class="language-ts">// invitations.routes.ts —— 五个接口（Express 风格，换成你的框架同理）
+// POST /api/teams/:teamId/invitations —— 管理员创建，201；重复待处理 409
+export async function createInvitation(req: AuthedRequest, res: Response): Promise&lt;void&gt; {
+  assertInvitationsEnabled();
+  const teamId = req.params.teamId;
+  await requireTeamAdmin(req.user.id, teamId);
+
+  const email = normalizeEmail(String(req.body?.email ?? &quot;&quot;));
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(422, &quot;INVALID_EMAIL&quot;);
+
+  // 过期的待处理邀请先失效，避免它挡住给同一邮箱重新发邀请
+  await db.none(
+    &quot;UPDATE invitations SET revoked_at = now() WHERE team_id = $1 AND email = $2 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at &lt;= now()&quot;,
+    [teamId, email],
+  );
+
+  const token = newInviteToken();
+  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+  try {
+    const row = await db.one&lt;{ id: string }&gt;(
+      &quot;INSERT INTO invitations (team_id, email, role, token_hash, expires_at, created_by) VALUES ($1, $2, 'member', $3, $4, $5) RETURNING id&quot;,
+      [teamId, email, hashInviteToken(token), expiresAt, req.user.id],
+    );
+    const body: CreateInvitationResponse = {
+      id: row.id, email, role: &quot;member&quot;,
+      expiresAt: expiresAt.toISOString(),
+      inviteUrl: `${process.env.APP_ORIGIN}/invite/${token}`,
+    };
+    res.status(201).json(body); // 日志里绝不打印 body，token 在里面
+  } catch (err) {
+    if (isUniqueViolation(err)) throw new HttpError(409, &quot;INVITATION_ALREADY_PENDING&quot;);
+    throw err;
+  }
+}
+
+// GET /api/teams/:teamId/invitations —— 只列待处理
+export async function listPendingInvitations(req: AuthedRequest, res: Response): Promise&lt;void&gt; {
+  await requireTeamAdmin(req.user.id, req.params.teamId);
+  const items = await db.any(
+    &quot;SELECT id, email, role, expires_at AS \&quot;expiresAt\&quot;, created_at AS \&quot;createdAt\&quot; FROM invitations WHERE team_id = $1 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at &gt; now() ORDER BY created_at DESC&quot;,
+    [req.params.teamId],
+  );
+  res.json({ items }); // 注意：这里永远不会、也不需要出现 token
+}
+
+// DELETE /api/teams/:teamId/invitations/:id —— 撤销，204
+export async function revokeInvitation(req: AuthedRequest, res: Response): Promise&lt;void&gt; {
+  assertInvitationsEnabled();
+  await requireTeamAdmin(req.user.id, req.params.teamId);
+  const changed = await db.result(
+    &quot;UPDATE invitations SET revoked_at = now() WHERE id = $1 AND team_id = $2 AND accepted_at IS NULL AND revoked_at IS NULL&quot;,
+    [req.params.id, req.params.teamId],
+    (r) =&gt; r.rowCount,
+  );
+  if (changed === 0) throw new HttpError(404, &quot;INVITATION_NOT_FOUND&quot;); // 跨团队 id 也走这里，不泄露
+  res.status(204).send();
+}
+
+// GET /api/invitations/:token —— 未登录可看的预览，只给团队名与是否可用
+export async function previewInvitation(req: Request, res: Response): Promise&lt;void&gt; {
+  const inv = await db.oneOrNone&lt;InvitationRow &amp; { teamName: string }&gt;(
+    &quot;SELECT i.id, i.team_id AS \&quot;teamId\&quot;, i.email, i.token_hash AS \&quot;tokenHash\&quot;, i.expires_at AS \&quot;expiresAt\&quot;, i.accepted_at AS \&quot;acceptedAt\&quot;, i.revoked_at AS \&quot;revokedAt\&quot;, t.name AS \&quot;teamName\&quot; FROM invitations i JOIN teams t ON t.id = i.team_id WHERE i.token_hash = $1&quot;,
+    [hashInviteToken(req.params.token)],
+  );
+  const body: InvitationPreview = inv === null
+    ? { teamName: &quot;&quot;, usable: false }
+    : { teamName: inv.teamName, usable: isUsable(inv) };
+  res.json(body);
+}
+
+// POST /api/invitations/:token/accept —— 需登录、邮箱一致，原子占用保证单次使用
+export async function acceptInvitation(req: AuthedRequest, res: Response): Promise&lt;void&gt; {
+  assertInvitationsEnabled();
+  const inv = await db.oneOrNone&lt;InvitationRow&gt;(
+    &quot;SELECT id, team_id AS \&quot;teamId\&quot;, email, token_hash AS \&quot;tokenHash\&quot;, expires_at AS \&quot;expiresAt\&quot;, accepted_at AS \&quot;acceptedAt\&quot;, revoked_at AS \&quot;revokedAt\&quot; FROM invitations WHERE token_hash = $1&quot;,
+    [hashInviteToken(req.params.token)],
+  );
+  if (inv === null || !isUsable(inv)) throw new HttpError(410, &quot;INVITATION_NOT_USABLE&quot;);
+  if (normalizeEmail(req.user.email) !== inv.email) throw new HttpError(403, &quot;EMAIL_MISMATCH&quot;);
+
+  await db.tx(async (t) =&gt; {
+    // 先原子占用：两个请求同时点接受，只有一个能把 accepted_at 从空改成时间
+    const claimed = await t.result(
+      &quot;UPDATE invitations SET accepted_at = now() WHERE id = $1 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at &gt; now()&quot;,
+      [inv.id],
+      (r) =&gt; r.rowCount,
+    );
+    if (claimed === 0) throw new HttpError(410, &quot;INVITATION_NOT_USABLE&quot;);
+    await t.none(
+      &quot;INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, 'member') ON CONFLICT (team_id, user_id) DO NOTHING&quot;,
+      [inv.teamId, req.user.id],
+    );
+  });
+  res.status(201).json({ teamId: inv.teamId, role: &quot;member&quot; });
+}
+</code></pre>
+<pre><code class="language-tsx">// AcceptInvitePage.tsx —— 接受页的状态机：每种后端结果都有对应画面
+type AcceptState =
+  | { kind: &quot;loading&quot; }
+  | { kind: &quot;ready&quot;; teamName: string }
+  | { kind: &quot;notUsable&quot; }
+  | { kind: &quot;emailMismatch&quot; }
+  | { kind: &quot;done&quot; }
+  | { kind: &quot;error&quot; };
+
+export function AcceptInvitePage() {
+  const { token } = useParams&lt;{ token: string }&gt;();
+  const [state, setState] = useState&lt;AcceptState&gt;({ kind: &quot;loading&quot; });
+
+  useEffect(() =&gt; {
+    let cancelled = false;
+    api.get&lt;InvitationPreview&gt;(`/api/invitations/${token}`)
+      .then((preview) =&gt; {
+        if (cancelled) return;
+        setState(preview.usable ? { kind: &quot;ready&quot;, teamName: preview.teamName } : { kind: &quot;notUsable&quot; });
+      })
+      .catch(() =&gt; { if (!cancelled) setState({ kind: &quot;error&quot; }); });
+    return () =&gt; { cancelled = true; };
+  }, [token]);
+
+  async function onAccept() {
+    setState({ kind: &quot;loading&quot; });
+    try {
+      await api.post(`/api/invitations/${token}/accept`);
+      setState({ kind: &quot;done&quot; });
+    } catch (err) {
+      if (hasStatus(err, 403)) setState({ kind: &quot;emailMismatch&quot; }); // 提示换被邀请邮箱登录
+      else if (hasStatus(err, 410)) setState({ kind: &quot;notUsable&quot; }); // 过期/已用/已撤销同一画面
+      else setState({ kind: &quot;error&quot; });
+    }
+  }
+
+  if (state.kind === &quot;loading&quot;) return &lt;p&gt;正在确认邀请…&lt;/p&gt;;
+  if (state.kind === &quot;notUsable&quot;) return &lt;p&gt;这个邀请链接已失效，请让管理员重新发送。&lt;/p&gt;;
+  if (state.kind === &quot;emailMismatch&quot;) return &lt;p&gt;请用被邀请的邮箱登录后再接受。&lt;/p&gt;;
+  if (state.kind === &quot;done&quot;) return &lt;p&gt;已加入团队，正在跳转…&lt;/p&gt;;
+  if (state.kind === &quot;error&quot;) return &lt;p&gt;出了点问题，请稍后重试。&lt;/p&gt;;
+  return (
+    &lt;div&gt;
+      &lt;p&gt;邀请你加入「{state.teamName}」&lt;/p&gt;
+      &lt;button onClick={onAccept}&gt;接受邀请&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<pre><code class="language-ts">// invitations.token.test.ts —— 单元测试先钉住令牌与过期/单次语义
+it(&quot;只存哈希，且哈希不等于原始令牌&quot;, () =&gt; {
+  const token = newInviteToken();
+  expect(hashInviteToken(token)).not.toBe(token);
+  expect(hashInviteToken(token)).toMatch(/^[0-9a-f]{64}$/);
+});
+
+it(&quot;过期、已接受、已撤销都不可用，未过期待处理可用&quot;, () =&gt; {
+  const base: InvitationRow = {
+    id: &quot;inv-1&quot;, teamId: &quot;team-1&quot;, email: &quot;new@example.com&quot;, tokenHash: &quot;h&quot;,
+    expiresAt: new Date(Date.now() + 60_000), acceptedAt: null, revokedAt: null,
+  };
+  expect(isUsable(base)).toBe(true);
+  expect(isUsable({ ...base, expiresAt: new Date(Date.now() - 1) })).toBe(false);
+  expect(isUsable({ ...base, acceptedAt: new Date() })).toBe(false);
+  expect(isUsable({ ...base, revokedAt: new Date() })).toBe(false);
+});
+</code></pre>
 <p><strong>完成定义：</strong>T1–T5 全部单任务验收绿、每任务一提交；你能用一句话说清每个提交改了什么。</p>
 <h3>31.6 自测与联调：按矩阵逐项打勾，不靠感觉</h3>
 <p><strong>你做什么：</strong>启动本地全栈 <code>&lt;dev&gt;</code>，先让 Agent 按契约生成一张自测矩阵（场景 × 入口 × 期望状态码/画面 × 实际结果），再逐项执行。后端用 curl 打一遍（把 <code>&lt;port&gt;</code>、<code>&lt;admin-token&gt;</code>、<code>&lt;member-token&gt;</code> 换成你本地的）：</p>
@@ -898,6 +1276,61 @@ curl -s http://localhost:&lt;port&gt;/api/invitations/&lt;token&gt;   # 预览�
 <p>前端手工走完整旅程：管理员在设置页发邀请 → 复制链接 → 无痕窗口打开接受页 → 未登录先跳登录 → 用被邀请邮箱登录接受 → 落到团队页且成员列表有自己 → 再打开同一链接看到「已被使用」。再让 Agent 补 e2e 用例覆盖这条主线和「过期链接」一条，跑 <code>&lt;e2e&gt;</code>。</p>
 <p><strong>验证信号：</strong>矩阵每一行都有实际结果（状态码或截图），不是只打勾；数据库里查到的该邀请记录只有 <code>token_hash</code>、没有原始令牌（用你的数据库控制台看一行即可）。</p>
 <p><strong>失败了怎么办：</strong>前后端对不上先回 <code>SPEC.md</code> 判谁偏离契约，不许两边各改一半；e2e 偶发失败先让 Agent 分清时序问题还是真缺陷，禁止直接重跑到绿为止。</p>
+<p><strong>接口测试要把契约逐条钉住（节选，都是真断言，不是状态码打勾）：</strong></p>
+<pre><code class="language-ts">// invitations.api.test.ts —— 集成测试跑在测试库上，beforeEach 清 invitations 与 team_members
+it(&quot;管理员创建成功：201、只给一次原始链接、库里只有哈希&quot;, async () =&gt; {
+  const res = await request(app)
+    .post(`/api/teams/${teamId}/invitations`)
+    .set(&quot;Authorization&quot;, `Bearer ${adminToken}`)
+    .send({ email: &quot;New@Example.com&quot;, role: &quot;member&quot; });
+  expect(res.status).toBe(201);
+  expect(res.body.email).toBe(&quot;new@example.com&quot;); // 已规范化
+  const token = String(res.body.inviteUrl).split(&quot;/invite/&quot;)[1];
+  expect(token).toBeTruthy();
+
+  const stored = await db.one(&quot;SELECT token_hash FROM invitations WHERE id = $1&quot;, [res.body.id]);
+  expect(stored.token_hash).not.toBe(token);
+  expect(stored.token_hash).toBe(hashInviteToken(token));
+});
+
+it(&quot;普通成员创建 403；拿别的团队 id 创建也是 403&quot;, async () =&gt; {
+  await request(app)
+    .post(`/api/teams/${teamId}/invitations`)
+    .set(&quot;Authorization&quot;, `Bearer ${memberToken}`)
+    .send({ email: &quot;a@example.com&quot;, role: &quot;member&quot; })
+    .expect(403);
+  await request(app)
+    .post(`/api/teams/${otherTeamId}/invitations`)
+    .set(&quot;Authorization&quot;, `Bearer ${adminToken}`)
+    .send({ email: &quot;a@example.com&quot;, role: &quot;member&quot; })
+    .expect(403);
+});
+
+it(&quot;重复待处理邀请 409；接受只能成功一次，第二次 410&quot;, async () =&gt; {
+  const created = await createInviteViaApi(app, adminToken, teamId, &quot;dup@example.com&quot;);
+  await request(app)
+    .post(`/api/teams/${teamId}/invitations`)
+    .set(&quot;Authorization&quot;, `Bearer ${adminToken}`)
+    .send({ email: &quot;dup@example.com&quot;, role: &quot;member&quot; })
+    .expect(409);
+
+  const token = String(created.inviteUrl).split(&quot;/invite/&quot;)[1];
+  await request(app).post(`/api/invitations/${token}/accept`)
+    .set(&quot;Authorization&quot;, `Bearer ${inviteeToken}`).expect(201);
+  await request(app).post(`/api/invitations/${token}/accept`)
+    .set(&quot;Authorization&quot;, `Bearer ${inviteeToken}`).expect(410);
+
+  const membership = await db.oneOrNone(
+    &quot;SELECT role FROM team_members WHERE team_id = $1 AND user_id = $2&quot;,
+    [teamId, inviteeId],
+  );
+  expect(membership?.role).toBe(&quot;member&quot;); // 落库且只是普通成员
+});
+</code></pre>
+<pre><code class="language-bash"># curl 冒烟把期望状态码写成断言，红了就是红了，不靠肉眼数
+test &quot;$(curl -s -o /tmp/inv.json -w '%{http_code}' -X POST &quot;http://localhost:&lt;port&gt;/api/teams/&lt;teamId&gt;/invitations&quot; -H &quot;Authorization: Bearer &lt;admin-token&gt;&quot; -H 'Content-Type: application/json' -d '{&quot;email&quot;:&quot;smoke@example.com&quot;,&quot;role&quot;:&quot;member&quot;}')&quot; = &quot;201&quot;
+test &quot;$(curl -s -o /dev/null -w '%{http_code}' -X POST &quot;http://localhost:&lt;port&gt;/api/teams/&lt;teamId&gt;/invitations&quot; -H &quot;Authorization: Bearer &lt;member-token&gt;&quot; -H 'Content-Type: application/json' -d '{&quot;email&quot;:&quot;smoke2@example.com&quot;,&quot;role&quot;:&quot;member&quot;}')&quot; = &quot;403&quot;
+</code></pre>
 <p><strong>完成定义：</strong>矩阵全项有据、<code>&lt;test&gt;</code>、<code>&lt;typecheck&gt;</code>、<code>&lt;lint&gt;</code>、<code>&lt;build&gt;</code>、<code>&lt;e2e&gt;</code> 全绿。把矩阵贴进 <code>PR.md</code> 草稿备用。</p>
 <h3>31.7 代码审查：换个新会话只读挑错，你逐条裁决</h3>
 <p><strong>你做什么：</strong>开一个全新会话（这点重要，别用写代码的那个会话审自己），只给只读权限，粘：</p>
@@ -935,6 +1368,15 @@ gh pr checks
 </ol>
 <p><strong>验证信号：</strong>每一步都有明确证据：预发冒烟结果、生产版本号、迁移执行成功、内部账号接受成功且成员列表正确。</p>
 <p><strong>失败了怎么办：</strong>预发冒烟红 → 不许带着「生产再看看」往下走，回 §31.6 定位；生产发完发现迁移没跑或跑错 → 立即按 §31.10 的回滚触发条件处置，先关开关，不要在生产上手改数据结构。</p>
+<p><strong>功能开关的守卫代码（接口层校验，不是只藏前端按钮）：</strong></p>
+<pre><code class="language-ts">// invitations.flag.ts —— 关开关时入口消失、接口直接拒绝，两处都要挡
+export function assertInvitationsEnabled(env: NodeJS.ProcessEnv = process.env): void {
+  if (env.INVITATIONS_ENABLED !== &quot;true&quot;) {
+    throw new HttpError(503, &quot;INVITATIONS_DISABLED&quot;);
+  }
+}
+</code></pre>
+<p>上面五个接口里创建、撤销、接受都先过 <code>assertInvitationsEnabled()</code>；团队设置页读同一个开关决定是否渲染入口。只挡前端不算数——§31.10 演练关开关时，要直接拿 curl 打接口确认返回 503。</p>
 <p><strong>完成定义：</strong>全量开启后，用一个全新邮箱完整走通一次邀请→接受，成员权限正确（能看团队内容、不能进管理员操作），这一步的截图或记录进了发布记录。</p>
 <h3>31.10 上线后观察与回滚准备：先写触发条件，再看盘</h3>
 <p><strong>你做什么：</strong>上线前就把观察项和回滚线写进 <code>PR.md</code>，别等出事再商量。观察窗口分两段：开全量后的头 30 分钟盯紧，之后 24 小时抽查三回。看什么：邀请创建接口的成功/失败数、409 是否异常飙升（可能有人脚本刷或前端重复提交）、接受接口失败数与失败原因分布（过期/邮箱不符占大头是正常使用问题，500 是你的问题）、跨团队 403 是否突增、错误日志里有没有出现邀请链接或令牌字样（出现即按安全事件处理）。让 Agent 帮忙分析时只给它导出的日志文本、只读分析，你下处置命令。</p>

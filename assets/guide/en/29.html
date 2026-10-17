@@ -658,6 +658,31 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <li><strong>When it fails.</strong> Field mismatch between layers → go back to <code>SPEC.md</code> and find who deviated; never let both sides &quot;meet in the middle&quot;. Flaky e2e → make it determine timing-vs-real-bug before any re-run.</li>
 <li><strong>Done when:</strong> contract, backend, frontend and e2e tests are all green; <code>git diff --stat</code> contains nothing outside the contract; the PR carries the test commands and output.</li>
 </ol>
+<p><strong>Key code (for Steps 2–3 above, red before green):</strong></p>
+<pre><code class="language-ts">// orders.api.test.ts — write this first: it should fail while the endpoint ignores `status`
+it(&quot;filters by status and rejects an unknown status with 400&quot;, async () =&gt; {
+  const ok = await request(app).get(&quot;/api/orders?status=PAID&quot;);
+  expect(ok.status).toBe(200);
+  expect(ok.body.items.every((o: { status: string }) =&gt; o.status === &quot;PAID&quot;)).toBe(true);
+
+  const bad = await request(app).get(&quot;/api/orders?status=NOPE&quot;);
+  expect(bad.status).toBe(400);
+  expect(bad.body.code).toBe(&quot;INVALID_STATUS&quot;);
+});
+</code></pre>
+<pre><code class="language-ts">// orders.routes.ts — the minimal implementation: validate the enum, push the filter into the query layer
+const ORDER_STATUSES = [&quot;PENDING&quot;, &quot;PAID&quot;, &quot;SHIPPED&quot;, &quot;CANCELLED&quot;] as const;
+
+app.get(&quot;/api/orders&quot;, async (req, res) =&gt; {
+  const status = typeof req.query.status === &quot;string&quot; ? req.query.status : undefined;
+  if (status !== undefined &amp;&amp; !(ORDER_STATUSES as readonly string[]).includes(status)) {
+    return res.status(400).json({ code: &quot;INVALID_STATUS&quot; });
+  }
+  const items = await orders.list({ status });
+  return res.json({ items });
+});
+</code></pre>
+<p>The assertions earn their keep: <code>every(...status === &quot;PAID&quot;)</code> catches &quot;parameter accepted but query ignored&quot;, and <code>INVALID_STATUS</code> catches the frontend swallowing bad values while the backend silently returns everything.</p>
 <h3>30.2 Case B walkthrough: intermittent checkout 500s</h3>
 <ol>
 <li><strong>Collect evidence first.</strong> Prepare one hour of error logs and one traceId; paste the prompt from Example B, §7. Hard rule: evidence chain and ranked hypotheses only — <strong>no code changes</strong>.</li>
@@ -668,6 +693,25 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <li><strong>When it fails.</strong> New redness elsewhere after the fix → it likely fixed a symptom or touched shared logic; inspect the diff and split unrelated changes out.</li>
 <li><strong>Done when:</strong> the regression test can be shown red→green; full suite green; the PR states the root cause, links the evidence chain, and records how the next occurrence gets diagnosed in five minutes (which log/alert was added).</li>
 </ol>
+<p><strong>Key code (Steps 3–5: turn the reproduction red, then fix the root cause).</strong> Suppose the evidence chain ends at &quot;no coupon means <code>couponCode</code> is null and the discount lookup dereferences it&quot; (your root cause is whatever your evidence says; this just gives the fix a shape):</p>
+<pre><code class="language-java">// The red-first regression test: checkout without a coupon must not 500
+@Test
+void checkoutWithoutCouponDoesNot500() throws Exception {
+    mockMvc.perform(post(&quot;/api/checkout&quot;)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(&quot;{\&quot;items\&quot;:[{\&quot;skuId\&quot;:\&quot;SKU-1\&quot;,\&quot;quantity\&quot;:1}],\&quot;couponCode\&quot;:null}&quot;))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath(&quot;$.payable&quot;).value(1999));
+}
+</code></pre>
+<pre><code class="language-java">// The minimal fix: no coupon means zero discount — never let null reach the lookup
+int discount = Optional.ofNullable(req.couponCode())
+    .filter(code -&gt; !code.isBlank())
+    .map(coupons::discountFor)
+    .orElse(0);
+int payable = Math.max(0, subtotal - discount);
+</code></pre>
+<p>Note the fix touches only the null path. Do not wrap the whole checkout in a try/catch that swallows exceptions — that leaves the next 500 with no evidence at all.</p>
 <h3>30.3 Case C walkthrough: rename <code>status</code> → <code>state</code> across layers</h3>
 <ol>
 <li><strong>Map the blast radius.</strong> A read-only agent searches the whole repo for reads/writes of <code>status</code>; you mark which hits are in scope and which are unrelated namesakes.</li>
@@ -678,6 +722,24 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <li><strong>When it fails.</strong> Dual writes disagree → stop at PR1 and fix write paths (hunt cron jobs and the other service); never jump to PR2 and &quot;adapt&quot; in the frontend to hide it.</li>
 <li><strong>Done when:</strong> three independently revertible PRs; the old field was deleted only with zero-traffic evidence; a final repo search finds no business references to the old name.</li>
 </ol>
+<p><strong>Key code (Steps 2–4: expand, dual-write, switch):</strong></p>
+<pre><code class="language-sql">-- PR1 (expand): add and backfill only, delete nothing
+ALTER TABLE orders ADD COLUMN state varchar(32);
+UPDATE orders SET state = status WHERE state IS NULL;
+-- PR3 (contract), only with zero-traffic evidence for the old field:
+-- ALTER TABLE orders DROP COLUMN status;
+</code></pre>
+<pre><code class="language-java">// During PR1/PR2 every write path dual-writes, including the one the cron job calls
+public void changeState(Order order, String next) {
+    order.setStatus(next); // keep the old field in sync until PR3
+    order.setState(next);
+    orders.save(order);
+}
+</code></pre>
+<pre><code class="language-java">// Dual-write consistency assertion: every write entry point needs one of these before the switch
+assertThat(saved.getState()).isEqualTo(&quot;PAID&quot;);
+assertThat(saved.getStatus()).isEqualTo(saved.getState());
+</code></pre>
 <h3>30.4 Case D walkthrough: frontend/backend contract drift</h3>
 <ol>
 <li><strong>Diff table only.</strong> Paste the prompt from Example D, §15; output is a table, no code. Review its &quot;which side is wrong&quot; column yourself.</li>
@@ -688,6 +750,27 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <li><strong>When it fails.</strong> The schema gets loosened &quot;to go green&quot; → send back; contract tests must catch exactly the class of break you planted in Step 5.</li>
 <li><strong>Done when:</strong> the diff table is empty, contract tests demonstrably go red and green, and the generate command is documented in <code>AGENTS.md</code>.</li>
 </ol>
+<p><strong>Key code (Steps 1 and 4: pin the drift as a red test):</strong></p>
+<pre><code class="language-yaml"># The frozen OpenAPI fragment
+OrderSummary:
+  type: object
+  required: [id, totalAmount]
+  properties:
+    id: { type: string }
+    totalAmount: { type: number }
+</code></pre>
+<pre><code class="language-ts">// Contract test: when the backend renames totalAmount to total, this goes red first
+it(&quot;order response matches the OpenAPI required fields and types&quot;, async () =&gt; {
+  const res = await fetch(`${baseUrl}/api/orders/42`);
+  expect(res.status).toBe(200);
+  const body = await res.json();
+  expect(typeof body.id).toBe(&quot;string&quot;);
+  expect(typeof body.totalAmount).toBe(&quot;number&quot;);
+});
+</code></pre>
+<pre><code class="language-ts">// The minimal fix aligns the response builder with the contract — never hand-edit generated frontend types
+res.json({ id: order.id, totalAmount: order.totalAmountCents / 100 });
+</code></pre>
 <h3>30.5 Case E walkthrough: runtime / framework major upgrade</h3>
 <ol>
 <li><strong>List the hits.</strong> Paste the prompt from Example E, §15; it reads the official migration guide and outputs breaking changes × locations in your repo.</li>
@@ -698,6 +781,34 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <li><strong>When it fails.</strong> Bisect using the one-fix-per-commit history; drive-bys are vetoed — no sprinkling <code>any</code>, disabling checks or swallowing exceptions to pass.</li>
 <li><strong>Done when:</strong> dual matrix green, smoke passes, lockfile contains only necessary changes, rollback is executable as written.</li>
 </ol>
+<p><strong>Key code (Steps 1 and 3: dual matrix, plus what one compatibility fix looks like):</strong></p>
+<pre><code class="language-yaml"># CI dual matrix (excerpt): both versions must be green before the default flips
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm test
+</code></pre>
+<pre><code class="language-python"># Compatibility fix example (Django major upgrade): the removed url() becomes path()
+# Before: url(r&quot;^orders/$&quot;, views.orders)
+from django.urls import path
+
+urlpatterns = [
+    path(&quot;orders/&quot;, views.orders, name=&quot;orders&quot;),
+]
+</code></pre>
+<pre><code class="language-python"># Smoke assertion: one compatibility fix per commit, bisected by exactly this
+def test_orders_route_survives_upgrade(client):
+    assert client.get(&quot;/orders/&quot;).status_code == 200
+</code></pre>
 <h3>30.6 The three-station (A/B/C) walkthrough, end to end</h3>
 <p>(Companion to §§17–18; this is the operating order.)</p>
 <ol>
@@ -713,6 +824,21 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <li><strong>Failure branches:</strong> two windows editing the same file → stop one, re-verify directories; B's tests broken by A's new signature → B rebases first, then adjusts tests (adding <code>@Disabled</code> to sneak past is forbidden); an agent merging inside its own worktree → unwind it and re-merge by hand.</li>
 <li><strong>Done when:</strong> main is green, all three station branches are deleted, review findings are cleared or recorded as debt, and no temp worktree directories remain.</li>
 </ol>
+<p><strong>Key code (Steps 5–6: this is what Station B's acceptance looks like; re-run it yourself before merging):</strong></p>
+<pre><code class="language-java">// Station B's tests must assert the business code — assertNotNull alone is a send-back
+mockMvc.perform(post(&quot;/api/orders&quot;)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(&quot;{\&quot;skuId\&quot;:\&quot;SKU-1\&quot;,\&quot;quantity\&quot;:0}&quot;))
+    .andExpect(status().isBadRequest())
+    .andExpect(jsonPath(&quot;$.code&quot;).value(&quot;INVALID_QUANTITY&quot;));
+</code></pre>
+<pre><code class="language-bash"># Closing checks in each station's own directory: change surface first, then re-run acceptance
+git status --short
+git diff --stat
+# then run the station ticket acceptance command (the &lt;test&gt; placeholder in the text)
+# For Station B, output like the next line means out of bounds — send it back on sight:
+#   src/main/java/... (B may only add tests)
+</code></pre>
 <h3>30.7 The OpenAI Harness case, miniaturised (one week to a skeleton in your project)</h3>
 <p>You cannot copy a large team's full autonomy, but the mechanics shrink:</p>
 <ol>
@@ -828,6 +954,49 @@ Flag anything that conflicts with the current-state map and ask me; do not route
 <p><strong>The teaching contract (rename for your project, but keep the elements):</strong> an <code>invitations</code> table with at least <code>id</code>, <code>team_id</code>, <code>email</code> (stored lower-cased/normalised), <code>role</code>, <code>token_hash</code>, <code>expires_at</code>, <code>accepted_at</code>, <code>revoked_at</code>, <code>created_by</code>, <code>created_at</code>; endpoints <code>POST /api/teams/&lt;teamId&gt;/invitations</code> (admin only, 201 on success, 409 for a duplicate pending invite), <code>GET /api/teams/&lt;teamId&gt;/invitations</code> (pending only), <code>DELETE /api/teams/&lt;teamId&gt;/invitations/&lt;id&gt;</code> (revoke), <code>GET /api/invitations/&lt;token&gt;</code> (preview: team name and whether it is still usable, without over-specifying why not, to avoid probing), <code>POST /api/invitations/&lt;token&gt;/accept</code> (signed in, email must match; success makes the user a plain member of that team). Tokens come from the project's existing secure-random capability; the server stores only a hash; the raw token appears only in the creation response and the link. Every endpoint keyed by <code>teamId</code> must verify both team membership and the admin role — being signed in is not enough.</p>
 <p><strong>Verification signal:</strong> every endpoint names its error codes; the state section answers &quot;what does an expired-and-revoked invite show when opened?&quot;; the security section literally says &quot;hash only, raw token never in logs&quot;.</p>
 <p><strong>When it fails:</strong> it proposes skipping the unique constraint (&quot;the app layer can check&quot;) → make it write down what happens when two admins invite the same email concurrently; if it cannot, add the database-level constraint in your dialect. It wants to infer <code>teamId</code> from the session and drop it from paths → keep the path parameter and spell out the checks, so the contract stays testable from outside.</p>
+<p><strong>Here is the code that matches the contract (teaching stack: PostgreSQL + TypeScript — keep the shape, adapt the ORM):</strong></p>
+<pre><code class="language-sql">-- migrations/20261017_create_invitations.sql
+-- Up: one new table, no old table touched (this is why §31.10 can roll back the app only)
+CREATE TABLE invitations (
+    id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    team_id     uuid NOT NULL REFERENCES teams (id) ON DELETE CASCADE,
+    email       text NOT NULL,              -- normalised to lower case, trimmed, before insert
+    role        text NOT NULL DEFAULT 'member' CHECK (role IN ('member')),
+    token_hash  text NOT NULL UNIQUE,       -- hash only; the raw token is never stored
+    expires_at  timestamptz NOT NULL,
+    accepted_at timestamptz,
+    revoked_at  timestamptz,
+    created_by  uuid NOT NULL REFERENCES users (id),
+    created_at  timestamptz NOT NULL DEFAULT now()
+);
+-- One pending invitation per team + email; an expired pending row is invalidated by the service before re-issuing
+CREATE UNIQUE INDEX invitations_one_pending_per_email
+    ON invitations (team_id, email)
+    WHERE accepted_at IS NULL AND revoked_at IS NULL;
+CREATE INDEX invitations_team_pending_idx
+    ON invitations (team_id)
+    WHERE accepted_at IS NULL AND revoked_at IS NULL;
+-- Down: DROP TABLE invitations;
+</code></pre>
+<pre><code class="language-ts">// invitations.dto.ts — request/response shapes mirroring the §31.3 written contract
+export interface CreateInvitationRequest {
+  email: string;
+  role: &quot;member&quot;; // v1 grants plain membership only; the literal type blocks escalation at the type layer
+}
+
+export interface CreateInvitationResponse {
+  id: string;
+  email: string;
+  role: &quot;member&quot;;
+  expiresAt: string; // ISO 8601
+  inviteUrl: string; // the raw token appears exactly here, once
+}
+
+export interface InvitationPreview {
+  teamName: string;
+  usable: boolean; // failure reasons are not itemised, to avoid probing
+}
+</code></pre>
 <p><strong>Done when:</strong> you have reviewed every line, written &quot;Contract frozen + date&quot; at the top of <code>SPEC.md</code>, and committed it alone. After freezing, contract changes go SPEC-first, code second — never code first.</p>
 <h3>31.4 Task split and plan: separate the serial spine from the parallel branches</h3>
 <p><strong>What you do:</strong> have the agent turn the design into <code>PLAN.md</code>. Every task card has the same five parts: goal, allowed paths, prohibitions, acceptance commands, delivery format. For this feature the split is:</p>
@@ -905,6 +1074,215 @@ implement or are unsure about (write &quot;none&quot; if so).
 <p>After each task you re-run its acceptance commands with your own hands and commit; one commit per task, message naming the task.</p>
 <p><strong>Verification signal:</strong> every task's transcript shows red before green; <code>git diff --stat</code> stays inside the card's allowed paths; the raw token never appears in logs, test snapshots or committed content (search the diff for a sample token string to prove it).</p>
 <p><strong>When it fails:</strong> it edits tests to fit the implementation → reject with the contract text; tests are frozen (the §30.12 commit-the-tests-first move). It wanders into the auth module → point at the out-of-bounds file in <code>git diff</code>, revert just that file, redo. Two correction rounds on the same spot without progress → stop, throw the session away, restart smaller with the failing output in the prompt (§5 style: one failing case only).</p>
+<p><strong>The core implementation code (excerpts; swap <code>db</code>, logging and error types for your repo's):</strong></p>
+<pre><code class="language-ts">// invitations.token.ts — generation, hashing, usability
+import { createHash, randomBytes } from &quot;node:crypto&quot;;
+
+export function newInviteToken(): string {
+  return randomBytes(32).toString(&quot;base64url&quot;); // the raw token goes into the link and the create response only
+}
+
+export function hashInviteToken(token: string): string {
+  return createHash(&quot;sha256&quot;).update(token, &quot;utf8&quot;).digest(&quot;hex&quot;); // storage and lookups both use this
+}
+
+export interface InvitationRow {
+  id: string;
+  teamId: string;
+  email: string;
+  tokenHash: string;
+  expiresAt: Date;
+  acceptedAt: Date | null;
+  revokedAt: Date | null;
+}
+
+export function isUsable(inv: InvitationRow, now = new Date()): boolean {
+  return inv.acceptedAt === null &amp;&amp; inv.revokedAt === null &amp;&amp; inv.expiresAt.getTime() &gt; now.getTime();
+}
+</code></pre>
+<pre><code class="language-ts">// invitations.guard.ts — tenant isolation and permission: &quot;signed in&quot; alone counts as unfinished
+export class HttpError extends Error {
+  constructor(public status: number, public code: string) {
+    super(code);
+  }
+}
+
+export function normalizeEmail(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+
+export async function requireTeamAdmin(userId: string, teamId: string): Promise&lt;void&gt; {
+  const membership = await db.oneOrNone&lt;{ role: &quot;admin&quot; | &quot;member&quot; }&gt;(
+    &quot;SELECT role FROM team_members WHERE team_id = $1 AND user_id = $2&quot;,
+    [teamId, userId],
+  );
+  if (membership === null) throw new HttpError(403, &quot;NOT_TEAM_MEMBER&quot;); // not a member: reveal nothing more
+  if (membership.role !== &quot;admin&quot;) throw new HttpError(403, &quot;ADMIN_REQUIRED&quot;);
+}
+</code></pre>
+<pre><code class="language-ts">// invitations.routes.ts — the five endpoints (Express style; your framework reads the same)
+// POST /api/teams/:teamId/invitations — admin creates, 201; duplicate pending 409
+export async function createInvitation(req: AuthedRequest, res: Response): Promise&lt;void&gt; {
+  assertInvitationsEnabled();
+  const teamId = req.params.teamId;
+  await requireTeamAdmin(req.user.id, teamId);
+
+  const email = normalizeEmail(String(req.body?.email ?? &quot;&quot;));
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(422, &quot;INVALID_EMAIL&quot;);
+
+  // Invalidate an expired pending invite first, so it cannot block re-inviting the same email
+  await db.none(
+    &quot;UPDATE invitations SET revoked_at = now() WHERE team_id = $1 AND email = $2 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at &lt;= now()&quot;,
+    [teamId, email],
+  );
+
+  const token = newInviteToken();
+  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+  try {
+    const row = await db.one&lt;{ id: string }&gt;(
+      &quot;INSERT INTO invitations (team_id, email, role, token_hash, expires_at, created_by) VALUES ($1, $2, 'member', $3, $4, $5) RETURNING id&quot;,
+      [teamId, email, hashInviteToken(token), expiresAt, req.user.id],
+    );
+    const body: CreateInvitationResponse = {
+      id: row.id, email, role: &quot;member&quot;,
+      expiresAt: expiresAt.toISOString(),
+      inviteUrl: `${process.env.APP_ORIGIN}/invite/${token}`,
+    };
+    res.status(201).json(body); // never log this body — the token is in it
+  } catch (err) {
+    if (isUniqueViolation(err)) throw new HttpError(409, &quot;INVITATION_ALREADY_PENDING&quot;);
+    throw err;
+  }
+}
+
+// GET /api/teams/:teamId/invitations — pending only
+export async function listPendingInvitations(req: AuthedRequest, res: Response): Promise&lt;void&gt; {
+  await requireTeamAdmin(req.user.id, req.params.teamId);
+  const items = await db.any(
+    &quot;SELECT id, email, role, expires_at AS \&quot;expiresAt\&quot;, created_at AS \&quot;createdAt\&quot; FROM invitations WHERE team_id = $1 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at &gt; now() ORDER BY created_at DESC&quot;,
+    [req.params.teamId],
+  );
+  res.json({ items }); // note: no token ever appears here, and none is needed
+}
+
+// DELETE /api/teams/:teamId/invitations/:id — revoke, 204
+export async function revokeInvitation(req: AuthedRequest, res: Response): Promise&lt;void&gt; {
+  assertInvitationsEnabled();
+  await requireTeamAdmin(req.user.id, req.params.teamId);
+  const changed = await db.result(
+    &quot;UPDATE invitations SET revoked_at = now() WHERE id = $1 AND team_id = $2 AND accepted_at IS NULL AND revoked_at IS NULL&quot;,
+    [req.params.id, req.params.teamId],
+    (r) =&gt; r.rowCount,
+  );
+  if (changed === 0) throw new HttpError(404, &quot;INVITATION_NOT_FOUND&quot;); // foreign-team ids land here too, leaking nothing
+  res.status(204).send();
+}
+
+// GET /api/invitations/:token — signed-out preview: team name and usability only
+export async function previewInvitation(req: Request, res: Response): Promise&lt;void&gt; {
+  const inv = await db.oneOrNone&lt;InvitationRow &amp; { teamName: string }&gt;(
+    &quot;SELECT i.id, i.team_id AS \&quot;teamId\&quot;, i.email, i.token_hash AS \&quot;tokenHash\&quot;, i.expires_at AS \&quot;expiresAt\&quot;, i.accepted_at AS \&quot;acceptedAt\&quot;, i.revoked_at AS \&quot;revokedAt\&quot;, t.name AS \&quot;teamName\&quot; FROM invitations i JOIN teams t ON t.id = i.team_id WHERE i.token_hash = $1&quot;,
+    [hashInviteToken(req.params.token)],
+  );
+  const body: InvitationPreview = inv === null
+    ? { teamName: &quot;&quot;, usable: false }
+    : { teamName: inv.teamName, usable: isUsable(inv) };
+  res.json(body);
+}
+
+// POST /api/invitations/:token/accept — signed in, email must match, atomically claimed for single use
+export async function acceptInvitation(req: AuthedRequest, res: Response): Promise&lt;void&gt; {
+  assertInvitationsEnabled();
+  const inv = await db.oneOrNone&lt;InvitationRow&gt;(
+    &quot;SELECT id, team_id AS \&quot;teamId\&quot;, email, token_hash AS \&quot;tokenHash\&quot;, expires_at AS \&quot;expiresAt\&quot;, accepted_at AS \&quot;acceptedAt\&quot;, revoked_at AS \&quot;revokedAt\&quot; FROM invitations WHERE token_hash = $1&quot;,
+    [hashInviteToken(req.params.token)],
+  );
+  if (inv === null || !isUsable(inv)) throw new HttpError(410, &quot;INVITATION_NOT_USABLE&quot;);
+  if (normalizeEmail(req.user.email) !== inv.email) throw new HttpError(403, &quot;EMAIL_MISMATCH&quot;);
+
+  await db.tx(async (t) =&gt; {
+    // Claim atomically first: of two simultaneous accepts, only one flips accepted_at from null
+    const claimed = await t.result(
+      &quot;UPDATE invitations SET accepted_at = now() WHERE id = $1 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at &gt; now()&quot;,
+      [inv.id],
+      (r) =&gt; r.rowCount,
+    );
+    if (claimed === 0) throw new HttpError(410, &quot;INVITATION_NOT_USABLE&quot;);
+    await t.none(
+      &quot;INSERT INTO team_members (team_id, user_id, role) VALUES ($1, $2, 'member') ON CONFLICT (team_id, user_id) DO NOTHING&quot;,
+      [inv.teamId, req.user.id],
+    );
+  });
+  res.status(201).json({ teamId: inv.teamId, role: &quot;member&quot; });
+}
+</code></pre>
+<pre><code class="language-tsx">// AcceptInvitePage.tsx — the accept page as a state machine: every backend outcome has a screen
+type AcceptState =
+  | { kind: &quot;loading&quot; }
+  | { kind: &quot;ready&quot;; teamName: string }
+  | { kind: &quot;notUsable&quot; }
+  | { kind: &quot;emailMismatch&quot; }
+  | { kind: &quot;done&quot; }
+  | { kind: &quot;error&quot; };
+
+export function AcceptInvitePage() {
+  const { token } = useParams&lt;{ token: string }&gt;();
+  const [state, setState] = useState&lt;AcceptState&gt;({ kind: &quot;loading&quot; });
+
+  useEffect(() =&gt; {
+    let cancelled = false;
+    api.get&lt;InvitationPreview&gt;(`/api/invitations/${token}`)
+      .then((preview) =&gt; {
+        if (cancelled) return;
+        setState(preview.usable ? { kind: &quot;ready&quot;, teamName: preview.teamName } : { kind: &quot;notUsable&quot; });
+      })
+      .catch(() =&gt; { if (!cancelled) setState({ kind: &quot;error&quot; }); });
+    return () =&gt; { cancelled = true; };
+  }, [token]);
+
+  async function onAccept() {
+    setState({ kind: &quot;loading&quot; });
+    try {
+      await api.post(`/api/invitations/${token}/accept`);
+      setState({ kind: &quot;done&quot; });
+    } catch (err) {
+      if (hasStatus(err, 403)) setState({ kind: &quot;emailMismatch&quot; }); // sign in with the invited email
+      else if (hasStatus(err, 410)) setState({ kind: &quot;notUsable&quot; }); // expired/used/revoked share one screen
+      else setState({ kind: &quot;error&quot; });
+    }
+  }
+
+  if (state.kind === &quot;loading&quot;) return &lt;p&gt;Checking your invitation…&lt;/p&gt;;
+  if (state.kind === &quot;notUsable&quot;) return &lt;p&gt;This invite link is no longer usable. Ask an admin to send a new one.&lt;/p&gt;;
+  if (state.kind === &quot;emailMismatch&quot;) return &lt;p&gt;Please sign in with the invited email address to accept.&lt;/p&gt;;
+  if (state.kind === &quot;done&quot;) return &lt;p&gt;You are in. Taking you to your team…&lt;/p&gt;;
+  if (state.kind === &quot;error&quot;) return &lt;p&gt;Something went wrong. Please try again.&lt;/p&gt;;
+  return (
+    &lt;div&gt;
+      &lt;p&gt;You are invited to join &quot;{state.teamName}&quot;&lt;/p&gt;
+      &lt;button onClick={onAccept}&gt;Accept invitation&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<pre><code class="language-ts">// invitations.token.test.ts — unit tests pinning token and expiry/single-use semantics
+it(&quot;stores only the hash, and the hash is not the token&quot;, () =&gt; {
+  const token = newInviteToken();
+  expect(hashInviteToken(token)).not.toBe(token);
+  expect(hashInviteToken(token)).toMatch(/^[0-9a-f]{64}$/);
+});
+
+it(&quot;expired, accepted and revoked are unusable; a live pending invite is usable&quot;, () =&gt; {
+  const base: InvitationRow = {
+    id: &quot;inv-1&quot;, teamId: &quot;team-1&quot;, email: &quot;new@example.com&quot;, tokenHash: &quot;h&quot;,
+    expiresAt: new Date(Date.now() + 60_000), acceptedAt: null, revokedAt: null,
+  };
+  expect(isUsable(base)).toBe(true);
+  expect(isUsable({ ...base, expiresAt: new Date(Date.now() - 1) })).toBe(false);
+  expect(isUsable({ ...base, acceptedAt: new Date() })).toBe(false);
+  expect(isUsable({ ...base, revokedAt: new Date() })).toBe(false);
+});
+</code></pre>
 <p><strong>Done when:</strong> T1–T5 are each green on their own acceptance, one commit each, and you can say in one sentence what every commit changed.</p>
 <h3>31.6 Self-test and integration: tick a matrix, not a feeling</h3>
 <p><strong>What you do:</strong> start the local stack with <code>&lt;dev&gt;</code>; have the agent generate a test matrix from the contract (scenario × entry point × expected status/screen × actual result), then execute it row by row. Drive the backend with curl (substitute your <code>&lt;port&gt;</code>, <code>&lt;admin-token&gt;</code>, <code>&lt;member-token&gt;</code>):</p>
@@ -920,6 +1298,61 @@ curl -s http://localhost:&lt;port&gt;/api/invitations/&lt;token&gt;   # preview:
 <p>Walk the frontend journey by hand: admin sends an invite from the settings page → copy the link → open it in a private window → signed-out redirects to login → sign in with the invited email and accept → land in the team with yourself on the member list → reopen the same link and see &quot;already used&quot;. Then have the agent add e2e cases for that main path plus one expired-link case, and run <code>&lt;e2e&gt;</code>.</p>
 <p><strong>Verification signal:</strong> every matrix row holds an actual result (status code or screenshot), not just a tick; the stored invitation row in your database shows <code>token_hash</code> and no raw token (one look in your DB console suffices).</p>
 <p><strong>When it fails:</strong> layers disagree → go back to <code>SPEC.md</code> and decide who deviated; never let both sides bend halfway. A flaky e2e → the agent must first classify timing-vs-real-defect; re-running until green is forbidden.</p>
+<p><strong>The API tests pin the contract line by line (excerpts — real assertions, not status-code ticks):</strong></p>
+<pre><code class="language-ts">// invitations.api.test.ts — integration tests against a test database; beforeEach clears invitations and team_members
+it(&quot;admin create succeeds: 201, raw link shown once, only the hash stored&quot;, async () =&gt; {
+  const res = await request(app)
+    .post(`/api/teams/${teamId}/invitations`)
+    .set(&quot;Authorization&quot;, `Bearer ${adminToken}`)
+    .send({ email: &quot;New@Example.com&quot;, role: &quot;member&quot; });
+  expect(res.status).toBe(201);
+  expect(res.body.email).toBe(&quot;new@example.com&quot;); // normalised
+  const token = String(res.body.inviteUrl).split(&quot;/invite/&quot;)[1];
+  expect(token).toBeTruthy();
+
+  const stored = await db.one(&quot;SELECT token_hash FROM invitations WHERE id = $1&quot;, [res.body.id]);
+  expect(stored.token_hash).not.toBe(token);
+  expect(stored.token_hash).toBe(hashInviteToken(token));
+});
+
+it(&quot;plain member gets 403, and so does an admin of another team&quot;, async () =&gt; {
+  await request(app)
+    .post(`/api/teams/${teamId}/invitations`)
+    .set(&quot;Authorization&quot;, `Bearer ${memberToken}`)
+    .send({ email: &quot;a@example.com&quot;, role: &quot;member&quot; })
+    .expect(403);
+  await request(app)
+    .post(`/api/teams/${otherTeamId}/invitations`)
+    .set(&quot;Authorization&quot;, `Bearer ${adminToken}`)
+    .send({ email: &quot;a@example.com&quot;, role: &quot;member&quot; })
+    .expect(403);
+});
+
+it(&quot;duplicate pending is 409; accept works exactly once, the second time is 410&quot;, async () =&gt; {
+  const created = await createInviteViaApi(app, adminToken, teamId, &quot;dup@example.com&quot;);
+  await request(app)
+    .post(`/api/teams/${teamId}/invitations`)
+    .set(&quot;Authorization&quot;, `Bearer ${adminToken}`)
+    .send({ email: &quot;dup@example.com&quot;, role: &quot;member&quot; })
+    .expect(409);
+
+  const token = String(created.inviteUrl).split(&quot;/invite/&quot;)[1];
+  await request(app).post(`/api/invitations/${token}/accept`)
+    .set(&quot;Authorization&quot;, `Bearer ${inviteeToken}`).expect(201);
+  await request(app).post(`/api/invitations/${token}/accept`)
+    .set(&quot;Authorization&quot;, `Bearer ${inviteeToken}`).expect(410);
+
+  const membership = await db.oneOrNone(
+    &quot;SELECT role FROM team_members WHERE team_id = $1 AND user_id = $2&quot;,
+    [teamId, inviteeId],
+  );
+  expect(membership?.role).toBe(&quot;member&quot;); // persisted, and plain member only
+});
+</code></pre>
+<pre><code class="language-bash"># curl smoke with the expected status as an assertion — red is red, no eyeballing
+test &quot;$(curl -s -o /tmp/inv.json -w '%{http_code}' -X POST &quot;http://localhost:&lt;port&gt;/api/teams/&lt;teamId&gt;/invitations&quot; -H &quot;Authorization: Bearer &lt;admin-token&gt;&quot; -H 'Content-Type: application/json' -d '{&quot;email&quot;:&quot;smoke@example.com&quot;,&quot;role&quot;:&quot;member&quot;}')&quot; = &quot;201&quot;
+test &quot;$(curl -s -o /dev/null -w '%{http_code}' -X POST &quot;http://localhost:&lt;port&gt;/api/teams/&lt;teamId&gt;/invitations&quot; -H &quot;Authorization: Bearer &lt;member-token&gt;&quot; -H 'Content-Type: application/json' -d '{&quot;email&quot;:&quot;smoke2@example.com&quot;,&quot;role&quot;:&quot;member&quot;}')&quot; = &quot;403&quot;
+</code></pre>
 <p><strong>Done when:</strong> the matrix is fully evidenced and <code>&lt;test&gt;</code>, <code>&lt;typecheck&gt;</code>, <code>&lt;lint&gt;</code>, <code>&lt;build&gt;</code>, <code>&lt;e2e&gt;</code> are all green. Paste the matrix into the <code>PR.md</code> draft.</p>
 <h3>31.7 Code review: a fresh session reads, you decide</h3>
 <p><strong>What you do:</strong> open a brand-new session (this matters — never let the writing session review itself), read-only, and paste:</p>
@@ -959,6 +1392,15 @@ gh pr checks
 </ol>
 <p><strong>Verification signal:</strong> each step has evidence: staging smoke results, production version, migration success, the internal account's acceptance landing with correct membership.</p>
 <p><strong>When it fails:</strong> staging smoke red → do not &quot;see how production behaves&quot;; go back to §31.6 and localise. Production up but the migration missing or wrong → invoke the §31.10 rollback triggers immediately: flag off first, no hand-editing the production schema.</p>
+<p><strong>The feature-flag guard (enforced at the endpoint layer, not just by hiding the frontend button):</strong></p>
+<pre><code class="language-ts">// invitations.flag.ts — flag off means entry points vanish AND endpoints refuse
+export function assertInvitationsEnabled(env: NodeJS.ProcessEnv = process.env): void {
+  if (env.INVITATIONS_ENABLED !== &quot;true&quot;) {
+    throw new HttpError(503, &quot;INVITATIONS_DISABLED&quot;);
+  }
+}
+</code></pre>
+<p>Create, revoke and accept above all pass through <code>assertInvitationsEnabled()</code> first; the settings page reads the same flag to decide whether to render the entry. Frontend-only hiding does not count — during the §31.10 drill, hit the endpoint with curl and confirm a 503.</p>
 <p><strong>Done when:</strong> after full enablement, one brand-new email address completes invite → accept, with correct member permissions (can see team content, cannot reach admin actions), and the screenshot or record is in the release notes.</p>
 <h3>31.10 Post-release observation and rollback readiness: write the triggers before watching the dashboard</h3>
 <p><strong>What you do:</strong> write the observation items and rollback lines into <code>PR.md</code> <em>before</em> release, not during an incident. Two windows: watch closely for the first 30 minutes after full enablement, then check three times over 24 hours. Watch: invitation-creation successes and failures, any 409 spike (scripted abuse or a double-submitting frontend), accept failures by reason (expired/email-mismatch dominating is a user-education signal; 500s are yours), any surge in cross-team 403s, and — critically — any invite link or token string appearing in error logs (that is a security incident, not a bug). When the agent helps analyse, give it exported log text only, read-only; you issue the commands.</p>
