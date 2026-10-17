@@ -3150,6 +3150,115 @@
         }
       ],
       "date": "2026-09-18"
+    },
+    {
+      "id": "R137",
+      "title": "Harness engineering: leveraging Codex in an agent-first world",
+      "authors": "OpenAI",
+      "year": 2026,
+      "url": "https://openai.com/index/harness-engineering/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ],
+      "date": "2026-02-11"
+    },
+    {
+      "id": "R138",
+      "title": "Using skills to accelerate OSS maintenance",
+      "authors": "OpenAI",
+      "year": 2026,
+      "url": "https://developers.openai.com/blog/skills-agents-sdk",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R139",
+      "title": "Building a C compiler with a team of parallel Claudes",
+      "authors": "Nicholas Carlini, Anthropic",
+      "year": 2026,
+      "url": "https://www.anthropic.com/engineering/building-c-compiler",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ],
+      "date": "2026-02-05"
+    },
+    {
+      "id": "R140",
+      "title": "Ten Months with Copilot Coding Agent in dotnet/runtime",
+      "authors": "Microsoft .NET team",
+      "year": 2026,
+      "url": "https://devblogs.microsoft.com/dotnet/ten-months-with-cca-in-dotnet-runtime/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R141",
+      "title": "How we accelerated Secret Protection engineering with Copilot",
+      "authors": "GitHub",
+      "year": 2025,
+      "url": "https://github.blog/ai-and-ml/github-copilot/how-we-accelerated-secret-protection-engineering-with-copilot/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ],
+      "date": "2025-08-28"
+    },
+    {
+      "id": "R142",
+      "title": "Best practices for coding with agents",
+      "authors": "Lee Robinson, Cursor",
+      "year": 2026,
+      "url": "https://cursor.com/blog/agent-best-practices",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ],
+      "date": "2026-01-09"
+    },
+    {
+      "id": "R143",
+      "title": "Run parallel sessions with worktrees",
+      "authors": "Anthropic",
+      "year": 2026,
+      "url": "https://code.claude.com/docs/en/worktrees",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
     }
   ]
 }

@@ -298,3 +298,351 @@ One commit per compatibility fix so we can bisect.
 <li><strong>Weekly (30 minutes):</strong> prune rule files; glance at eval trends; drop unused MCP servers; stay sceptical of &quot;feels faster&quot; stories like the METR result — watch lead time and change-failure rate instead.</li>
 </ol>
 <p>Treat the agent as a tireless execution layer and keep three things for yourself: <strong>the contract (SPEC/rules), the evidence (tests/logs), and the merge button.</strong> With those three, full-stack maintenance scales; missing one, it scales the mess at the same speed.</p>
+<h2>17. Parallel work on the ground: three work-station tickets + one read-only review ticket</h2>
+<p>The principles are above; here is a schedulable version you can rename and reuse. Still full-stack: add a create-order endpoint to an orders module (backend + DTO validation + frontend wiring + docs). What matters is not the example but <strong>how the tickets are written</strong>.</p>
+<p>You personally write a one-page contract and put it on disk first (never leave it in chat): <code>docs/contracts/order-create.md</code> — path, fields, error codes, forbidden zones, acceptance signals. All three stations <code>@</code>-reference the same file.</p>
+<table>
+<thead>
+<tr>
+<th>Station</th>
+<th>Task</th>
+<th>Parallel?</th>
+<th>Acceptance signal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A Contract landing</td>
+<td><code>POST /api/orders</code> + DTO validation</td>
+<td>Starts once the contract is pinned</td>
+<td>Target test class + manual curl</td>
+</tr>
+<tr>
+<td>B Test backfill</td>
+<td>Boundary cases for the existing <code>OrderService</code></td>
+<td>Parallel with A, but <strong>no production signature changes</strong></td>
+<td>Touches only <code>src/test/**</code></td>
+</tr>
+<tr>
+<td>C Docs</td>
+<td>Error codes and integration examples</td>
+<td>Parallel with A/B</td>
+<td>Touches only <code>docs/</code></td>
+</tr>
+<tr>
+<td>R Read-only review</td>
+<td>Review the combined diff after merging</td>
+<td>Last</td>
+<td>Edits nothing</td>
+</tr>
+</tbody>
+</table>
+<p>Senior teams add three hard constraints on top:</p>
+<ul>
+<li><strong>Shared contracts queue first.</strong> DTOs, migrations, public interfaces and generated code (OpenAPI types, ORM models) are serial items: merge them first, then start downstream work. Only pure tests, docs, independent modules and read-only research are truly parallel.</li>
+<li><strong>Every ticket states five things:</strong> goal, allowed paths, prohibitions, acceptance command, delivery format (file list + raw command output + one sentence on uncovered edges). Miss one and the agent invents it — rarely the way you wanted.</li>
+<li><strong>Concurrency is capped by review bandwidth.</strong> 2–4 editable agents + 1 read-only reviewer is the common sweet spot; beyond that the bottleneck is instantly you, not the model.</li>
+</ul>
+<p>A root <code>AGENTS.md</code> can start from this skeleton (swap the build command for your stack; Spring Boot is only the example):</p>
+<pre><code class="language-markdown"># AGENTS.md (excerpt)
+- Build: ./mvnw -q -DskipITs test        # replace with your test/build/lint
+- Never modify: **/application-prod.yml, **/prod/**, secrets and .env
+- Never: upgrade dependencies unless tasked; no empty assertions; never edit generated files
+- merge / rebase / force-push are human-only; agents only commit
+- Style reference: the existing Controller / Service in-repo
+</code></pre>
+<h2>18. Worktrees hands-on: create, open, verify, merge, clean up</h2>
+<h3>18.1 Create the isolation</h3>
+<pre><code class="language-bash">cd ~/code/shop-api
+git status                 # must be clean
+git fetch origin
+git switch main &amp;&amp; git pull --ff-only origin main
+
+git worktree add ../shop-agent-a -b feat/order-create origin/main
+git worktree add ../shop-agent-b -b test/order-service origin/main
+git worktree add ../shop-agent-c -b docs/order-errors  origin/main
+git worktree list          # check: four directories, four branches
+</code></pre>
+<p>Copy local config per worktree (<code>cp .env.example ../shop-agent-a/.env</code>); <strong>never symlink one writable <code>.env</code></strong> across stations. Stagger ports and test databases/schemas per station, and write that into the tickets.</p>
+<h3>18.2 Open and prove identity</h3>
+<ul>
+<li><strong>Cursor:</strong> <code>File → Open Folder…</code> — one window per worktree (a/b/c), one <strong>fresh</strong> Agent chat each; confirm the working directory is not the main repo.</li>
+<li><strong>Claude Code:</strong> one terminal per station, <code>cd ../shop-agent-a &amp;&amp; claude</code> (or start with its built-in worktree mode, e.g. <code>claude -w &lt;name&gt;</code>).</li>
+<li><strong>First job is not coding; it is identity proof.</strong> Have each agent report back:</li>
+</ul>
+<pre><code class="language-bash">pwd
+git rev-parse --show-toplevel
+git branch --show-current
+</code></pre>
+<p>If directory or branch does not match the ticket, stop immediately. Label windows/terminal tabs with the station name — the cheapest anti-cross-talk device there is.</p>
+<h3>18.3 A schedule with decision points (90-minute example)</h3>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Action / decision point</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T+0</td>
+<td>Contract finalised and committed → create three worktrees → verify directories in all three windows</td>
+</tr>
+<tr>
+<td>T+5</td>
+<td>Dispatch A/B/C simultaneously (tickets pasted verbatim)</td>
+</tr>
+<tr>
+<td>T+15</td>
+<td>One sweep: who is touching forbidden paths? Who is stuck installing dependencies?</td>
+</tr>
+<tr>
+<td>T+30</td>
+<td><strong>Decision 1:</strong> B/C green first → pre-review only, do not merge; A still running → never ask it to &quot;quickly fix B's production code too&quot;</td>
+</tr>
+<tr>
+<td>T+40</td>
+<td><strong>Decision 2:</strong> A red or out of bounds → send back and <strong>start a fresh session</strong> (failed log + contract only); if it touched deps/prod → discard that file outright; timeout (&gt;25 min without green) → shrink scope: Controller+DTO only, mock the Service for now</td>
+</tr>
+<tr>
+<td>T+50</td>
+<td><strong>Decision 3:</strong> B green, A not ready → if B depends on A's new signature, mark &quot;awaiting rebase&quot; and shelve; tests of old behaviour only may merge first</td>
+</tr>
+<tr>
+<td>T+60</td>
+<td>Collect A: <strong>you</strong> re-run acceptance locally (an agent's &quot;all passed&quot; screenshot is not evidence)</td>
+</tr>
+<tr>
+<td>T+70</td>
+<td>Merge by dependency: A → B rebased and re-tested → C → R read-only review of the total diff</td>
+</tr>
+<tr>
+<td>T+85</td>
+<td>Clean up worktrees (§18.5)</td>
+</tr>
+</tbody>
+</table>
+<h3>18.4 Merge / rebase order (fixed; do not improvise)</h3>
+<pre><code class="language-bash"># A merges first
+cd ../shop-agent-a &amp;&amp; ./mvnw -Dtest=OrderControllerTest test
+git push -u origin feat/order-create
+cd ../shop-api &amp;&amp; git switch main &amp;&amp; git pull --ff-only origin main
+git merge --no-ff feat/order-create -m &quot;feat(order): POST /api/orders&quot;
+./mvnw -Dtest=OrderControllerTest test &amp;&amp; git push origin main
+
+# B rebases onto the new main, re-tests, then merges
+cd ../shop-agent-b &amp;&amp; git fetch origin &amp;&amp; git rebase origin/main
+./mvnw -Dtest=OrderServiceTest test
+git push -u origin test/order-service --force-with-lease
+cd ../shop-api &amp;&amp; git merge --no-ff test/order-service -m &quot;test(order): boundary cases&quot;
+./mvnw -Dtest=OrderServiceTest,OrderControllerTest test &amp;&amp; git push origin main
+
+# C last (doc conflicts resolve in favour of the contract file)
+cd ../shop-agent-c &amp;&amp; git fetch origin &amp;&amp; git rebase origin/main
+git push -u origin docs/order-errors --force-with-lease
+cd ../shop-api &amp;&amp; git merge --no-ff docs/order-errors -m &quot;docs(order): error codes&quot; &amp;&amp; git push origin main
+</code></pre>
+<p>If your team works through PRs, replace <code>merge</code> with opening a PR; the order does not change. <strong>Merge, rebase and force-push are human-only</strong> — put that in AGENTS.md and in every ticket's prohibitions.</p>
+<h3>18.5 Clean up</h3>
+<pre><code class="language-bash">cd ~/code/shop-api
+git worktree remove ../shop-agent-a
+git worktree remove ../shop-agent-b
+git worktree remove ../shop-agent-c
+git push origin --delete feat/order-create test/order-service docs/order-errors
+git branch -d feat/order-create test/order-service docs/order-errors
+</code></pre>
+<h2>19. Red-line paths and diff failure examples</h2>
+<p>Read the file list before the code. These are <strong>one-vote vetoes</strong> — send it back without debating intent:</p>
+<table>
+<thead>
+<tr>
+<th>What you see</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>application-prod.yml</code>, <code>*/prod/*</code>, <code>.env</code>, real connection strings/keys</td>
+<td>Discard that file immediately</td>
+</tr>
+<tr>
+<td>Dependency versions changed in <code>pom.xml</code> / <code>build.gradle*</code> / <code>package.json</code> when not tasked</td>
+<td>Send back (drive-by upgrade)</td>
+</tr>
+<tr>
+<td>Station B (tests only) touching <code>src/main/**</code></td>
+<td>Send back</td>
+</tr>
+<tr>
+<td>Station C touching <code>*.java</code> / any code file</td>
+<td>Send back</td>
+</tr>
+<tr>
+<td>Tests with only <code>assertTrue(true)</code> / <code>assertNotNull(x)</code> and no business assertion</td>
+<td>Send back (empty test)</td>
+</tr>
+<tr>
+<td><code>@Disabled</code> / skipped cases quietly multiplying</td>
+<td>Send back and ask why</td>
+</tr>
+<tr>
+<td>Error codes disagreeing with the contract (code says <code>BAD_REQUEST</code>, docs say <code>INVALID_QUANTITY</code>; or errors wrapped in HTTP 200)</td>
+<td>Send back</td>
+</tr>
+<tr>
+<td>Commit says <code>fix: order 500</code>, diff is only comments/spelling</td>
+<td>Send back (comment edit impersonating a fix)</td>
+</tr>
+<tr>
+<td>Whole-file reformatting, unrelated renames, deleting &quot;seemingly unused&quot; dependencies in the same PR</td>
+<td>Send back (drive-by refactor)</td>
+</tr>
+<tr>
+<td>Docs already describe the new field but the implementation has not merged</td>
+<td>Wrong order: implementation merges before docs</td>
+</tr>
+</tbody>
+</table>
+<p>The shortest possible read-only review ticket:</p>
+<pre><code class="language-text">Review only; do not edit code. Against docs/contracts/order-create.md
+and git diff, list: out-of-bounds files, invalid assertions, code/HTTP
+status mismatches with the contract, suspected secrets, skipped tests.
+Sort by severity.
+</code></pre>
+<h2>20. Green/red signals: without them the agent stops at &quot;looks right&quot;</h2>
+<p>A dividing line between senior and amateur practice is whether <strong>executable green/red signals</strong> are written into the ticket. Spring Boot as the example (translate to your stack):</p>
+<p><strong>Test side (MockMvc) — assert status and error code, never empty assertions:</strong></p>
+<pre><code class="language-java">mockMvc.perform(post(&quot;/api/orders&quot;)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(&quot;{\&quot;skuId\&quot;:\&quot;SKU-1\&quot;,\&quot;quantity\&quot;:0}&quot;))
+    .andExpect(status().isBadRequest())
+    .andExpect(jsonPath(&quot;$.code&quot;).value(&quot;INVALID_QUANTITY&quot;));
+
+mockMvc.perform(post(&quot;/api/orders&quot;)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(&quot;{\&quot;skuId\&quot;:\&quot;SKU-1\&quot;,\&quot;quantity\&quot;:2}&quot;))
+    .andExpect(status().isCreated())
+    .andExpect(jsonPath(&quot;$.status&quot;).value(&quot;CREATED&quot;))
+    .andExpect(jsonPath(&quot;$.orderId&quot;).isNotEmpty());
+</code></pre>
+<p><strong>Service layer — assert the business code, not just &quot;threw something&quot;:</strong></p>
+<pre><code class="language-java">assertThatThrownBy(() -&gt; orderService.create(new CreateOrderRequest(&quot;SKU-1&quot;, 0)))
+    .isInstanceOf(InvalidOrderException.class)
+    .extracting(ex -&gt; ((InvalidOrderException) ex).getCode())
+    .isEqualTo(&quot;INVALID_QUANTITY&quot;);
+</code></pre>
+<p><strong>Manual curl — write both colours into the ticket and require the status line + JSON back:</strong></p>
+<pre><code class="language-bash"># Green: 201 + CREATED
+curl -sS -D - -X POST http://localhost:8080/api/orders \
+  -H 'Content-Type: application/json' -d '{&quot;skuId&quot;:&quot;SKU-1&quot;,&quot;quantity&quot;:2}'
+# Red: 400 + INVALID_QUANTITY
+curl -sS -D - -X POST http://localhost:8080/api/orders \
+  -H 'Content-Type: application/json' -d '{&quot;skuId&quot;:&quot;SKU-1&quot;,&quot;quantity&quot;:0}'
+</code></pre>
+<p>When spot-checking you only look at three things: <strong>status code, the <code>code</code>/<code>status</code> fields, and whether forbidden paths were touched.</strong> The frontend equivalent: &quot;after clicking the filter, URL and list must agree&quot; as an e2e assertion, not a screenshot and a promise.</p>
+<h2>21. Field failures: four recurring wrecks (senior edition)</h2>
+<p><strong>Wreck 1: three windows, one directory.</strong> Worktrees exist, but the second session is still opened on the main checkout; both sides edit the same <code>OrderService</code> and the diffs overwrite each other. The fix is §18.2's identity proof: <code>pwd</code> + <code>show-toplevel</code> + branch name, matched before any work. What is shared is not just files — one local database, one Redis, one port cross-talks just as well, which is why senior teams isolate test data per station too.</p>
+<p><strong>Wreck 2: B merges first, A changes the signature, tests go fake-green.</strong> Tests written against the old signature land first; A changes <code>create(...)</code>; CI stays green because the tests were skipped or never compiled against the new signature. Fix: freeze the order A→B; B must re-run after rebasing; in review, specifically scan for <code>@Disabled</code> and loosened assertions. Contract-level signature changes get their own ticket, merged first, before downstream parallelism starts.</p>
+<p><strong>Wreck 3: the agent &quot;helpfully&quot; merges.</strong> Inside its own worktree it runs <code>git merge main</code>, resolves conflicts, and drags another station's code in; history is instantly dirty. Fix: agents only commit; merge/rebase/force are human-only. This belongs in the ticket itself, not only in AGENTS.md — in a long session the ticket's prohibitions are closest to hand.</p>
+<p><strong>Wreck 4: the contract lives only in chat.</strong> A implements field names from conversation v1; C documents the v2 you mentioned verbally later; integration day discovers the mismatch. Fix: contract lands on disk and is committed before dispatch; every ticket <code>@</code>-references the same file; when the contract changes, stop the affected stations, update the file, then resume — and make running stations re-read it.</p>
+<p>One level up, senior teams also guard two variants: <strong>generated-artifact collisions</strong> (two stations each regenerate and edit a generated file — generation is owned by the contract station and merges first) and <strong>shared-environment fake green</strong> (testing B's code against A's running service). The former is solved by single-ownership of generation; the latter by port/database isolation and tickets that state <em>which</em> running service acceptance applies to.</p>
+<h2>22. Wrap-up checklist (tape it next to the screen)</h2>
+<p>Before dispatch: ☐ one-page contract on disk (ideally committed) ☐ serial vs parallel items marked ☐ <code>git worktree list</code> checked ☐ every ticket has its five parts ☐ AGENTS.md states build commands and forbidden paths</p>
+<p>During: ☐ ≤4 editable agents ☐ every window's directory verified ☐ agent going in circles → fresh session ☐ A red/out-of-bounds → send back into a fresh session ☐ B/C early → pre-review only, merge in dependency order by default</p>
+<p>Before wrapping: ☐ file list checked against the red-line table first ☐ acceptance commands run by your own hand ☐ merged A → rebased-and-retested B → C ☐ read-only review over the total diff ☐ <code>git worktree remove</code> done</p>
+<p>One line to remember: <strong>you are dispatch and the gate; agents are parallel workers. Isolate the workspaces, share one on-disk contract, let dependencies decide merge order, and let green/red you ran yourself decide acceptance.</strong></p>
+<h2>23. Case library (1): OpenAI's Harness Engineering — humans write no code, only the environment</h2>
+<p>OpenAI's February 2026 engineering post documents an extreme experiment: an internal product with <strong>zero lines of human-written code</strong>, ~1M lines (code, tests, CI, docs, tooling), ~1,500 merged PRs in five months, starting with 3 engineers (growing to 7), ~3.5 PRs per engineer per day. The transferable lessons for senior teams are not the scale but the counter-intuitive decisions:</p>
+<ul>
+<li><strong><code>AGENTS.md</code> is a map, not an encyclopedia.</strong> They tried the giant single file; it failed predictably: crowding out context, making everything &quot;important&quot; so nothing is, rotting instantly, impossible to verify mechanically. Instead ~100 lines of map plus structured <code>docs/</code> as the system of record, linters/CI checking doc freshness and cross-links, and a recurring &quot;doc-gardening&quot; agent that opens PRs fixing stale documentation.</li>
+<li><strong>Observability is fed straight to the agent.</strong> Each worktree boots an isolated app instance with queryable logs/metrics/traces (LogQL / PromQL), so &quot;startup must complete in under 800ms&quot; becomes an executable prompt. Single runs of 6+ hours are routine.</li>
+<li><strong>Entropy needs garbage collection.</strong> Agents replicate existing bad patterns. After Friday manual clean-ups failed to scale, they encoded &quot;golden principles&quot; and run background agents that scan for drift, update quality grades, and open small refactoring PRs — most reviewable and mergeable in under a minute.</li>
+</ul>
+<p>Steal three things first: a short AGENTS.md plus structured docs; a per-worktree app you can boot standalone with its own logs; and turning repeated taste issues into lints whose error messages contain the fix, so the agent repairs its own violations.</p>
+<h2>24. Case library (2): OpenAI Agents SDK — maintaining OSS with Skills</h2>
+<p>OpenAI's Agents SDK repos (Python / TypeScript) run day-to-day maintenance on <code>AGENTS.md</code> + repo-local Skills + GitHub Action; merged PRs rose from 316 to <strong>457</strong> quarter over quarter. Copyable patterns:</p>
+<ul>
+<li><strong>Make Skills mandatory with if/then in AGENTS.md.</strong> E.g. call <code>$implementation-strategy</code> before touching runtime/API, run <code>$code-change-verification</code> whenever code changes, check <code>$changeset-validation</code> for JS package changes, finish with <code>$pr-draft-summary</code>.</li>
+<li><strong>Verification stacks live inside the Skill.</strong> Python: <code>make format / lint / typecheck / tests</code>. TypeScript: <code>pnpm i / build / -r build-check / lint / test</code>. One definition, changed in one place.</li>
+<li><strong>Routing is governed by <code>description</code>, not code.</strong> Their sharpest lesson: a vague <code>description</code> (&quot;run the verification stack&quot;) routes badly; a specific one (&quot;run when changes affect runtime code, tests, or build behaviour…&quot;) routes reliably. Fix metadata before adding machinery.</li>
+<li><strong>Deterministic work sinks into <code>scripts/</code>.</strong> The model judges and reports; scripts run the repetitive shell. Only after a Skill is stable locally does it move into CI.</li>
+</ul>
+<h2>25. Case library (3): 16 agents write a C compiler — the ceiling test for parallelism and verification</h2>
+<p>Anthropic's Nicholas Carlini ran 16 agents through ~2,000 Claude Code sessions at ~$20k API cost over two weeks to produce a 100k-line Rust C compiler that builds Linux 6.9. The engineering is the lesson:</p>
+<ul>
+<li><strong>Task locks prevent collisions.</strong> Each agent claims work by writing a file under <code>current_tasks/</code>; git sync naturally rejects duplicate claims. Finish: merge, push, release the lock.</li>
+<li><strong>The verifier must be near-perfect.</strong> Most effort went into test suites and checker scripts, extended whenever a new failure mode appeared. When new features kept breaking old ones, CI gained a hard rule: no new commit may break existing tests.</li>
+<li><strong>Split mega-tasks until they parallelise.</strong> Compiling the whole Linux kernel is one giant task — 16 agents converged on the same bug. Using GCC as a known-good oracle and randomly mixing GCC-compiled and agent-compiled files to bisect made 16 lines actually parallel.</li>
+<li><strong>Design around model blindness.</strong> Test output prints only a few lines, detail goes to files (error lines prefixed <code>ERROR</code> for grep); against &quot;time blindness&quot;, default runs sample 1%/10% (<code>--fast</code>) so an agent does not spend hours running the full suite.</li>
+</ul>
+<p>The blunt summary: <strong>how far autonomy goes is set by how hard the verifier is, how small the tasks are, and how clean the context is</strong> — not by how moving the prompt is.</p>
+<h2>26. Case library (4): Anthropic's multi-agent research — when parallelism actually pays</h2>
+<p>Anthropic's multi-agent Research system carries the cleanest numbers available: a Lead (Opus 4) + Sonnet 4 subagents beat a single Opus 4 agent by <strong>90.2%</strong> on their internal eval, while multi-agent use costs ~<strong>15×</strong> the tokens of chat. On BrowseComp, token usage alone explained ~<strong>80%</strong> of performance variance.</p>
+<p>The failures and counters are equally copyable:</p>
+<ul>
+<li>Early versions spawned 50 subagents for simple questions. Counter: <strong>effort rules tied to difficulty</strong> written into the prompt — one agent and a few tool calls for simple facts; 10+ divided subagents only for complex research.</li>
+<li>Subagent briefs must carry objective, output format, allowed tools and boundaries, or they duplicate work and leave gaps.</li>
+<li>Parallel tool calls cut complex-query time by up to ~90%.</li>
+<li>Evaluate <strong>end state</strong>, not a fixed path — multiple agents legitimately take different routes.</li>
+</ul>
+<p>Translated to code maintenance: parallelism pays for work that is <em>broad and independent</em> (investigation, multi-solution search) and disappoints on <em>narrow and coupled</em> work (one call chain). And price it honestly — 15× tokens is not rhetoric.</p>
+<h2>27. Case library (5): dotnet/runtime, ten months — the real merge rate in an elite codebase</h2>
+<p>Microsoft's .NET team ran GitHub Copilot's coding agent in <code>dotnet/runtime</code> for ten months with unusually complete data: <strong>878 agent PRs, 535 merged (67.9% success)</strong> vs 87.1% for Microsoft humans and 79.7% for community humans; ~95k lines added, ~31k removed. In a GitHub-internal case, the Secret Protection team expanded validated token types from <strong>32 to nearly 90</strong> in a few weeks, with interns directing the agent.</p>
+<p>How senior teams should read this:</p>
+<ul>
+<li><strong>67.9% is a good number, not a failure.</strong> In the hardest kind of repo two-thirds of agent PRs merge — but a third need human rework, so staff your review/rework capacity accordingly; never plan on &quot;fully automatic&quot;.</li>
+<li><strong>Framework-shaped, repeatable work pays most.</strong> Token validation, test backfill, debt burn-down — clear patterns, clear acceptance. Taste and cross-team coordination remain human work.</li>
+<li><strong>Scope issues to what a human can review.</strong> The GitHub Billing team's lesson: don't file &quot;improve test coverage&quot;; file &quot;add tests for file X / folder Y&quot; as separate issues — not because the agent can't do bigger, but because you can't review a 100+-file PR.</li>
+</ul>
+<h2>28. Case library (6): Cursor's official workflow — plan files, the TDD five-step, model racing</h2>
+<p>From Cursor's official January 2026 best-practices guide, the moves most validated across teams:</p>
+<ul>
+<li><strong>Plans land on disk.</strong> Plan Mode (<code>Shift+Tab</code>) output saved into the workspace (e.g. <code>.cursor/plans/</code>) survives interruptions and briefs the next agent. When a build goes wrong, <strong>reverting to the plan and re-running is usually faster and cleaner than patching via follow-ups</strong>.</li>
+<li><strong>The TDD five-step, frozen:</strong> ① agent writes tests from I/O pairs, explicitly told it is TDD and must not fake implementations; ② run tests, confirm all red, tests-only edits allowed; ③ commit the tests; ④ implement with tests frozen, iterate to green; ⑤ commit the implementation.</li>
+<li><strong>Sediment the daily commands.</strong> <code>/pr</code> (diff → message → <code>gh pr create</code>), <code>/fix-issue [number]</code>, <code>/review</code>, <code>/update-deps</code> (one at a time, tests after each) as repo-checked command files.</li>
+<li><strong>Same-prompt multi-model racing</strong> for hard problems, keeping the cleanest diff; native worktrees as the isolation mechanism.</li>
+<li><strong>Debug Mode for stubborn bugs:</strong> enumerate hypotheses, instrument with logging, have the human reproduce, locate from runtime data — evidence over guessing.</li>
+</ul>
+<h2>29. Case map: match your situation to one move</h2>
+<table>
+<thead>
+<tr>
+<th>Your situation</th>
+<th>Case to re-read</th>
+<th>First move to copy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rule file keeps growing, agent keeps ignoring it</td>
+<td>§23 / §11</td>
+<td>Cut AGENTS.md to a map; the rest goes to structured docs + lints</td>
+</tr>
+<tr>
+<td>Repetitive maintenance is eating the team</td>
+<td>§24</td>
+<td>One Skill + an if/then mandatory route in AGENTS.md</td>
+</tr>
+<tr>
+<td>You want the agent to run overnight unsupervised</td>
+<td>§25 / §10</td>
+<td>Hard verifier + <code>current_tasks/</code>-style locks + a <code>--fast</code> sample</td>
+</tr>
+<tr>
+<td>Debating whether to go multi-agent</td>
+<td>§26</td>
+<td>Price the tokens first: broad-and-independent only</td>
+</tr>
+<tr>
+<td>Cloud-agent output looks high, merge rate disappoints</td>
+<td>§27</td>
+<td>Budget a ~2/3 success rate; split issues by file/folder</td>
+</tr>
+<tr>
+<td>Iterating in circles on one feature</td>
+<td>§28</td>
+<td>Revert to the plan and re-run; TDD with tests committed first</td>
+</tr>
+</tbody>
+</table>
+<p>Read cases as moves, not stories: copy exactly <strong>one</strong> practice from a case, run it until it is boring, then take the next. That is the rhythm every team above shares — fix the environment and the verifier first, and the model's capability gets amplified on its own.</p>

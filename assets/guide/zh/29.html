@@ -284,3 +284,351 @@ disable-model-invocation: true
 <li><strong>周度（30 分钟）：</strong> 剪规则文件；看 eval 趋势；清掉没用的 MCP；对 METR 那类“体感变快”保持怀疑——只看交付周期与变更失败率。</li>
 </ol>
 <p>把 Agent 当成不知疲倦的执行层，你自己守住三样东西：<strong>合约（SPEC/规则）、证据（测试/日志）、合并权（人）。</strong> 这三样在，全栈维护可以被放大；缺一样，它会以同样的速度放大混乱。</p>
+<h2>17. 把并行落到地面：三张工位票 + 一张只读审查票</h2>
+<p>前面讲的是原则，这一节给一套可以直接改名套用的排班。场景仍用全栈：给订单模块加一个创建接口（后端 + DTO 校验 + 前端联调 + 文档）。关键不是例子本身，而是<strong>票怎么开</strong>。</p>
+<p>先由你本人写一页契约并落盘（不要留在聊天里）： <code>docs/contracts/order-create.md</code>——路径、字段、错误码、禁止事项、验收信号。三个工位都 <code>@</code> 同一份文件。</p>
+<table>
+<thead>
+<tr>
+<th>工位</th>
+<th>任务</th>
+<th>能否并行</th>
+<th>验收信号</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A 契约落地</td>
+<td><code>POST /api/orders</code> + DTO 校验</td>
+<td>契约先定后开工</td>
+<td>目标测试类 + 手工 curl</td>
+</tr>
+<tr>
+<td>B 测试补齐</td>
+<td>给现有 <code>OrderService</code> 补边界用例</td>
+<td>与 A 并行，但<strong>不改生产签名</strong></td>
+<td>只动 <code>src/test/**</code></td>
+</tr>
+<tr>
+<td>C 文档</td>
+<td>错误码与联调示例</td>
+<td>与 A/B 并行</td>
+<td>只动 <code>docs/</code></td>
+</tr>
+<tr>
+<td>R 只读审查</td>
+<td>合并后审三工位总 diff</td>
+<td>最后</td>
+<td>不改任何文件</td>
+</tr>
+</tbody>
+</table>
+<p>给新人的版本到此为止；资深团队再加三条硬约束：</p>
+<ul>
+<li><strong>共享契约先排队。</strong> DTO、migration、公共接口、生成代码（OpenAPI 类型、ORM 模型）属于串行项：先合，再开下游。能并行的只有纯测试、文档、独立模块与只读调研。</li>
+<li><strong>每张票写五件事：</strong> 目标、允许改的路径、禁止事项、验收命令、交付格式（文件列表 + 命令原文 + 未覆盖边界一句话）。缺任何一项，Agent 都会自己补——补出来的通常不是你想要的。</li>
+<li><strong>并发上限按审查带宽定。</strong> 2–4 个可编辑 Agent + 1 个只读审查是常见甜点；再多，瓶颈立刻从模型变成你。</li>
+</ul>
+<p>仓库根的 <code>AGENTS.md</code> 可以直接从这个骨架起步（构建命令按你的栈替换，Spring Boot 只是示例）：</p>
+<pre><code class="language-markdown"># AGENTS.md（节选）
+- 构建：./mvnw -q -DskipITs test        # 换成你的 test/build/lint
+- 禁止修改：**/application-prod.yml、**/prod/**、密钥与 .env
+- 禁止：无任务要求不得升级依赖；不得空断言；不得改生成文件
+- merge / rebase / force-push 只能由人执行，Agent 只 commit
+- 样例风格：见仓库内同类 Controller / Service
+</code></pre>
+<h2>18. Worktree 实操：建、开、验、合、清（命令可直接抄）</h2>
+<h3>18.1 建隔离区</h3>
+<pre><code class="language-bash">cd ~/code/shop-api
+git status                 # 必须干净
+git fetch origin
+git switch main &amp;&amp; git pull --ff-only origin main
+
+git worktree add ../shop-agent-a -b feat/order-create origin/main
+git worktree add ../shop-agent-b -b test/order-service origin/main
+git worktree add ../shop-agent-c -b docs/order-errors  origin/main
+git worktree list          # 核对：四个目录、四个分支
+</code></pre>
+<p>每个 worktree 各自复制本地配置（ <code>cp .env.example ../shop-agent-a/.env</code> ），<strong>不要软链同一份可写 <code>.env</code></strong>；端口、测试数据库/schema 也按工位错开，并写进票里。</p>
+<h3>18.2 打开与自检</h3>
+<ul>
+<li><strong>Cursor：</strong> <code>File → Open Folder…</code> 三个窗口分别打开 a/b/c，各开一个<strong>新</strong> Agent 对话；确认工作目录不是主仓。</li>
+<li><strong>Claude Code：</strong> 每个终端 <code>cd ../shop-agent-a &amp;&amp; claude</code>（或用它自带的 worktree 方式起会话，如 <code>claude -w &lt;名字&gt;</code>）。</li>
+<li><strong>第一件事不是干活，是验明正身。</strong> 让每个 Agent 先回你：</li>
+</ul>
+<pre><code class="language-bash">pwd
+git rev-parse --show-toplevel
+git branch --show-current
+</code></pre>
+<p>与票面目录/分支对不上立刻停。窗口标题或终端标签写上工位名（A/B/C），这是防串台最便宜的办法。</p>
+<h3>18.3 含决策点的排班（示例 90 分钟）</h3>
+<table>
+<thead>
+<tr>
+<th>时间</th>
+<th>动作 / 决策点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T+0</td>
+<td>契约定稿并 commit → 建三个 worktree → 三窗验目录</td>
+</tr>
+<tr>
+<td>T+5</td>
+<td>同时派 A/B/C（票面原样粘贴）</td>
+</tr>
+<tr>
+<td>T+15</td>
+<td>巡检一轮：谁在改禁止路径？谁卡在装依赖？</td>
+</tr>
+<tr>
+<td>T+30</td>
+<td><strong>决策点 1：</strong> B/C 先绿 → 只预审不合入；A 还在跑 → 不许催它“顺手帮 B 改生产代码”</td>
+</tr>
+<tr>
+<td>T+40</td>
+<td><strong>决策点 2：</strong> A 验收红或越界 → 打回并<strong>新开会话</strong>（只贴失败日志+契约）；改了依赖/prod → 直接 discard 那个文件；超时（&gt;25 分钟无绿）→ 缩范围：先 Controller+DTO，Service 用 mock 顶</td>
+</tr>
+<tr>
+<td>T+50</td>
+<td><strong>决策点 3：</strong> B 已绿、A 未好 → B 若依赖 A 的新签名，标记“待 rebase”搁置；只测旧行为的可先合</td>
+</tr>
+<tr>
+<td>T+60</td>
+<td>收 A：你自己在本机重跑验收（不看 Agent 的“已通过”截图）</td>
+</tr>
+<tr>
+<td>T+70</td>
+<td>按依赖合：A → B rebase 后重测 → C → R 只读审总 diff</td>
+</tr>
+<tr>
+<td>T+85</td>
+<td>清理 worktree（见 18.5）</td>
+</tr>
+</tbody>
+</table>
+<h3>18.4 合并 / rebase 顺序（写死，不要现场发明）</h3>
+<pre><code class="language-bash"># A 先合
+cd ../shop-agent-a &amp;&amp; ./mvnw -Dtest=OrderControllerTest test
+git push -u origin feat/order-create
+cd ../shop-api &amp;&amp; git switch main &amp;&amp; git pull --ff-only origin main
+git merge --no-ff feat/order-create -m &quot;feat(order): POST /api/orders&quot;
+./mvnw -Dtest=OrderControllerTest test &amp;&amp; git push origin main
+
+# B rebase 到新主线，重测再合
+cd ../shop-agent-b &amp;&amp; git fetch origin &amp;&amp; git rebase origin/main
+./mvnw -Dtest=OrderServiceTest test
+git push -u origin test/order-service --force-with-lease
+cd ../shop-api &amp;&amp; git merge --no-ff test/order-service -m &quot;test(order): boundary cases&quot;
+./mvnw -Dtest=OrderServiceTest,OrderControllerTest test &amp;&amp; git push origin main
+
+# C 最后合（文档冲突以契约文件为准）
+cd ../shop-agent-c &amp;&amp; git fetch origin &amp;&amp; git rebase origin/main
+git push -u origin docs/order-errors --force-with-lease
+cd ../shop-api &amp;&amp; git merge --no-ff docs/order-errors -m &quot;docs(order): error codes&quot; &amp;&amp; git push origin main
+</code></pre>
+<p>团队走 PR 的，把 <code>merge</code> 换成开 PR 即可，顺序不变。<strong>merge / rebase / force-push 只由人做</strong>——这一条写进 AGENTS.md 与每张票的禁止项。</p>
+<h3>18.5 清理</h3>
+<pre><code class="language-bash">cd ~/code/shop-api
+git worktree remove ../shop-agent-a
+git worktree remove ../shop-agent-b
+git worktree remove ../shop-agent-c
+git push origin --delete feat/order-create test/order-service docs/order-errors
+git branch -d feat/order-create test/order-service docs/order-errors
+</code></pre>
+<h2>19. 红线路径与 Diff 失败样例（审的时候照着对）</h2>
+<p>先看文件列表，再看代码。下面这些是<strong>一票否决</strong>信号，看见就打回，不讨论动机：</p>
+<table>
+<thead>
+<tr>
+<th>看到什么</th>
+<th>判定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>application-prod.yml</code>、<code>*/prod/*</code>、<code>.env</code>、真实连接串/密钥</td>
+<td>立刻丢弃该文件</td>
+</tr>
+<tr>
+<td><code>pom.xml</code> / <code>build.gradle*</code> / <code>package.json</code> 依赖版本在未要求时变了</td>
+<td>打回（顺手升级）</td>
+</tr>
+<tr>
+<td>工位 B（只加测试）出现 <code>src/main/**</code> 改动</td>
+<td>打回</td>
+</tr>
+<tr>
+<td>工位 C 出现 <code>*.java</code> / 代码文件</td>
+<td>打回</td>
+</tr>
+<tr>
+<td>测试只有 <code>assertTrue(true)</code>、<code>assertNotNull(x)</code> 而无业务断言</td>
+<td>打回（空测试）</td>
+</tr>
+<tr>
+<td><code>@Disabled</code> / 跳过的用例突然变多</td>
+<td>打回并追问</td>
+</tr>
+<tr>
+<td>错误码与契约对不上（代码 <code>BAD_REQUEST</code>，文档 <code>INVALID_QUANTITY</code>；或用 200 包错误）</td>
+<td>打回</td>
+</tr>
+<tr>
+<td>commit 写 <code>fix: order 500</code>，diff 只有注释/拼写</td>
+<td>打回（改注释冒充修 Bug）</td>
+</tr>
+<tr>
+<td>同 PR 全文件格式化、重命名无关类、删“看似无用”的依赖</td>
+<td>打回（顺手大重构）</td>
+</tr>
+<tr>
+<td>文档已写新字段，但实现还没合</td>
+<td>顺序错：先合实现再合文档</td>
+</tr>
+</tbody>
+</table>
+<p>给只读审查 Agent 的最短票：</p>
+<pre><code class="language-text">只做审查，不改代码。对照 docs/contracts/order-create.md 与 git diff，
+列出：越界文件、无效断言、与契约不一致的 code/HTTP 状态、疑似密钥、
+被跳过的测试。按严重程度排序。
+</code></pre>
+<h2>20. 给 Agent 的绿/红信号：没有信号，它就停在「看起来像对」</h2>
+<p>资深与业余的一个分水岭，是你有没有把<strong>可执行的绿/红</strong>写进票里。以 Spring Boot 为例（换成你的栈同理）：</p>
+<p><strong>测试侧（MockMvc）——断言状态码与错误码，不要空断言：</strong></p>
+<pre><code class="language-java">mockMvc.perform(post(&quot;/api/orders&quot;)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(&quot;{\&quot;skuId\&quot;:\&quot;SKU-1\&quot;,\&quot;quantity\&quot;:0}&quot;))
+    .andExpect(status().isBadRequest())
+    .andExpect(jsonPath(&quot;$.code&quot;).value(&quot;INVALID_QUANTITY&quot;));
+
+mockMvc.perform(post(&quot;/api/orders&quot;)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(&quot;{\&quot;skuId\&quot;:\&quot;SKU-1\&quot;,\&quot;quantity\&quot;:2}&quot;))
+    .andExpect(status().isCreated())
+    .andExpect(jsonPath(&quot;$.status&quot;).value(&quot;CREATED&quot;))
+    .andExpect(jsonPath(&quot;$.orderId&quot;).isNotEmpty());
+</code></pre>
+<p><strong>服务层——断言业务 code，不只断言“抛了异常”：</strong></p>
+<pre><code class="language-java">assertThatThrownBy(() -&gt; orderService.create(new CreateOrderRequest(&quot;SKU-1&quot;, 0)))
+    .isInstanceOf(InvalidOrderException.class)
+    .extracting(ex -&gt; ((InvalidOrderException) ex).getCode())
+    .isEqualTo(&quot;INVALID_QUANTITY&quot;);
+</code></pre>
+<p><strong>手工 curl——把绿/红都写进票里，要求回贴状态行 + JSON：</strong></p>
+<pre><code class="language-bash"># 绿：201 + CREATED
+curl -sS -D - -X POST http://localhost:8080/api/orders \
+  -H 'Content-Type: application/json' -d '{&quot;skuId&quot;:&quot;SKU-1&quot;,&quot;quantity&quot;:2}'
+# 红：400 + INVALID_QUANTITY
+curl -sS -D - -X POST http://localhost:8080/api/orders \
+  -H 'Content-Type: application/json' -d '{&quot;skuId&quot;:&quot;SKU-1&quot;,&quot;quantity&quot;:0}'
+</code></pre>
+<p>你抽查时只看三样：<strong>状态码、<code>code</code>/<code>status</code> 字段、有没有碰禁止路径。</strong> 前端同理：把“点筛选后 URL 与列表必须一致”做成 e2e 断言，而不是让它回你一张截图说好了。</p>
+<h2>21. 踩坑实录：四个反复出现的翻车（资深版）</h2>
+<p><strong>坑 1：三个窗口其实指向同一目录。</strong> worktree 建了，但第二个会话仍开在主仓，两边改同一个 <code>OrderService</code>，diff 互相覆盖。修法就是 §18.2 的验明正身：<code>pwd</code> + <code>show-toplevel</code> + 分支名，先对再干。共享的不只是文件——同一本地数据库、同一 Redis、同一端口同样会串台，所以资深团队连测试数据都按工位隔离。</p>
+<p><strong>坑 2：B 先合、A 后改签名，测试集体假绿。</strong> B 按旧签名写的测试先合了，A 改了 <code>create(...)</code> 签名，CI 还绿着，因为测试被跳过、或根本没编到新签名。修法：顺序写死 A→B；B rebase 后必须重跑；审查时专门扫 <code>@Disabled</code> 与被放宽的断言。契约层面的签名变更，先单独成票、先合，再放下游并行。</p>
+<p><strong>坑 3：Agent “帮你”合并。</strong> 它在自己的 worktree 里 <code>git merge main</code>、解冲突、顺手把别的工位代码带进来，历史立刻变脏。修法：Agent 只 commit；merge/rebase/force 只能人来。这要在票里写明，不能只写在 AGENTS.md——会话长了它会忘，票面禁止项离手边最近。</p>
+<p><strong>坑 4：契约只活在聊天里。</strong> A 按对话里第一版字段实现，C 按你后来口头改的第二版写文档，联调才发现对不上。修法：契约先落盘、先 commit 再派工；所有票 <code>@</code> 同一份文件；改契约时先停相关工位，改完文件再恢复，并通知已在跑的工位重新读。</p>
+<p>再往上走一层，资深团队还会防两个变体：<strong>生成物冲突</strong>（两边都跑代码生成、各改一份生成文件——生成物只由一个工位产出并先合）和<strong>共享环境假绿</strong>（在 A 的服务上测 B 的代码）。前者把生成步骤收归契约工位，后者靠端口/数据库隔离与票面写清“在哪台服务上验”。</p>
+<h2>22. 收工清单（贴在屏幕边上勾）</h2>
+<p>派工前：☐ 契约一页纸已落盘（建议已 commit） ☐ 串行/并行项标清 ☐ <code>git worktree list</code> 核对过 ☐ 每张票五件事齐全 ☐ AGENTS.md 写明构建命令与禁止路径</p>
+<p>进行中：☐ 可编辑 Agent ≤ 4 ☐ 每窗验过目录 ☐ 犯傻就新开对话 ☐ A 红/越界直接打回新会话 ☐ B/C 先好只预审、默认等 A 按序合</p>
+<p>收工前：☐ 先看文件列表对红线表 ☐ 验收命令你亲手跑过 ☐ A→rebase B 重测→C 顺序合并 ☐ 只读 Review 过总 diff ☐ <code>git worktree remove</code> 清理完</p>
+<p>一句话记法：<strong>你是调度与门禁，Agent 是并行工人。隔离工作区，共享一份落盘契约，合并顺序由依赖说了算，验收由你亲手跑的绿/红说了算。</strong></p>
+<h2>23. 案例库（一）：OpenAI 的 Harness Engineering——人不写代码，只设计环境</h2>
+<p>OpenAI 2026 年 2 月的工程博客记录了一个极端实验：一个内部产品<strong>零行人工代码</strong>，约 100 万行（含测试、CI、文档与工具），5 个月约 1,500 个已合并 PR，最初只有 3 名工程师（后到 7 名），人均约 3.5 PR/天。他们的做法对资深团队最有借鉴的不是规模，而是几条反直觉的决定：</p>
+<ul>
+<li><strong><code>AGENTS.md</code> 只做目录，不做百科。</strong> 他们试过巨型单文件，失败模式很典型：挤占上下文、什么都是重点等于没重点、迅速腐烂、无法机械校验。改为约 100 行的地图 + <code>docs/</code> 作为系统记录，用 lint/CI 校验文档的新鲜度与交叉链接，还有一个定期的“文档园丁”Agent 专门开 PR 修过期文档。</li>
+<li><strong>可观测性直接喂给 Agent。</strong> 每个 worktree 起一个独立应用实例，日志/指标/链路对 Agent 可查（LogQL / PromQL），于是“启动必须在 800ms 内”这类提示变得可执行。单个任务跑 6 小时以上是常态（人睡了它还在跑）。</li>
+<li><strong>熵要靠“垃圾回收”。</strong> Agent 会复制仓库里现有的坏模式。人工每周五清理撑不下去后，他们把“黄金原则”写进仓库，让后台 Agent 定期扫描偏差、刷质量分、开小重构 PR——多数一分钟内可审可合。</li>
+</ul>
+<p>迁移到你的团队时，先搬三件：短 AGENTS.md + 结构化 docs、每 worktree 可独立启动并自带日志、把反复出现的品味问题编码成 lint（错误信息里直接写修复办法，让 Agent 自己改）。</p>
+<h2>24. 案例库（二）：OpenAI Agents SDK——用 Skills 维护开源仓库</h2>
+<p>OpenAI 另一篇 2026 年的实践更贴近日常维护：两个 Agents SDK 仓库（Python / TypeScript）靠 <code>AGENTS.md</code> + 仓库内 Skills + GitHub Action 做日常活儿，三个月合并 PR 从 316 涨到 457。</p>
+<p>可直接抄的模式：</p>
+<ul>
+<li><strong>用 if/then 把 Skill 变成强制项。</strong> 例如 AGENTS.md 里写明：动运行时/API 前必须先调 <code>$implementation-strategy</code>；动了代码就跑 <code>$code-change-verification</code>；JS 包变了查 <code>$changeset-validation</code>；完工用 <code>$pr-draft-summary</code> 出 PR 草稿。</li>
+<li><strong>验证栈写死在 Skill 里。</strong> Python 仓是 <code>make format / lint / typecheck / tests</code>；JS 仓是 <code>pnpm i / build / -r build-check / lint / test</code>。定义只有一个地方，改一处全队生效。</li>
+<li><strong>路由靠 description，不靠代码。</strong> 他们最具体的教训：Skill 的 <code>description</code> 写不清“什么时候该用”，Agent 就会乱路由；改元数据常比加脚本更有效。</li>
+<li><strong>确定性的活下沉到 scripts/。</strong> 模型做判断与汇报，脚本做重复的壳命令；Skill 本地跑顺了再搬进 CI。</li>
+</ul>
+<h2>25. 案例库（三）：16 个 Agent 写一个 C 编译器——并行与验证的上限测试</h2>
+<p>Anthropic 的 Nicholas Carlini 用 16 个 Agent、以近 2,000 次 Claude Code 会话、约 2 万美元 API 成本、两周时间，产出一个 10 万行 Rust 写的 C 编译器，能编译 Linux 6.9。对维护者的价值在工程手法：</p>
+<ul>
+<li><strong>任务锁防撞车。</strong> 每个 Agent 在 <code>current_tasks/</code> 写一个文件认领任务，用 git 同步天然排斥重复认领；做完合并推送再释放锁。</li>
+<li><strong>验证器要近乎完美。</strong> 他花最多时间的是测试套件与校验脚本，并针对观察到的失败不断加测。后期新功能总弄坏旧功能，就上 CI 强制“新提交不得弄坏已有测试”。</li>
+<li><strong>把大规模任务拆成可并行的。</strong> 编译整个 Linux 内核是一个大块任务，16 个 Agent 会挤在同一个 Bug 上。用 GCC 当“已知正确”的 oracle、随机混合两边编译的文件来二分定位，16 条线才真正并行。</li>
+<li><strong>照顾模型的盲区。</strong> 测试输出只打几行、明细进文件（错误行带 <code>ERROR</code> 前缀方便 grep）；防“时间盲”——默认跑 1%/10% 随机子采样（<code>--fast</code>），别让它花几小时跑全量测试。</li>
+</ul>
+<p>教训很直白：<strong>自治能跑多远，取决于验证器有多硬、任务切得有多碎、上下文有多干净</strong>，而不是提示词写得多动情。</p>
+<h2>26. 案例库（四）：Anthropic 多 Agent Research——什么时候并行真的划算</h2>
+<p>Anthropic 的多 Agent 研究系统给出目前最干净的一组数字：Lead（Opus 4）+ 子 Agent（Sonnet 4）在其内部评测上比单 Agent 高 <strong>90.2%</strong>；但多 Agent 约耗 <strong>15 倍</strong>于普通对话的 token。他们在 BrowseComp 上发现：token 用量单独解释了约 <strong>80%</strong> 的表现方差。</p>
+<p>同样值得抄的是失败与对策：</p>
+<ul>
+<li>早期系统会为简单问题派 50 个子 Agent。解法是把<strong>投入与难度挂钩的规则</strong>写进提示：简单事实题 1 个 Agent、几次工具调用；复杂研究才开 10+ 子 Agent 并明分职责。</li>
+<li>子 Agent 的任务描述必须含目标、输出格式、可用工具与边界，否则会重复劳动、漏查方向。</li>
+<li>并行工具调用把复杂查询的时间最多砍掉约 90%。</li>
+<li>评估看<strong>终局状态</strong>，不苛求固定路径——多 Agent 天然会有多条合法路径。</li>
+</ul>
+<p>翻译到代码维护：并行最适合“宽而独立”的搜索/调查/多方案，不适合“窄而耦合”的同一调用链改动；而且必须在心里给它标好价格——15 倍 token 不是夸张修辞。</p>
+<h2>27. 案例库（五）：dotnet/runtime 十个月——云端 Agent 在顶级仓库的真实合并率</h2>
+<p>微软 .NET 团队在 <code>dotnet/runtime</code> 用了十个月 GitHub Copilot 编码 Agent，数据非常完整：Agent 提了 <strong>878 个 PR，535 个合并（成功率 67.9%）</strong>，对比人类（微软）87.1%、社区 79.7%；净增约 9.5 万行、删 3.1 万行。另一个 GitHub 内部案例里，Secret Protection 团队在实习生调度下几周内把校验的 token 类型从 <strong>32 扩到近 90</strong>。</p>
+<p>给资深团队的读法：</p>
+<ul>
+<li><strong>67.9% 是好数字，不是失败。</strong> 在最难的仓库里，三分之二的 Agent PR 能合；但它也说明三分之一要人返工——排班时把审查与打回算进产能，不要按“全自动”估。</li>
+<li><strong>最适合的是框架化、可重复的活。</strong> token 校验、补测试、清债这类有清晰模式的任务产出最高；需要品味与跨团队协调的，仍是人的活。</li>
+<li><strong>把任务切到可审查。</strong> GitHub Billing 团队的经验原话要点：别写“提升测试覆盖率”，拆成“给 X 文件 / Y 目录补测试”的多个 issue——不是因为 Agent 做不了大的，而是因为人审不了 100+ 文件的 PR。</li>
+</ul>
+<h2>28. 案例库（六）：Cursor 官方工作流——计划文件、TDD 五步与同题竞跑</h2>
+<p>Cursor 2026 年 1 月的官方最佳实践里，有几条已被大量团队验证的具体动作：</p>
+<ul>
+<li><strong>计划落盘。</strong> Plan Mode（<code>Shift+Tab</code>）产出的计划保存进工作区（如 <code>.cursor/plans/</code>），既方便中断续做，也给下一个 Agent 留上下文。构建不合预期时，<strong>回滚到计划重跑通常比追着补提示更快、结果更干净</strong>。</li>
+<li><strong>TDD 五步写死：</strong> ①让 Agent 按输入/输出写测试并明说处于 TDD、别写假实现；②跑测试确认全红、此刻只许动测试；③提交测试；④写实现且禁止改测试、迭代到全绿；⑤提交实现。</li>
+<li><strong>常用命令沉淀。</strong> <code>/pr</code>（diff→提交信息→<code>gh pr create</code>）、<code>/fix-issue [number]</code>、<code>/review</code>、<code>/update-deps</code>（逐个升、每个都跑测试）这类一天用多次的流程，存成仓库内命令文件。</li>
+<li><strong>同题多模型竞跑。</strong> 难题同一提示喂多个模型，挑 diff 最干净的合；并行 worktree 是它的原生隔离方式。</li>
+<li><strong>Debug Mode 处理疑难 Bug：</strong> 先列多个假设、给代码加日志埋点、让你复现、再用运行时数据定位——不是靠猜。</li>
+</ul>
+<h2>29. 案例落点速查：遇到什么问题翻哪一节</h2>
+<table>
+<thead>
+<tr>
+<th>你的处境</th>
+<th>先翻的案例</th>
+<th>先抄的一个动作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>规则文件越写越厚、Agent 越来越不听</td>
+<td>§23 / §11</td>
+<td>AGENTS.md 砍成地图，余者进结构化 docs + lint</td>
+</tr>
+<tr>
+<td>重复的维护活吃掉人力</td>
+<td>§24</td>
+<td>一个 Skill + AGENTS.md 里的 if/then 强制路由</td>
+</tr>
+<tr>
+<td>想让 Agent 过夜自己跑</td>
+<td>§25 / §10</td>
+<td>硬验证器 + <code>current_tasks/</code> 式锁 + <code>--fast</code> 子采样</td>
+</tr>
+<tr>
+<td>在犹豫要不要上多 Agent</td>
+<td>§26</td>
+<td>先算 token 账：宽而独立才开，耦合任务别开</td>
+</tr>
+<tr>
+<td>云端 Agent 产出虚高、合并率难看</td>
+<td>§27</td>
+<td>把成功率预期设在 2/3，按文件/目录切 issue</td>
+</tr>
+<tr>
+<td>改了又改还是一团糟</td>
+<td>§28</td>
+<td>回滚到计划重跑；TDD 先提交测试再碰实现</td>
+</tr>
+</tbody>
+</table>
+<p>把案例读成动作，而不是故事：每个案例只先抄<strong>一条</strong>，跑顺了再加下一条。这正是这些团队共同的节奏——先把环境与验证做好，模型的能力自然会被放大。</p>
