@@ -1,43 +1,70 @@
-<h1>Traditional CI/CD: Pipelines Run Automatically, Judgement Stays with People</h1>
+<h1>Many People, Many Agents: Humans Define and Review, Digital Employees Execute</h1>
 <blockquote>
-<p>Companion to diagram #34 · Chapter 6 &quot;How AI Reshapes the Dev Lifecycle&quot;</p>
+<p>Companion to diagram #34 · Chapter 5 &quot;Multi-Agent Programming&quot;</p>
 </blockquote>
-<p>Continuous integration and continuous delivery (CI/CD) turned build, test and deploy into automated pipelines, one of the most important advances in software engineering of the past decade or more. But in traditional CI/CD and operations, <strong>execution is automatic while judgement stays with people</strong>: when a test fails, who works out why? When an alert fires, who locates the problem? Should the release continue? How do we learn from the incident? All of this depends on engineers' experience.</p>
-<p>This chapter looks at what AI changes from the process perspective. Like &quot;The Traditional IDE&quot; in Chapter 3, this article is the baseline: where the pipeline is automated today and where it relies on people.</p>
-<h2>1. The pipeline: what is already automated</h2>
-<p>A typical pipeline:</p>
-<pre><code>commit → build → unit tests → integration tests → artefact → staging → canary → production
-</code></pre>
-<p>Every arrow is the machine moving things forward. The release engineering chapter of Google's SRE Book stresses two principles that explain why such pipelines are reliable:</p>
+<p>When not one person but a whole team works with many agents at once, the problem shifts from tools to organisation: who defines tasks? Who reviews? How are agents' identities and permissions managed? The AIDC digital ad-buyer team in Alibaba's practice handbook went through three periods, &quot;super-individual → digital employees → Scrum in the cloud&quot;, and offers a real sample answer. This article follows their experience.</p>
+<h2>1. Stage one: the super-individual</h2>
+<p>According to the handbook, after the team standardised on one mainstream agent tool, one person directing 3–5 sessions became normal, some long-running tasks completed overnight, and it felt like one person was doing the work of two or three. It helped the team ship its first MVP.</p>
+<p>It sounds great, but two kinds of problems soon appeared:</p>
 <ul>
-<li><strong>Self-service</strong>: teams release on their own without queueing for dedicated release engineers, removing a &quot;wait for a person&quot; step.</li>
-<li><strong>Hermetic builds</strong>: builds are insensitive to the libraries and software installed on the build machine; the same inputs always give the same output, so builds are repeatable.</li>
+<li><strong>Indigestion.</strong> Intermediate output produced at great token cost was hard for people to understand, review and apply. When discussing designs with colleagues, the colleagues could not explain them either and could only pass the question back to an agent.</li>
+<li><strong>No reuse.</strong> After a task was delivered, the experience was hard for others to reuse.</li>
 </ul>
-<p>Repeatability matters especially in the agent era. Agents rely on environmental feedback to correct themselves (Chapter 3). If the same code builds today and fails tomorrow because a library on the machine was upgraded, the agent will go off to &quot;fix&quot; a problem that doesn't exist. <strong>Hermetic builds are a prerequisite for trustworthy feedback.</strong></p>
-<h2>2. Judgement: what still relies on people</h2>
-<p>Wherever the pipeline stops is where a person steps in:</p>
+<p>Both have the same root: <strong>output and understanding came apart.</strong> Code a person wrote, they understood; code a person &quot;directed&quot; into existence, they may not fully understand. Everyone became a super-individual, but knowledge didn't flow between them. The larger the team, the worse this gets.</p>
+<h2>2. Stage two: agents as &quot;digital employees&quot;</h2>
+<p><strong>From &quot;does this person have permission?&quot; to &quot;who is doing what on whose behalf?&quot;</strong> The handbook treats agents as independent actors in enterprise systems. Platforms used to answer only &quot;does this person have permission?&quot;; now they must answer: <strong>which agent, in which runtime, on behalf of which user, for which task, accessing which resource, doing what, and does it need human approval?</strong></p>
+<p>Why not just use a person's account? The handbook's analysis: reusing a person's account means audits can't tell whether the person or an agent acted; reusing a service account obscures who is responsible, who authorised it and who can switch it off. Imagine a production config changed at 3 a.m. If the log says only &quot;Zhang San&quot;, you can't tell whether Zhang San did it, or one of Zhang San's agents did it during some task, let alone which task.</p>
+<p><strong>The trust boundary moves outward.</strong> The handbook divides human–agent collaboration into roughly three stages, essentially an outward shift of the trust boundary:</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Trust boundary</th>
+<th>Human responsibilities</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local assistance</td>
+<td>Person + local tools</td>
+<td>Provide context, approve commands, check results</td>
+</tr>
+<tr>
+<td>Cloud autonomy</td>
+<td>Person + cloud runtime + repository</td>
+<td>Set goals, review MRs, approve key steps</td>
+</tr>
+<tr>
+<td>Multi-agent team</td>
+<td>Lead agent + specialist agents + many systems</td>
+<td>Design collaboration, govern boundaries, own final responsibility</td>
+</tr>
+</tbody>
+</table>
+<p>Going down the table, the person's work involves fewer concrete operations and more <strong>rules and responsibility.</strong></p>
+<p><strong>The &quot;intern&quot; metaphor only goes halfway.</strong> The handbook cautions that thinking of an agent as an intern is only half right: agents do need mentors, duties, permission boundaries and review, but they lack professional ethics and tacit common sense. A human intern knows not to delete the production database even if nobody says so; an agent may not. Governance therefore also needs <strong>machine-enforceable guardrails</strong>, in line with the OWASP advice from Chapter 2 (human approval for high-risk operations, least privilege) and the MCP specification (explicit user consent before tool calls).</p>
+<h2>3. Redividing responsibilities</h2>
+<p>The digital ad-buyer team arrived at this split:</p>
 <ul>
-<li><strong>Analysing test failures and build errors</strong>: is the code wrong, the test wrong, or the environment flaky?</li>
-<li><strong>Alert triage and fault localisation</strong>: does this alert matter? Where is the problem?</li>
-<li><strong>Release decisions</strong>: continue, pause or roll back?</li>
-<li><strong>Postmortems and follow-up actions</strong>: why did it happen? How do we prevent it?</li>
+<li><strong>Systems</strong> handle <strong>high-certainty</strong> matters such as state, permissions and rules;</li>
+<li><strong>AI</strong> handles analysis, generation and long-running multi-step execution;</li>
+<li><strong>People</strong> handle goal setting, key decisions, risk trade-offs and final accountability.</li>
 </ul>
-<p>Consider a concrete moment. Friday, 4 p.m.: during the canary, the error rate rises from 0.1% to 0.3%. The on-call engineer has minutes to answer: is this the new version or normal noise? Roll back? What would a rollback affect? These calls need experience, context and risk trade-offs; the pipeline itself can't answer them.</p>
-<h2>3. Toil: where AI moves in first</h2>
-<p>The SRE Book defines toil as work tied to running a production service that is <strong>manual, repetitive, automatable, tactical, devoid of enduring value</strong>, and that scales linearly as the service grows.</p>
-<p>Google aims to keep each SRE's toil below 50% of their time, with at least half spent on engineering work that reduces future toil or adds service features. The book mentions quarterly surveys showing Google SREs spend about 33% of their time on toil on average.</p>
-<p>By this definition much &quot;judgement&quot; work is half toil: digging through logs, finding TraceIds, checking recent changes, pulling up similar past incidents. These steps are manual, repetitive and automatable. Chapter 4's evidence chain hands exactly the evidence-gathering part to agents. <strong>AI moves first not into the parts needing deep judgement, but into the toil that precedes judgement.</strong></p>
-<h2>4. Decide with data, not feelings</h2>
-<p>Another key SRE idea is to replace subjective calls with objective measures:</p>
-<p><strong>Error budgets.</strong> An error budget based on a service level objective (SLO) gives an objective measure of how unreliable a service is allowed to be in a quarter. For example, with a 99.9% availability SLO, a 30-day month allows <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">30</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">24</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">60</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8056em;vertical-align:-0.0556em;"></span><span class="mord">0.1%</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">43.2</span></span></span></span> minutes of downtime. With plenty of budget left you can release faster; when it is nearly spent, slow down and prioritise stability. Arguments about release pace change from &quot;I think&quot; to &quot;how much budget is left&quot;.</p>
-<p><strong>Blameless postmortems.</strong> Postmortems focus on identifying the contributing causes of an incident, not on blaming individuals or teams. That has new meaning in the agent era: when an agent's change causes an outage, the postmortem should ask &quot;which verification layer missed it, and why did permissions allow it?&quot;, not simply conclude &quot;AI is unreliable&quot;.</p>
-<p><strong>DORA metrics</strong> are the common language for measuring the pipeline: throughput via change lead time (from commit to production deployment), deployment frequency and failed deployment recovery time; instability via change failure rate and deployment rework rate (Chapter 4).</p>
-<h2>5. Manual nodes outside the pipeline</h2>
-<p>Alibaba's practice handbook observes that a requirement coded in an hour can still take weeks from finished code to live after going through several internal platforms, release processes and environment constraints.</p>
-<p>Even when the pipeline itself is highly automated, then, there are many manual nodes <strong>outside</strong> it: requesting resources, waiting for approvals, coordinating release windows, getting cross-team sign-off. By Amdahl's Law, these are the main bottleneck of end-to-end efficiency.</p>
+<p>The unit of delivery changed with it: from &quot;people collaborating with people to finish a task&quot; to &quot;<strong>people define goals and acceptance criteria; digital employees divide up and execute.</strong>&quot;</p>
+<p>The three-way split is instructive: it doesn't simply say &quot;AI executes, humans decide&quot;; it singles out <strong>systems</strong>. Permission checks and state transitions are more reliable in deterministic code than in AI. That returns to Chapter 3's conclusion: probabilistic AI needs deterministic tools behind it.</p>
+<h2>4. Stage three: Scrum in the cloud</h2>
+<p>To fix stage one's reuse problem, the team built two &quot;cloud Scrum&quot; supply lines:</p>
+<ul>
+<li><strong>Experience loop</strong>: two digital employees responsible respectively for discovering strategies and putting them live; strategy delivery time fell from about 10 days to 2.</li>
+<li><strong>Hands-and-feet loop</strong>: turns production failure traces into capability-building requirements; about 80% of core capabilities have become Skills.</li>
+</ul>
+<p>The hands-and-feet loop is especially worth borrowing: <strong>wherever an agent fails is the next capability to build.</strong> Failure traces are not discarded logs but a source of requirements. It is the same idea as Chapter 4's &quot;add a rule when the agent keeps making a mistake&quot; and &quot;turn it into a Skill after three repeats&quot;, upgraded from personal habit to team process.</p>
+<h2>5. The limits of digital employees</h2>
+<p>The handbook is clear-eyed about limits: discovering growth opportunities still depends heavily on people's business understanding, and goal setting, business thresholds, release gates and high-risk decisions still rest with people. Digital employees are best at executing, to a high standard, work that <strong>has already been thought through and has clear standards.</strong></p>
+<p>Review is still a team-level bottleneck. The developer on X advises keeping each MR small and focusing human review on business logic and on whether the test results are enough to support delivery.</p>
 <h2>6. Common misconceptions</h2>
 <ul>
-<li><strong>&quot;Having CI/CD means we do DevOps.&quot;</strong> Automated execution is only the foundation; judgement still relies heavily on people.</li>
-<li><strong>&quot;Toil means the team isn't working hard enough.&quot;</strong> The SRE Book treats toil as something to eliminate systematically with engineering, not a personal failing.</li>
-<li><strong>&quot;AI will replace the pipeline.&quot;</strong> The opposite: a reliable pipeline is the infrastructure that gives agents their verification signals.</li>
+<li><strong>&quot;More agents means fewer people needed.&quot;</strong> The work of defining, reviewing and governing grows with the number of agents.</li>
+<li><strong>&quot;Running agents under personal accounts is easiest.&quot;</strong> Audit and accountability become blurred.</li>
+<li><strong>&quot;Digital employees can replace organisational consensus.&quot;</strong> They execute what has been thought through; they cannot think it through for the team.</li>
 </ul>

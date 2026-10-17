@@ -1,57 +1,110 @@
-<h1>为什么多 Agent：用并行换时间，代价是 token 与审阅</h1>
+<h1>用 AI Agent 维护代码：小步、可验证、留痕的七步循环</h1>
 <blockquote>
-<p>对应图 #29 · 第五章「多 Agent 编程」</p>
+<p>对应图 #29 · 第四章「当前如何做 AI 编程」</p>
 </blockquote>
-<p>单个 Coding Agent 一次只能做一件事。当任务可以拆成彼此独立的部分时，同时运行多个 Agent 就能<strong>用并行换时间</strong>。但并行不是免费的：每个 Agent 都消耗 token，每份产出都需要人审阅。多 Agent 编程的核心问题，就是这笔账什么时候划算。</p>
-<p>这一篇先讲收益从哪里来，再讲代价，最后给出一个判断框架。</p>
-<h2>一、收益来自哪里？</h2>
-<p><strong>收益一：并行。</strong> 最直观的一点。三个彼此独立的子任务，串行做要三份时间，并行做只要一份（加上拆分和合并的开销）。</p>
-<p><strong>收益二：上下文隔离。</strong> 这一点更不明显，但同样重要。第四章讲过，上下文越长，模型的注意力越分散。一个 Agent 先调研支付模块、再调研用户模块、再写代码，到写代码时上下文里已经塞满了调研的中间结果。如果让两个子 Agent 分别调研，各自只把结论交回来，主 Agent 的上下文就是干净的。</p>
-<p>Anthropic 的多 Agent 研究系统正是这样工作的：子 Agent 在各自的上下文窗口中并行探索问题的不同方面，再把最重要的信息压缩后交给主 Agent。他们的内部研究评测显示，多 Agent 系统比单 Agent 高出 90.2%；在复杂查询上，并行化把研究时间缩短了最多 90%。</p>
-<h2>二、代价是什么？</h2>
-<p><strong>代价一：token。</strong> 同一篇文章给出了一组数字：Agent 的 token 用量约为普通聊天的 4 倍，多 Agent 系统约为 15 倍。而且他们发现，<strong>token 用量本身就解释了 80% 的性能差异</strong>。换句话说，多 Agent 效果好，很大程度上是因为它花了更多 token 去思考和探索。这不是坏事，但意味着它是一种「花钱买质量和时间」的手段，而不是免费的午餐。</p>
-<p><strong>代价二：编码任务天然更难并行。</strong> Anthropic 明确指出：大多数编码任务中真正可并行的部分比研究任务少，而且 LLM Agent 还不擅长实时协调和委派。研究任务（「调研五家竞品的定价策略」）天然可以拆成五份独立的工作；编码任务的各部分常常紧密耦合：改了接口，调用方就要跟着改。<strong>需要所有 Agent 共享同一上下文、或者 Agent 之间依赖很多的任务，目前不适合多 Agent。</strong></p>
-<p><strong>代价三：人的审阅成为新瓶颈。</strong> X 上分享 Orca 用法的开发者总结了多开之后会撞上的四件事：</p>
+<p>上一张图讲的是“这一周把地基打好”。这一篇往下走一步：地基有了以后，<strong>每天维护一个真实的代码仓库</strong>时，具体怎么和 Agent 配合。它写给两类人：刚开始用 Claude Code、Codex、Cursor 或 Copilot 的新手，以及已经在用、但总觉得“时灵时不灵”的中高级工程师。</p>
+<p>先说结论：会用 Agent 的人和不会用的人，差别不在于背了多少命令，而在于有没有一个<strong>闭环</strong>。Anthropic 官方的最佳实践把它放在第一条：给 Agent 一个它自己能运行的检查（测试、构建、截图对比），这决定了一次会话是你盯着看，还是你可以走开。Karpathy 在 2026 年初那篇被广泛转发的笔记里说得更直接：不要告诉它怎么做，给它成功标准，然后看它跑；让它先写测试，再让测试通过。下面的七步，就是围绕这个闭环展开的。</p>
+<h2>一、七步循环</h2>
+<p><strong>步骤 0：项目地图。</strong> 在仓库根目录放一份给 Agent 看的说明：<code>AGENTS.md</code>（Codex、Cursor、Copilot 都会读）或 <code>CLAUDE.md</code>（Claude Code；新版在没有 CLAUDE.md 时也会读 AGENTS.md）。不用从零写，Claude Code 和 Codex 都有 <code>/init</code>，会扫一遍仓库生成初稿。你要做的是删减和补充：怎么装依赖、怎么跑测试、目录约定、哪些地方不能碰。</p>
+<p>这份文件越短越好。官方文档专门列了一个失败模式叫“过度详细的 CLAUDE.md”：写得太长，重要的规则反而被淹没。判断标准很简单——如果删掉某一行，Agent 也不会犯错，那这一行就该删。Claude Code 的作者 Boris Cherny 分享过团队的做法：每次纠正 Agent 之后，补一句“更新 CLAUDE.md，别再犯这个错”，并持续修剪，直到错误率明显下降。这样它是“从错误里长出来”的，而不是一次写成的规章。</p>
+<p><strong>步骤 1：只读探索。</strong> 接手一段陌生代码，第一件事不是让它改，而是让它讲。可以直接问：“登录流程从哪里进来、经过哪些文件？”“这个函数被谁调用？”“为什么这里要加锁？”这些问题在新人带教里本来要找资深同事问，现在可以先问 Agent，再用自己的眼睛核对它给出的文件和行号。</p>
+<p><strong>步骤 2：先出计划。</strong> 只要改动跨多个文件、你不确定方案、或者你不熟悉这块代码，就先进入 Plan 模式。Claude Code 和 Cursor 都是在输入框里按 <code>Shift+Tab</code> 切换；Plan 模式下 Agent 只读不写，最后给出一份计划。好的计划要回答三件事：改哪些文件、按什么顺序、<strong>怎么证明改对了</strong>。反过来，如果你能用一句话描述整个 diff（改个拼写、加一行日志），就跳过计划直接做——官方文档也明确说，计划是有开销的。</p>
+<p>Claude Code 团队的经验是：在计划上多花力气，让实现一次到位；实现中途一旦跑偏，不要硬推，立刻切回 Plan 模式重新规划。还有人会开第二个会话，让它以“资深工程师”的身份审这份计划。</p>
+<p><strong>步骤 3：小步实现。</strong> 让 Agent 一次只做一件事。原因不是 Agent 做不了大事，而是<strong>你审不了大 diff</strong>。一个 50 行的 diff 你能逐行读完，一个 2000 行的 diff 你只会点“接受”。Karpathy 观察到的典型错误恰恰在这种地方：替你做了错误的假设然后一路跑下去、把代码写得过度复杂、顺手改掉它没看懂的注释和代码。小步走，这些问题在每一步都会暴露出来。</p>
+<p><strong>步骤 4：跑检查。</strong> 这是闭环的核心，图上用橙色标出。把“跑测试、跑构建、跑 lint”直接写进任务里，让 Agent 自己读结果、自己修，直到通过。并且要它<strong>拿出证据</strong>：贴出跑了什么命令、输出是什么，而不是一句“已完成”。看证据比你自己重跑一遍快得多。</p>
+<p><strong>步骤 5：审 diff。</strong> 机器的关过了，才轮到人。你读的重点不是语法，而是：有没有改动任务以外的东西、有没有删掉不该删的、有没有更简单的写法。Boris 团队的常用招式是让 Agent 反过来考你：“把这些改动给我讲清楚，我答不上来就不许开 PR”；或者在一次平庸的修复之后说：“以你现在知道的一切，推倒重来，写一个优雅的版本。”另一种做法是开一个干净的会话或子 Agent 专门挑错——写代码的和评判代码的不要是同一个上下文。</p>
+<p><strong>步骤 6：提交 / PR。</strong> 让 Agent 写清楚提交信息并开 PR，然后让 CI 再把一道关。Anthropic 内部每个 PR 的第一轮评审由 Claude 完成，方式是在 GitHub Action 里跑无交互的 <code>claude -p</code>；Codex 对应的是 <code>codex exec</code>。人看到 PR 的时候，低级问题已经被筛过一轮。</p>
+<h2>二、四个常见场景怎么套用</h2>
+<p><strong>修 Bug。</strong> 先让它写一个能复现问题的测试，确认这个测试是失败的，再去修，直到通过。这一步“先失败”非常关键：一个从来没失败过的测试，证明不了任何事。日志、报错栈、CI 失败输出直接贴进去，比你自己转述准确得多。Boris 团队甚至只说一句“去把失败的 CI 修好”，不规定怎么修。</p>
+<p><strong>重构。</strong> 先补测试把现有行为锁住，再分批改。每一批都单独跑测试、单独提交，出问题可以精确回退。重构时要特别提醒 Agent“行为不变”，并在审 diff 时盯住它有没有顺手“优化”了业务逻辑。</p>
+<p><strong>依赖升级。</strong> 让它先读目标版本的变更日志，列出可能受影响的调用点，然后一次只升一个依赖，每升一个跑一次全量测试。把多个大版本升级捆在一个 PR 里，是最难审、也最难回退的做法。</p>
+<p><strong>补文档。</strong> 让 Agent 读代码起草 README、接口说明或架构说明，人负责核对事实。Agent 写文档很快，但它也会把“看起来合理”的东西写成事实，所以凡是涉及版本号、命令、默认值的地方都要实际跑一遍。</p>
+<h2>三、只记这几招就够了</h2>
+<p>各家工具的命令很多，而且更新很快。日常维护里真正高频的只有下面几类，思路在各工具之间是相通的：</p>
+<table>
+<thead>
+<tr>
+<th>招式</th>
+<th>作用</th>
+<th>在哪些工具里</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/init</code></td>
+<td>扫描仓库，生成项目说明初稿</td>
+<td>Claude Code（CLAUDE.md）、Codex（AGENTS.md）</td>
+</tr>
+<tr>
+<td><code>/clear</code></td>
+<td>换任务时清空上下文</td>
+<td>Claude Code</td>
+</tr>
+<tr>
+<td><code>/compact</code></td>
+<td>长会话压缩成摘要，继续干</td>
+<td>Claude Code、Codex</td>
+</tr>
+<tr>
+<td><code>Shift+Tab</code></td>
+<td>切换到 Plan 模式，只读出计划</td>
+<td>Claude Code、Cursor</td>
+</tr>
+<tr>
+<td><code>@文件</code></td>
+<td>精确把某个文件放进上下文</td>
+<td>Claude Code、Cursor 等</td>
+</tr>
+<tr>
+<td><code>/review</code></td>
+<td>审查当前未提交的改动</td>
+<td>Codex（Claude Code 对应 <code>/code-review</code>）</td>
+</tr>
+<tr>
+<td><code>claude -p</code> / <code>codex exec</code></td>
+<td>无交互运行，适合脚本和 CI</td>
+<td>Claude Code、Codex</td>
+</tr>
+</tbody>
+</table>
+<p>另外两个值得记住的按键：Claude Code 里按 <code>Esc</code> 可以随时打断、纠正方向；连按两次 <code>Esc</code>（或用 <code>/rewind</code>）可以回退到之前的检查点。</p>
+<p>其中最被低估的是 <code>/clear</code>。官方文档列出的两个高频失败模式都和它有关：一是“大杂烩会话”，一个会话里先做 A、又问 B、再回到 A，上下文全是无关信息；二是“反复纠正”，错了改、改了还错，上下文里堆满失败的尝试。处理办法一样：<strong>纠正两次还不对，就 <code>/clear</code>，把学到的教训写进一个更好的初始提示，重新开始。</strong></p>
+<h2>四、规范：让团队都能放心用</h2>
+<ul>
+<li><strong>规则文件进仓库。</strong> <code>AGENTS.md</code> / <code>CLAUDE.md</code> / <code>.cursor/rules/</code> / <code>.github/copilot-instructions.md</code> 和代码一起评审、一起演进。个人偏好放本地文件（例如 <code>CLAUDE.local.md</code>），不要污染团队规则。</li>
+<li><strong>一个任务一个分支。</strong> Agent 的改动永远在分支上，经过 PR 合并；不要让它直接推主干。</li>
+<li><strong>测试先行。</strong> 修 Bug 先有失败的测试，重构先有锁住行为的测试。</li>
+<li><strong>小 diff。</strong> 一个 PR 只解决一个问题，审得完才合得进。</li>
+<li><strong>密钥不进上下文。</strong> 不要把 <code>.env</code>、令牌、生产凭据贴进对话；高风险命令（删数据、改权限、推生产）保持需要人确认，不要为了省事全局放开。Codex 的 <code>--sandbox</code> / <code>--ask-for-approval</code>、Claude Code 的 <code>/permissions</code> 就是用来划这条线的。</li>
+<li><strong>审的是证据。</strong> 没有测试输出、没有截图的“已完成”，等于没完成。</li>
+</ul>
+<h2>五、可直接复制的提示模板</h2>
+<p><strong>理解代码：</strong></p>
+<pre><code class="language-text">先不要修改任何文件。阅读 src/auth/，告诉我：登录请求从哪里进入、
+经过哪些函数、会话存在哪里。每个结论标出文件和行号。
+</code></pre>
+<p><strong>修 Bug：</strong></p>
+<pre><code class="language-text">问题：&lt;粘贴报错 / 日志&gt;。
+先写一个能复现它的测试，运行并确认它失败；然后修复根因，
+不要靠吞掉异常来消除报错。最后运行全部测试，把命令和输出贴给我。
+</code></pre>
+<p><strong>重构：</strong></p>
+<pre><code class="language-text">目标：把 OrderService 中的价格计算拆成独立模块，行为保持完全不变。
+先确认现有测试覆盖了价格计算，不够就先补；然后分步修改，
+每一步都运行测试。不要改动和价格计算无关的代码。
+</code></pre>
+<p><strong>审查：</strong></p>
+<pre><code class="language-text">以资深评审的身份审查当前分支相对 main 的改动：找出行为变化、
+缺失的测试、可以更简单的写法。只列问题，不要动手改。
+</code></pre>
+<h2>六、两条成长路线</h2>
+<p><strong>新手路线：一个会话，一件事，每一步都看 diff。</strong> 头两周不追求快，追求“看得懂”。固定按“探索 → 计划 → 小步实现 → 跑检查 → 读 diff → 提交”的顺序走；每次被 Agent 坑了，就把教训补进规则文件。把 Agent 当作一个能干但会想当然的新同事：它干活，你验收。Claude Code 团队还推荐把输出风格切到“解释型 / 学习型”，让它在改动时讲清楚为什么——这是读懂一个陌生仓库最快的方式之一。</p>
+<p><strong>中高级路线：并行、复用、自动化。</strong></p>
 <ol>
-<li><strong>跑不起来</strong>：新副本缺依赖和密钥。</li>
-<li><strong>盯不过来</strong>：分不清哪个在干活、哪个在等确认。</li>
-<li><strong>看不过来</strong>：生成越来越快，瓶颈变成了验收。</li>
-<li><strong>被绑住</strong>：被一家厂商的额度绑住。</li>
+<li><strong>并行。</strong> Claude Code 团队公认最大的提效点，是同时开 3–5 个 git worktree，每个跑一个独立会话，做互不相关的任务（Claude Code 自带 <code>claude -w &lt;名字&gt;</code> 直接在 worktree 里开会话）。前提是任务真的能拆开，而且你审得过来——第五章会细讲这背后的代价。</li>
+<li><strong>复用。</strong> 一天里做两次以上的事，就做成自定义命令或 Skill，提交进仓库给全队用（Claude Code 放在 <code>.claude/skills/</code> 或 <code>.claude/commands/</code>）。需要专门角色时定义子 Agent（<code>.claude/agents/</code>），比如只读的代码评审员；子 Agent 有独立上下文，还能让主会话保持干净。</li>
+<li><strong>连接。</strong> 用 MCP 把 issue 系统、日志、浏览器接进来，让 Agent 自己拿证据，而不是你复制粘贴。</li>
+<li><strong>确定性的关卡。</strong> 规则写在提示里，Agent 可能忘；写进 hooks 就每次都执行，比如每次编辑后自动跑格式化和 lint。</li>
+<li><strong>CI 里的 Agent。</strong> 用 <code>claude -p</code> 或 <code>codex exec</code> 在流水线里做第一轮评审，或者把一个 issue 直接指派给 Copilot 的编码 Agent，让它开 PR 回来给你审。</li>
 </ol>
-<p>第三条最根本。回到第四章的阿姆达尔定律：三个 Agent 并行，编码时间可能缩短到三分之一，但审阅时间变成了三倍。如果审阅本来就是瓶颈，多 Agent 只会让队列更长。</p>
-<h2>三、算一笔账</h2>
-<p>假设一个需求包含三个独立模块，单 Agent 每个模块要 1 小时，人审阅每个模块要 20 分钟。</p>
-<ul>
-<li><strong>单 Agent 串行</strong>：编码 3 小时 + 审阅 1 小时 = 4 小时，token 花费 1 份（记为 T）。</li>
-<li><strong>三 Agent 并行</strong>：编码约 1 小时 + 审阅仍是 1 小时（审阅三份一样多）= 2 小时，token 约 3T。</li>
-</ul>
-<p>时间省了一半，但审阅时间没有减少，成了总时间中占比最大的部分。如果这三个模块并不独立，而是需要在中途反复对齐接口，并行的收益还会被协调成本吃掉。</p>
-<p>这个账本告诉我们：<strong>多 Agent 的收益上限，取决于任务的可并行程度和审阅能力。</strong></p>
-<h2>四、判断框架</h2>
-<p><strong>值得用多 Agent：</strong></p>
-<ul>
-<li>子任务彼此独立：不同模块、不同页面、前后端分头审查。</li>
-<li>改错代价高，值得多个方案对比（见第 3 篇「赛跑」）。</li>
-<li>信息量超出单个上下文：大规模调研、代码库探索。</li>
-</ul>
-<p><strong>别用：</strong></p>
-<ul>
-<li>小改动、文案调整。</li>
-<li>改动高度耦合，必须在同一上下文里协调。</li>
-<li>还没有自动化验证，审阅能力跟不上。</li>
-</ul>
-<p>最后一条值得强调：<strong>第四章的分层验证，是多 Agent 的前提。</strong> 没有自动化验证，每多一个 Agent，就多一份要人从头审的产出。</p>
-<p>前述开发者引用一篇评测的说法：赛跑「省下的是来回重试的时间，额度照付三份」，所以只在支付、权限、数据迁移这类改错了很麻烦的地方这么做。</p>
-<h2>五、这一路是怎么来的</h2>
-<ul>
-<li><strong>2023 MetaGPT、ChatDev、AutoGen</strong>：早期多 Agent 软件开发框架，探索让不同角色的 Agent 协作。</li>
-<li><strong>2023 多 Agent 辩论</strong>：多个模型实例多轮辩论，提升推理能力和事实性。</li>
-<li><strong>2025 Anthropic 多 Agent 研究系统</strong>：主 Agent 规划，并行派生子 Agent。</li>
-<li><strong>Claude Code / Codex / Cursor 的子 Agent</strong>：每个子 Agent 在自己的上下文窗口中工作，把结果返回给主 Agent。多 Agent 从研究框架变成了日常工具的内置功能。</li>
-</ul>
-<h2>六、常见误区</h2>
-<ul>
-<li><strong>「多 Agent 一定更快。」</strong> 取决于任务可并行的程度，协调和审阅都有成本。</li>
-<li><strong>「token 便宜，不用算。」</strong> 15 倍的消耗在规模化后非常可观。</li>
-<li><strong>「Agent 多了可以少看代码。」</strong> 产出越多，越需要自动化验证和更好的审阅工具。</li>
-</ul>
+<p>两条路线的终点是同一个：你花在“写”上的时间越来越少，花在“定义问题和验收结果”上的时间越来越多。Karpathy 的提醒值得一直记着——这些模型的错误已经不是语法错误，而是一个有点马虎、有点急的初级工程师会犯的概念性错误。只要你守住验证这一关，它就是一个永远不累的帮手；一旦放掉这一关，它就会自信地把错误放大。</p>

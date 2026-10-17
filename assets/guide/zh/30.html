@@ -1,89 +1,57 @@
-<h1>Orca：一个任务一个 worktree，一个 worktree 一个 Agent</h1>
+<h1>为什么多 Agent：用并行换时间，代价是 token 与审阅</h1>
 <blockquote>
 <p>对应图 #30 · 第五章「多 Agent 编程」</p>
 </blockquote>
-<p>多个 Agent 同时改同一份代码，最先遇到的问题是<strong>互相踩踏</strong>。Git worktree 是解决这个问题的基础设施，Orca 则是围绕它构建的多 Agent 开发工作台。Orca 官方文档的定位是：一个让多个 AI 编程 Agent 并排运行的桌面 IDE，每个任务有自己的 git worktree、自己的 Agent 终端和自己的浏览器标签页。</p>
-<h2>一、问题：同一个目录里的三个 Agent</h2>
-<p>假设你在同一个项目目录里开了三个终端，分别让三个 Agent 做三件事：A 修支付 bug，B 加用户头像功能，C 重构日志模块。很快就会出问题：</p>
+<p>单个 Coding Agent 一次只能做一件事。当任务可以拆成彼此独立的部分时，同时运行多个 Agent 就能<strong>用并行换时间</strong>。但并行不是免费的：每个 Agent 都消耗 token，每份产出都需要人审阅。多 Agent 编程的核心问题，就是这笔账什么时候划算。</p>
+<p>这一篇先讲收益从哪里来，再讲代价，最后给出一个判断框架。</p>
+<h2>一、收益来自哪里？</h2>
+<p><strong>收益一：并行。</strong> 最直观的一点。三个彼此独立的子任务，串行做要三份时间，并行做只要一份（加上拆分和合并的开销）。</p>
+<p><strong>收益二：上下文隔离。</strong> 这一点更不明显，但同样重要。第四章讲过，上下文越长，模型的注意力越分散。一个 Agent 先调研支付模块、再调研用户模块、再写代码，到写代码时上下文里已经塞满了调研的中间结果。如果让两个子 Agent 分别调研，各自只把结论交回来，主 Agent 的上下文就是干净的。</p>
+<p>Anthropic 的多 Agent 研究系统正是这样工作的：子 Agent 在各自的上下文窗口中并行探索问题的不同方面，再把最重要的信息压缩后交给主 Agent。他们的内部研究评测显示，多 Agent 系统比单 Agent 高出 90.2%；在复杂查询上，并行化把研究时间缩短了最多 90%。</p>
+<h2>二、代价是什么？</h2>
+<p><strong>代价一：token。</strong> 同一篇文章给出了一组数字：Agent 的 token 用量约为普通聊天的 4 倍，多 Agent 系统约为 15 倍。而且他们发现，<strong>token 用量本身就解释了 80% 的性能差异</strong>。换句话说，多 Agent 效果好，很大程度上是因为它花了更多 token 去思考和探索。这不是坏事，但意味着它是一种「花钱买质量和时间」的手段，而不是免费的午餐。</p>
+<p><strong>代价二：编码任务天然更难并行。</strong> Anthropic 明确指出：大多数编码任务中真正可并行的部分比研究任务少，而且 LLM Agent 还不擅长实时协调和委派。研究任务（「调研五家竞品的定价策略」）天然可以拆成五份独立的工作；编码任务的各部分常常紧密耦合：改了接口，调用方就要跟着改。<strong>需要所有 Agent 共享同一上下文、或者 Agent 之间依赖很多的任务，目前不适合多 Agent。</strong></p>
+<p><strong>代价三：人的审阅成为新瓶颈。</strong> X 上分享 Orca 用法的开发者总结了多开之后会撞上的四件事：</p>
+<ol>
+<li><strong>跑不起来</strong>：新副本缺依赖和密钥。</li>
+<li><strong>盯不过来</strong>：分不清哪个在干活、哪个在等确认。</li>
+<li><strong>看不过来</strong>：生成越来越快，瓶颈变成了验收。</li>
+<li><strong>被绑住</strong>：被一家厂商的额度绑住。</li>
+</ol>
+<p>第三条最根本。回到第四章的阿姆达尔定律：三个 Agent 并行，编码时间可能缩短到三分之一，但审阅时间变成了三倍。如果审阅本来就是瓶颈，多 Agent 只会让队列更长。</p>
+<h2>三、算一笔账</h2>
+<p>假设一个需求包含三个独立模块，单 Agent 每个模块要 1 小时，人审阅每个模块要 20 分钟。</p>
 <ul>
-<li><strong>文件互相覆盖</strong>：A 和 C 都改了 <code>utils/logger.py</code>，后保存的覆盖了先保存的。</li>
-<li><strong>测试结果互相污染</strong>：A 跑测试时，B 改了一半的代码还没写完，A 看到的失败其实是 B 造成的，于是 A 去「修」一个不存在的问题。</li>
-<li><strong>分支冲突</strong>：A 想切到 <code>fix-payment</code> 分支，但 B 正在 <code>feature-avatar</code> 分支上工作。工作目录只有一个，切分支会打断 B。</li>
+<li><strong>单 Agent 串行</strong>：编码 3 小时 + 审阅 1 小时 = 4 小时，token 花费 1 份（记为 T）。</li>
+<li><strong>三 Agent 并行</strong>：编码约 1 小时 + 审阅仍是 1 小时（审阅三份一样多）= 2 小时，token 约 3T。</li>
 </ul>
-<p>根本原因是：<strong>一个工作目录在同一时刻只能检出一个分支、只能有一份文件状态。</strong></p>
-<h2>二、解法：git worktree</h2>
-<p>Git 官方文档说明，一个仓库可以支持多个工作树，从而同时检出多个分支；新建的工作树称为「linked worktree」，与 <code>git init</code> 或 <code>git clone</code> 创建的主工作树相对。</p>
-<pre><code>git worktree add ../fix-payment -b fix-payment
-git worktree add ../feature-avatar -b feature-avatar
-git worktree list
-git worktree remove ../fix-payment
-</code></pre>
-<p>执行前两条之后，磁盘上就有了三个目录：原来的项目目录、<code>../fix-payment</code>、<code>../feature-avatar</code>。每个目录检出不同的分支，文件互不干扰。</p>
-<p>关键在于：<strong>所有工作树共享同一个仓库的对象和历史</strong>，只是各自有独立的工作目录和检出分支。这和「clone 三份」不同：clone 会复制三份完整的历史，而 worktree 只多出工作目录本身；在一个 worktree 里提交，另一个 worktree 立刻就能看到这个提交（比如 <code>git log fix-payment</code>）。</p>
-<h2>三、Orca 在 worktree 之上加了什么？</h2>
-<p>worktree 解决了文件隔离，但多 Agent 的其他问题还在。Orca 官方文档把工作流压缩成：<strong>添加仓库 → 开工作区（worktree）→ 选 Agent → 分屏 → 看改动 → 提交</strong>。几个设计要点：</p>
+<p>时间省了一半，但审阅时间没有减少，成了总时间中占比最大的部分。如果这三个模块并不独立，而是需要在中途反复对齐接口，并行的收益还会被协调成本吃掉。</p>
+<p>这个账本告诉我们：<strong>多 Agent 的收益上限，取决于任务的可并行程度和审阅能力。</strong></p>
+<h2>四、判断框架</h2>
+<p><strong>值得用多 Agent：</strong></p>
 <ul>
-<li><strong>不自带模型</strong>：运行你已有的 Claude Code、Codex、Cursor CLI、OpenCode 等，用你自己的订阅。这也回应了上一篇「被一家厂商的额度绑住」的问题：可以在不同 worktree 里用不同厂商的 Agent。</li>
-<li><strong>每个 worktree 都是真实的 git worktree</strong>，可以随时进入目录用原生 git，不会被锁在工具里。</li>
-<li><strong>默认在本地桌面运行</strong>，远程计算使用你自己控制的机器（SSH、自托管服务器或云 VM）。</li>
+<li>子任务彼此独立：不同模块、不同页面、前后端分头审查。</li>
+<li>改错代价高，值得多个方案对比（见第 3 篇「赛跑」）。</li>
+<li>信息量超出单个上下文：大规模调研、代码库探索。</li>
 </ul>
-<p><strong>让新 worktree 一进门就能干活。</strong> 这是上一篇「跑不起来」问题的解法。新 worktree 是从 Git 检出的干净代码，未被 Git 管理的 <code>.env</code>、依赖目录都不在里面，Agent 一启动就会报错。前述 X 上的开发者介绍，Orca 可以配置哪些文件为每个副本复制一份（如 <code>.env</code>）、哪些目录共享一份（如依赖包）。</p>
-<p><strong>通知与审阅。</strong> 这是「盯不过来、看不过来」的解法。据该开发者介绍，Agent 从干活变为空闲时，Orca 会弹通知；改动视图支持逐行批注，并一次性发回给 Agent，还能标出哪些行是 AI 写的。</p>
-<p><strong>共享规则。</strong> 项目规则靠 Agent 自己会读的文件：Claude Code 读 CLAUDE.md，Codex 读 AGENTS.md。<strong>必须提交到 Git</strong>，否则新 worktree 中的 Agent 看不到。这是一个非常容易踩的坑：规则在主目录里写好了却没提交，新 worktree 里的 Agent 就像一个没读过规范的新人。</p>
-<h2>四、worktree 隔离不了什么？</h2>
-<p>worktree 隔离的是<strong>文件</strong>，而不是<strong>运行时</strong>：</p>
-<table>
-<thead>
-<tr>
-<th>资源</th>
-<th>是否隔离</th>
-<th>风险</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>工作目录文件</td>
-<td>是</td>
-<td>—</td>
-</tr>
-<tr>
-<td>检出分支</td>
-<td>是</td>
-<td>—</td>
-</tr>
-<tr>
-<td>仓库历史、对象库</td>
-<td>否（共享）</td>
-<td>一般无害</td>
-</tr>
-<tr>
-<td>端口</td>
-<td>否</td>
-<td>两个 Agent 同时启动开发服务器，都想占 3000 端口</td>
-</tr>
-<tr>
-<td>本地数据库</td>
-<td>否</td>
-<td>A 的测试清空了 B 正在用的测试数据</td>
-</tr>
-<tr>
-<td>外部服务</td>
-<td>否</td>
-<td>都在调同一个测试环境的接口</td>
-</tr>
-</tbody>
-</table>
-<p>所以，并行跑测试时还要为每个 worktree 配置不同的端口、独立的数据库或者容器。</p>
-<h2>五、工程要点</h2>
+<p><strong>别用：</strong></p>
 <ul>
-<li><strong>任务命名</strong>：一个 worktree 对应一个明确的任务和分支，便于事后清理。</li>
-<li><strong>用完即删</strong>：落选或完成的 worktree 及其分支要及时清理，否则磁盘和分支列表会越来越乱。</li>
-<li><strong>适用边界</strong>：该开发者坦言，如果只用一家的 Agent、一次只做一件事，Orca 帮不上太多忙，官方客户端就够了；<strong>它的价值与同时运行的 Agent 数量和需要验收的改动量成正比。</strong></li>
+<li>小改动、文案调整。</li>
+<li>改动高度耦合，必须在同一上下文里协调。</li>
+<li>还没有自动化验证，审阅能力跟不上。</li>
 </ul>
-<p>Orca 由 Stably 出品，MIT 协议开源；GitHub 仓库创建于 2026 年 3 月 17 日，截至本文核实时约 9.4 万 star。</p>
+<p>最后一条值得强调：<strong>第四章的分层验证，是多 Agent 的前提。</strong> 没有自动化验证，每多一个 Agent，就多一份要人从头审的产出。</p>
+<p>前述开发者引用一篇评测的说法：赛跑「省下的是来回重试的时间，额度照付三份」，所以只在支付、权限、数据迁移这类改错了很麻烦的地方这么做。</p>
+<h2>五、这一路是怎么来的</h2>
+<ul>
+<li><strong>2023 MetaGPT、ChatDev、AutoGen</strong>：早期多 Agent 软件开发框架，探索让不同角色的 Agent 协作。</li>
+<li><strong>2023 多 Agent 辩论</strong>：多个模型实例多轮辩论，提升推理能力和事实性。</li>
+<li><strong>2025 Anthropic 多 Agent 研究系统</strong>：主 Agent 规划，并行派生子 Agent。</li>
+<li><strong>Claude Code / Codex / Cursor 的子 Agent</strong>：每个子 Agent 在自己的上下文窗口中工作，把结果返回给主 Agent。多 Agent 从研究框架变成了日常工具的内置功能。</li>
+</ul>
 <h2>六、常见误区</h2>
 <ul>
-<li><strong>「多开几个终端也一样。」</strong> 可以，但缺依赖、盯不过来、审不过来这些问题需要自己解决。</li>
-<li><strong>「worktree 之间完全隔离。」</strong> 它们共享仓库历史和对象库；端口、数据库、外部服务等运行时资源仍可能冲突。</li>
-<li><strong>「Orca 是一个模型或托管服务。」</strong> 官方文档明确说明，它不是模型，也不是托管的 VPS 产品。</li>
+<li><strong>「多 Agent 一定更快。」</strong> 取决于任务可并行的程度，协调和审阅都有成本。</li>
+<li><strong>「token 便宜，不用算。」</strong> 15 倍的消耗在规模化后非常可观。</li>
+<li><strong>「Agent 多了可以少看代码。」</strong> 产出越多，越需要自动化验证和更好的审阅工具。</li>
 </ul>

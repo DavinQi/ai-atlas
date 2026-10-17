@@ -1,89 +1,57 @@
-<h1>Orca: One Task per Worktree, One Agent per Worktree</h1>
+<h1>Why Multiple Agents: Trade Parallelism for Time, Pay in Tokens and Review</h1>
 <blockquote>
 <p>Companion to diagram #30 · Chapter 5 &quot;Multi-Agent Programming&quot;</p>
 </blockquote>
-<p>When several agents edit the same code at once, the first problem is <strong>trampling on each other.</strong> Git worktrees are the infrastructure that solves this, and Orca is a multi-agent development workbench built around them. Orca's docs describe it as a desktop IDE for running multiple AI coding agents side by side, where each task gets its own git worktree, its own agent terminal and its own browser tab.</p>
-<h2>1. The problem: three agents in one directory</h2>
-<p>Suppose you open three terminals in the same project directory and give three agents three jobs: A fixes a payments bug, B adds avatars, C refactors logging. Trouble starts quickly:</p>
+<p>A single coding agent does one thing at a time. When a task splits into independent parts, running several agents at once <strong>trades parallelism for time.</strong> But parallelism is not free: every agent consumes tokens and every output needs human review. The core question of multi-agent programming is when that trade pays off.</p>
+<p>This article covers where the gains come from, then the costs, and finally a decision framework.</p>
+<h2>1. Where do the gains come from?</h2>
+<p><strong>Gain 1: parallelism.</strong> The obvious one. Three independent subtasks take three units of time in series and one in parallel (plus the overhead of splitting and merging).</p>
+<p><strong>Gain 2: context isolation.</strong> Less obvious but just as important. As Chapter 4 explained, the longer the context, the more scattered the model's attention. If one agent researches the payments module, then the user module, then writes code, by the time it writes code its context is full of intermediate research. If two subagents research separately and each returns only conclusions, the main agent's context stays clean.</p>
+<p>Anthropic's multi-agent research system works exactly this way: subagents explore different aspects of a problem in parallel in their own context windows, then compress the most important information for the lead agent. Their internal research evaluation found the multi-agent system outperformed a single agent by 90.2%, and on complex queries parallelisation cut research time by up to 90%.</p>
+<h2>2. What are the costs?</h2>
+<p><strong>Cost 1: tokens.</strong> The same article reports that agents use about 4× the tokens of chat, and multi-agent systems about 15×. They also found that <strong>token usage alone explains 80% of the variance in performance.</strong> In other words, multi-agent systems do well largely because they spend more tokens thinking and exploring. That is not bad, but it means multi-agent is a way to buy quality and time with money, not a free lunch.</p>
+<p><strong>Cost 2: coding tasks are inherently harder to parallelise.</strong> Anthropic states plainly that most coding tasks involve fewer truly parallelisable parts than research, and that LLM agents are not yet good at coordinating and delegating in real time. Research tasks (&quot;survey five competitors' pricing&quot;) split naturally into five independent jobs; parts of a coding task are often tightly coupled: change an interface and its callers must change too. <strong>Tasks where all agents need the same context, or where agents depend heavily on each other, are not currently a good fit for multiple agents.</strong></p>
+<p><strong>Cost 3: human review becomes the new bottleneck.</strong> The developer on X who shared how they use Orca summarised four walls you hit after opening several agents:</p>
+<ol>
+<li><strong>They won't run</strong>: new copies lack dependencies and secrets.</li>
+<li><strong>You can't keep track</strong>: which is working, which is waiting for confirmation?</li>
+<li><strong>You can't keep up</strong>: generation keeps getting faster, and acceptance becomes the bottleneck.</li>
+<li><strong>You're locked in</strong>: tied to one vendor's quota.</li>
+</ol>
+<p>The third is the most fundamental. Back to Amdahl's Law in Chapter 4: three agents in parallel may cut coding time to a third, but review time triples. If review was already the bottleneck, multiple agents only lengthen the queue.</p>
+<h2>3. Do the arithmetic</h2>
+<p>Suppose a feature has three independent modules. A single agent needs 1 hour per module, and a person needs 20 minutes to review each.</p>
 <ul>
-<li><strong>Files overwrite each other</strong>: A and C both edit <code>utils/logger.py</code>, and whoever saves last wins.</li>
-<li><strong>Test results contaminate each other</strong>: while A runs tests, B's half-written code is in the tree; A sees failures B caused and goes off to &quot;fix&quot; a problem that doesn't exist.</li>
-<li><strong>Branch conflicts</strong>: A wants to switch to <code>fix-payment</code> while B is working on <code>feature-avatar</code>. There is only one working directory; switching interrupts B.</li>
+<li><strong>One agent in series</strong>: 3 hours coding + 1 hour review = 4 hours, token cost 1 unit (call it T).</li>
+<li><strong>Three agents in parallel</strong>: about 1 hour coding + still 1 hour review (three outputs to review) = 2 hours, about 3T.</li>
 </ul>
-<p>The root cause: <strong>a working directory can have only one branch checked out and one state of its files at a time.</strong></p>
-<h2>2. The fix: git worktree</h2>
-<p>Git's documentation explains that a repository can support multiple working trees, so several branches can be checked out at once; a newly added working tree is called a &quot;linked worktree&quot;, as opposed to the main working tree created by <code>git init</code> or <code>git clone</code>.</p>
-<pre><code>git worktree add ../fix-payment -b fix-payment
-git worktree add ../feature-avatar -b feature-avatar
-git worktree list
-git worktree remove ../fix-payment
-</code></pre>
-<p>After the first two commands there are three directories on disk: the original project, <code>../fix-payment</code> and <code>../feature-avatar</code>, each with a different branch checked out and files that don't interfere.</p>
-<p>The key point: <strong>all worktrees share the repository's objects and history</strong>, each with its own working directory and checked-out branch. That differs from cloning three times: a clone copies the full history three times, while a worktree adds only the working directory. A commit made in one worktree is immediately visible from another (for example via <code>git log fix-payment</code>).</p>
-<h2>3. What Orca adds on top of worktrees</h2>
-<p>Worktrees solve file isolation, but the other multi-agent problems remain. Orca's docs compress the workflow into: <strong>add a repo → open a workspace (worktree) → choose an agent → split panes → review changes → commit.</strong> Some design points:</p>
+<p>Half the time saved, but review did not shrink and is now the largest share of the total. If the three modules are not truly independent and need repeated mid-course interface alignment, coordination eats into the parallel gain further.</p>
+<p>The lesson: <strong>the ceiling on multi-agent gains depends on how parallelisable the task is and on review capacity.</strong></p>
+<h2>4. A decision framework</h2>
+<p><strong>Worth using multiple agents:</strong></p>
 <ul>
-<li><strong>No bundled model</strong>: it runs the Claude Code, Codex, Cursor CLI, OpenCode and so on that you already have, on your own subscriptions. This also addresses &quot;locked into one vendor's quota&quot; from the previous article: different worktrees can run different vendors' agents.</li>
-<li><strong>Every worktree is a real git worktree</strong>, so you can step into the directory and use plain git at any time without being locked into the tool.</li>
-<li><strong>Runs on your local desktop by default</strong>; remote compute uses machines you control (SSH, self-hosted servers or cloud VMs).</li>
+<li>Subtasks are independent: different modules, different pages, separate front-end and back-end review.</li>
+<li>Mistakes are costly enough to justify comparing several solutions (see &quot;racing&quot; in article 3).</li>
+<li>The information exceeds a single context: large-scale research, codebase exploration.</li>
 </ul>
-<p><strong>Make new worktrees ready to work immediately.</strong> This answers &quot;they won't run&quot;. A new worktree is clean code checked out from Git; untracked <code>.env</code> files and dependency directories aren't there, so the agent errors on start. The developer on X mentioned earlier explains that Orca can be configured to copy some files into each copy (such as <code>.env</code>) and to share some directories (such as dependency packages).</p>
-<p><strong>Notifications and review.</strong> This answers &quot;can't keep track, can't keep up&quot;. According to the same developer, Orca pops a notification when an agent goes from working to idle; its change view supports line-by-line comments sent back to the agent in one go, and can mark which lines AI wrote.</p>
-<p><strong>Shared rules.</strong> Project rules rely on files the agents read themselves: Claude Code reads CLAUDE.md, Codex reads AGENTS.md. <strong>They must be committed to Git</strong>, or agents in new worktrees won't see them. This is an easy trap: rules written in the main directory but not committed leave the agent in a new worktree like a new hire who never read the handbook.</p>
-<h2>4. What worktrees don't isolate</h2>
-<p>Worktrees isolate <strong>files</strong>, not the <strong>runtime</strong>:</p>
-<table>
-<thead>
-<tr>
-<th>Resource</th>
-<th>Isolated?</th>
-<th>Risk</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Working-directory files</td>
-<td>Yes</td>
-<td>—</td>
-</tr>
-<tr>
-<td>Checked-out branch</td>
-<td>Yes</td>
-<td>—</td>
-</tr>
-<tr>
-<td>Repository history, object store</td>
-<td>No (shared)</td>
-<td>Usually harmless</td>
-</tr>
-<tr>
-<td>Ports</td>
-<td>No</td>
-<td>Two agents both start dev servers on port 3000</td>
-</tr>
-<tr>
-<td>Local database</td>
-<td>No</td>
-<td>A's tests wipe test data B is using</td>
-</tr>
-<tr>
-<td>External services</td>
-<td>No</td>
-<td>Both call the same test environment's APIs</td>
-</tr>
-</tbody>
-</table>
-<p>So when running tests in parallel, give each worktree its own ports and its own database or container.</p>
-<h2>5. Engineering points</h2>
+<p><strong>Don't:</strong></p>
 <ul>
-<li><strong>Name tasks</strong>: one worktree per clear task and branch, which makes cleanup easy.</li>
-<li><strong>Delete when done</strong>: clean up losing or finished worktrees and their branches promptly, or the disk and branch list get messy.</li>
-<li><strong>Know the limits</strong>: the developer admits that if you use one vendor's agent and do one thing at a time, Orca adds little and the official client is enough; <strong>its value scales with the number of agents running at once and the volume of changes to accept.</strong></li>
+<li>Small changes, copy edits.</li>
+<li>Tightly coupled changes that must be coordinated in one context.</li>
+<li>No automated verification yet, so review can't keep up.</li>
 </ul>
-<p>Orca is made by Stably and open-sourced under the MIT licence; its GitHub repository was created on 17 March 2026 and had about 94,000 stars when this was checked.</p>
+<p>The last point deserves emphasis: <strong>Chapter 4's layered verification is a prerequisite for multiple agents.</strong> Without it, every extra agent is one more output a person must review from scratch.</p>
+<p>The developer above quotes a review: racing &quot;saves the time of back-and-forth retries, but you still pay for three quotas&quot;, so do it only where mistakes are painful, such as payments, permissions and data migrations.</p>
+<h2>5. How we got here</h2>
+<ul>
+<li><strong>2023 MetaGPT, ChatDev, AutoGen</strong>: early multi-agent software-development frameworks exploring collaboration between agents with different roles.</li>
+<li><strong>2023 multi-agent debate</strong>: several model instances debating over multiple rounds improves reasoning and factuality.</li>
+<li><strong>2025 Anthropic's multi-agent research system</strong>: a lead agent plans and spawns parallel subagents.</li>
+<li><strong>Subagents in Claude Code / Codex / Cursor</strong>: each works in its own context window and returns results to the main agent. Multi-agent has gone from research framework to a built-in feature of everyday tools.</li>
+</ul>
 <h2>6. Common misconceptions</h2>
 <ul>
-<li><strong>&quot;Opening a few terminals is the same.&quot;</strong> It can be, but you have to solve missing dependencies, losing track and review overload yourself.</li>
-<li><strong>&quot;Worktrees are fully isolated.&quot;</strong> They share history and the object store; ports, databases and external services can still collide.</li>
-<li><strong>&quot;Orca is a model or a hosted service.&quot;</strong> Its docs say explicitly that it is neither a model nor a hosted VPS product.</li>
+<li><strong>&quot;Multiple agents are always faster.&quot;</strong> It depends on how parallelisable the task is; coordination and review both cost.</li>
+<li><strong>&quot;Tokens are cheap; don't bother counting.&quot;</strong> A 15× multiplier adds up fast at scale.</li>
+<li><strong>&quot;More agents means reading less code.&quot;</strong> More output needs more automated verification and better review tools.</li>
 </ul>

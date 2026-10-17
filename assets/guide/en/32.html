@@ -1,57 +1,65 @@
-<h1>The Orchestration Layer: One Agent as Project Manager, Humans Guard the Gates</h1>
+<h1>Two Plays: Race for the Best Result, or Pipeline the Work</h1>
 <blockquote>
 <p>Companion to diagram #32 · Chapter 5 &quot;Multi-Agent Programming&quot;</p>
 </blockquote>
-<p>When more agents run at once than a person can track, you need an <strong>orchestration layer</strong>: one agent acts as &quot;project manager&quot;, breaking down the task, dispatching work to worker agents, tracking progress and consolidating results, while humans step in only at key <strong>decision gates</strong>. This is what Anthropic calls the orchestrator–workers pattern: a central LLM dynamically breaks down tasks, delegates them to worker LLMs and synthesises the results, well suited to coding tasks whose subtasks can't be predicted in advance.</p>
-<h2>1. Why an orchestration layer?</h2>
-<p>In the previous two articles a human did the orchestrating: deciding how many worktrees to open, what to give each agent, when to check, how to merge. That is manageable with three agents; with ten, a person's whole day fills up with switching windows, checking status and copy-pasting errors.</p>
-<p><strong>The orchestration layer hands scheduling itself to an agent</strong>, turning the person from dispatcher back into decision-maker. It continues the thread of Chapter 3: each generation of tools hands one more layer of detail to the machine.</p>
-<h2>2. Subagents: the basic unit</h2>
-<p>Mainstream tools all have subagents built in:</p>
+<p>Multi-agent programming has two basic plays:</p>
 <ul>
-<li><strong>Claude Code</strong>: subagents are Markdown files with YAML front matter; each runs in its own context window with a custom system prompt, specific tool access and independent permissions.</li>
-<li><strong>Codex</strong>: can spawn specialised agents in parallel and collect their results into one response; current versions enable subagent workflows by default.</li>
-<li><strong>Cursor</strong>: subagents are specialised assistants the main agent can delegate to; each works in its own context and returns results to the parent, used to break down complex tasks, work in parallel and keep the main conversation's context clean.</li>
+<li><strong>Race</strong>: give the same task to several agents at once and pick the best result.</li>
+<li><strong>Pipeline</strong>: split one task into stages or parts handled by different agents.</li>
 </ul>
-<p>These subagents usually live within one session. Larger, longer-running orchestration needs a more structured coordination mechanism.</p>
-<h2>3. An example of structured orchestration: Orca</h2>
-<p>Orca's docs describe orchestration as a structured multi-agent layer (experimental), built on five concepts:</p>
-<ul>
-<li><strong>Run</strong>: a durable namespace and coordinator inbox.</li>
-<li><strong>Task</strong>: a work item with a spec, dependencies and status; tasks can form a DAG (directed acyclic graph).</li>
-<li><strong>Dispatch</strong>: one attempt to execute a task on a particular terminal.</li>
-<li><strong>Message</strong>: <code>worker_done</code>, <code>escalation</code>, <code>question</code>, <code>heartbeat</code> and so on.</li>
-<li><strong>Decision gate</strong>: a question created by the coordinator that blocks the relevant tasks until a decision is recorded.</li>
-</ul>
-<p>A pre-release review shows how they fit. The developer on X who shared how they use Orca gives this example: before launch, one agent acts as project manager and leads two agents reviewing front end and back end separately, and the person reads only the final summary; the database migration step has a gate that a human must approve. Mapped onto the model:</p>
-<pre><code>Run: pre-release review
-├─ Task A: review front end → Dispatch to terminal 1 → worker_done
-├─ Task B: review back end  → Dispatch to terminal 2 → worker_done
-├─ Task C: run migration    (depends on A, B)
-│    └─ Decision gate: &quot;May the migration script run?&quot; ← human
-└─ Coordinator summarises → hands to the human
+<p>They correspond to the two variants of &quot;parallelisation&quot; in Anthropic's pattern catalogue: <strong>voting</strong>, running the same task several times for diverse outputs, and <strong>sectioning</strong>, splitting a task into independent subtasks run in parallel. They solve different problems: racing tackles what is <strong>hard</strong>, pipelines tackle what is <strong>big</strong>.</p>
+<h2>1. Racing: lower risk through diversity</h2>
+<p><strong>Scenario.</strong> Payments occasionally charge customers twice in production, cause unknown. A classic &quot;hard&quot; problem: the change may be small, but getting it wrong is expensive.</p>
+<p><strong>How.</strong> Orca's docs list &quot;have three agents fix the same bug at once and pick the winner&quot; as a typical use. The three agents analyse and fix independently, each in its own worktree, and a person compares the results.</p>
+<p><strong>Why it works.</strong> The developer on X who shared how they use Orca relays the official explanation: <strong>different agents make different mistakes.</strong> Where all three change the same thing, it is probably right; where each changes something different, that is the genuinely hard part of the problem. For one wait you get three answers plus a map of where they disagree.</p>
+<p>That disagreement map is often worth more than any single answer. Say all three agents add an idempotency check to the payment callback (agreement) but choose differently between the order ID and the payment transaction ID as the idempotency key (disagreement). You can safely adopt the agreed part; the disagreement is exactly where human attention should go.</p>
+<p><strong>The research counterpart.</strong> The Codex paper found repeated sampling an effective strategy for reaching correct solutions: 28.8% solved with one sample, 70.2% with 100 samples per problem. Multi-agent debate research showed that several model instances proposing and debating answers improves reasoning and factual accuracy. Racing combines the two: more samples raise the chance of hitting a right answer, and comparing disagreements helps identify which one it is.</p>
+<p><strong>Different vendors help.</strong> If all three agents run the same model, their errors are often correlated and they may share a blind spot. Agents from different vendors (one reason Orca doesn't bind you to a model) make errors more independent, so agreement means more.</p>
+<p><strong>Races don't merge themselves.</strong> When each result is half right, let the winning agent revise once more with reference to another's changes, or pick the good parts by hand.</p>
+<h2>2. Pipelines: handle complexity through division of labour</h2>
+<p><strong>Scenario.</strong> Building a new &quot;loyalty points&quot; feature spanning requirements, design, back end, front end and tests. A &quot;big&quot; problem: no single step need be hard, but the total exceeds what one context holds comfortably.</p>
+<p><strong>How.</strong> MetaGPT encodes standard operating procedures (SOPs) into prompt sequences and uses an assembly-line paradigm to assign roles to different agents, breaking complex tasks into subtasks handled collaboratively, with agents that have domain expertise verifying intermediate results to reduce errors. A common coding pipeline:</p>
+<pre><code>clarify requirements → design → code → test → cross-review → integrate
 </code></pre>
-<p>Task C depends on A and B, forming a DAG; the decision gate stops C from running until the human answers.</p>
-<p><strong>The worker contract.</strong> Orca sets explicit requirements for workers: send <code>worker_done</code> <strong>exactly once</strong>, whether successful or not, stating the outcome; include a summary of what was done, what was found and what remains; send heartbeats during long work; and ask blocking questions through the coordinator rather than waiting locally.</p>
-<p>These rules may look fussy, but each addresses a classic distributed-systems problem:</p>
+<p><strong>Hand-offs go through files, not conversations.</strong> The biggest risk in a pipeline is information lost at hand-off. The remedy is for each stage to produce explicit shared artefacts: a spec, CONTEXT.md, interface definitions, test results. Downstream agents read these rather than rereading the whole upstream conversation. That is another value of Chapter 4's spec-driven approach: <strong>the spec is the pipeline's interface.</strong></p>
+<p><strong>Cross-review.</strong> Another developer has a coding agent finish, then brings in another vendor's agent for adversarial review, with all issues fed back to the main coding agent to fix and re-verify. It is a concrete form of &quot;verifying intermediate results&quot;, again relying on different agents making different mistakes.</p>
+<h2>3. Which one?</h2>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Race</th>
+<th>Pipeline</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Problem it tackles</td>
+<td>Hard: single-point problems where mistakes are costly</td>
+<td>Big: large tasks that can be split</td>
+</tr>
+<tr>
+<td>Cost</td>
+<td>N× tokens</td>
+<td>Sum of the stages</td>
+</tr>
+<tr>
+<td>Human work</td>
+<td>Compare, choose, merge</td>
+<td>Define interfaces and acceptance</td>
+</tr>
+<tr>
+<td>Main risk</td>
+<td>Review burden multiplies</td>
+<td>Information lost at hand-off</td>
+</tr>
+</tbody>
+</table>
+<p>They combine, too: inside a pipeline, race just the riskiest step (say, the change to the payment callback).</p>
+<p><strong>Race only where it counts.</strong> The developer's advice: race only where mistakes are painful, such as payments, permissions and data migrations; don't do it for copy edits.</p>
+<h2>4. Common misconceptions</h2>
 <ul>
-<li><strong>Exactly once</strong>: prevents a task being marked done twice, or never receiving a completion signal.</li>
-<li><strong>Completion messages carry both the task ID and the dispatch ID</strong>: Orca requires this so a stale retry cannot complete the wrong task. If a dispatch timed out and was re-dispatched, and the old attempt reported completion later, a task ID alone could overwrite the new attempt's result.</li>
-<li><strong>Heartbeats</strong>: let the coordinator tell &quot;still working&quot; from &quot;stuck&quot;.</li>
-<li><strong>Questions via the coordinator</strong>: workers don't wait forever locally, and all blockers gather where a person can see them.</li>
-</ul>
-<h2>4. Humans guard the gates</h2>
-<p>Gates belong on <strong>irreversible or high-risk</strong> steps: merging shared components, database migrations, releases. That matches the guardrail principle from Chapter 2: let reversible operations go, require confirmation for irreversible ones.</p>
-<p>Gates also <strong>concentrate</strong> decisions. Without an orchestration layer, ten agents ask for confirmation at ten different times in ten windows; with one, requests collect at the coordinator and a person can handle them in one sitting.</p>
-<h2>5. Engineering points</h2>
-<ul>
-<li><strong>The orchestrator is itself an agent.</strong> The developer notes that Orca is built for agents as well as people: an agent can open new workspaces itself and read errors from other windows, and the &quot;project manager&quot; uses exactly these abilities to assign tasks and collect results.</li>
-<li><strong>Start small.</strong> Anthropic cautions that LLM agents are not yet good at coordinating and delegating in real time. Pilot with two or three workers and well-bounded tasks.</li>
-<li><strong>Verification decides.</strong> A worker reporting &quot;done&quot; is a signal; whether the task is really done depends on tests and checks.</li>
-</ul>
-<h2>6. Common misconceptions</h2>
-<ul>
-<li><strong>&quot;With an orchestrator, humans can step out entirely.&quot;</strong> High-risk decisions still need a responsible person; gates are part of the design.</li>
-<li><strong>&quot;The more elaborate the orchestration, the stronger.&quot;</strong> Every layer adds tokens and failure points; add them as needed.</li>
-<li><strong>&quot;If a worker says it's done, it's done.&quot;</strong> Completion is judged by verification results, not the agent's self-report.</li>
+<li><strong>&quot;The more racers, the better.&quot;</strong> Returns diminish while cost grows linearly and review multiplies. Going from 1 to 3 buys a valuable disagreement map; going from 3 to 10 mostly buys review work.</li>
+<li><strong>&quot;The finer the pipeline roles, the better.&quot;</strong> Every hand-off can lose information, and Anthropic warns that tasks with heavy inter-agent dependencies are not currently a good fit.</li>
+<li><strong>&quot;If three agents agree, it must be right.&quot;</strong> Agreement raises confidence, but tests are still needed, especially when they run the same model.</li>
 </ul>

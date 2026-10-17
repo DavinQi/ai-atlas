@@ -1,65 +1,89 @@
-<h1>两种打法：赛跑挑最优，流水线分工协作</h1>
+<h1>Orca：一个任务一个 worktree，一个 worktree 一个 Agent</h1>
 <blockquote>
 <p>对应图 #31 · 第五章「多 Agent 编程」</p>
 </blockquote>
-<p>多 Agent 编程有两种基本打法：</p>
+<p>多个 Agent 同时改同一份代码，最先遇到的问题是<strong>互相踩踏</strong>。Git worktree 是解决这个问题的基础设施，Orca 则是围绕它构建的多 Agent 开发工作台。Orca 官方文档的定位是：一个让多个 AI 编程 Agent 并排运行的桌面 IDE，每个任务有自己的 git worktree、自己的 Agent 终端和自己的浏览器标签页。</p>
+<h2>一、问题：同一个目录里的三个 Agent</h2>
+<p>假设你在同一个项目目录里开了三个终端，分别让三个 Agent 做三件事：A 修支付 bug，B 加用户头像功能，C 重构日志模块。很快就会出问题：</p>
 <ul>
-<li><strong>赛跑（race）</strong>：同一个任务交给多个 Agent 同时做，挑最好的结果。</li>
-<li><strong>流水线（pipeline）</strong>：一个任务拆成不同阶段或不同部分，由不同 Agent 分工完成。</li>
+<li><strong>文件互相覆盖</strong>：A 和 C 都改了 <code>utils/logger.py</code>，后保存的覆盖了先保存的。</li>
+<li><strong>测试结果互相污染</strong>：A 跑测试时，B 改了一半的代码还没写完，A 看到的失败其实是 B 造成的，于是 A 去「修」一个不存在的问题。</li>
+<li><strong>分支冲突</strong>：A 想切到 <code>fix-payment</code> 分支，但 B 正在 <code>feature-avatar</code> 分支上工作。工作目录只有一个，切分支会打断 B。</li>
 </ul>
-<p>两者分别对应 Anthropic 模式库中「并行化」的两种变体：<strong>投票（voting）</strong>，同一任务多次运行以获得多样化输出；<strong>分段（sectioning）</strong>，把任务拆成独立子任务并行运行。它们解决的是不同的问题：赛跑对付「难」，流水线对付「大」。</p>
-<h2>一、赛跑：用多样性降低风险</h2>
-<p><strong>场景。</strong> 线上支付偶发重复扣款，原因不明。这是一个典型的「难」问题：改动可能不大，但改错了代价很高。</p>
-<p><strong>做法。</strong> Orca 官方文档把「让三个 Agent 同时修同一个 bug，挑出赢家」列为典型用法。三个 Agent 各自在独立的 worktree 里分析和修复，完成后人来比较。</p>
-<p><strong>它为什么有效？</strong> X 上分享 Orca 用法的开发者转述了官方对这一打法的解释：<strong>不同的 Agent 犯不同的错。</strong> 三个都改成一样的地方，大概率是对的；三个各改各的地方，就是这个问题真正难的部分。等于花一份等待时间，拿到三份答案和一张「哪里有分歧」的地图。</p>
-<p>这张「分歧地图」常常比任何一份答案都更有价值。假设三个 Agent 都在扣款回调里加了幂等检查（一致），但对「幂等键用订单号还是支付流水号」各有选择（分歧）。一致的部分可以放心采纳；分歧的部分，恰好就是人需要投入注意力的地方。</p>
-<p><strong>学术上的对应。</strong> Codex 论文发现，对同一问题重复采样是获得正确解的有效策略：单次采样解决 28.8%，每题 100 次采样时达到 70.2%。多 Agent 辩论研究则表明，多个模型实例提出并辩论各自的答案，可以提升推理能力和事实准确性。赛跑结合了这两种思路：多次采样增加命中正确答案的机会，比较分歧则帮助识别哪个是对的。</p>
-<p><strong>注意不同厂商的价值。</strong> 如果三个 Agent 都是同一个模型，它们的错误往往是相关的，同一个盲点可能三个都有。用不同厂商的 Agent（这也是 Orca 不绑定模型的意义之一）能让错误更独立，「一致」也就更有说服力。</p>
-<p><strong>赛跑不会自动合并。</strong> 三份结果各对一半时，可以让获胜的 Agent 参考另一份改动再改一轮，或手动挑选好的部分。</p>
-<h2>二、流水线：用分工处理复杂任务</h2>
-<p><strong>场景。</strong> 开发一个新的「会员积分」功能，涉及需求、设计、后端、前端和测试。这是一个「大」问题：每一步不一定难，但总量超出了一个上下文能舒适容纳的范围。</p>
-<p><strong>做法。</strong> MetaGPT 把标准作业流程（SOP）编码进提示序列，采用流水线范式为不同 Agent 分配角色，把复杂任务拆成多个 Agent 协作的子任务，并让具备领域专长的 Agent 校验中间结果以减少错误。一个常见的编码流水线：</p>
-<pre><code>需求澄清 → 方案设计 → 编码 → 测试 → 交叉审查 → 集成
+<p>根本原因是：<strong>一个工作目录在同一时刻只能检出一个分支、只能有一份文件状态。</strong></p>
+<h2>二、解法：git worktree</h2>
+<p>Git 官方文档说明，一个仓库可以支持多个工作树，从而同时检出多个分支；新建的工作树称为「linked worktree」，与 <code>git init</code> 或 <code>git clone</code> 创建的主工作树相对。</p>
+<pre><code>git worktree add ../fix-payment -b fix-payment
+git worktree add ../feature-avatar -b feature-avatar
+git worktree list
+git worktree remove ../fix-payment
 </code></pre>
-<p><strong>交接靠文件，不靠对话。</strong> 流水线最大的风险是交接时丢失信息。解法是让每一阶段产出明确的共享产物：Spec、CONTEXT.md、接口定义、测试结果。下游 Agent 读这些文件，而不必重读上游的全部对话。这也是第四章 Spec 驱动的另一个价值：<strong>Spec 就是流水线的「接口」</strong>。</p>
-<p><strong>交叉审查。</strong> 另一位开发者的做法是：编码 Agent 完成后，引入其他厂商的 Agent 做对抗性审查，问题统一反馈给主编码 Agent 修复并重新验证。这是流水线中「校验中间结果」的一个具体形式，同样利用了「不同的 Agent 犯不同的错」。</p>
-<h2>三、怎么选？</h2>
+<p>执行前两条之后，磁盘上就有了三个目录：原来的项目目录、<code>../fix-payment</code>、<code>../feature-avatar</code>。每个目录检出不同的分支，文件互不干扰。</p>
+<p>关键在于：<strong>所有工作树共享同一个仓库的对象和历史</strong>，只是各自有独立的工作目录和检出分支。这和「clone 三份」不同：clone 会复制三份完整的历史，而 worktree 只多出工作目录本身；在一个 worktree 里提交，另一个 worktree 立刻就能看到这个提交（比如 <code>git log fix-payment</code>）。</p>
+<h2>三、Orca 在 worktree 之上加了什么？</h2>
+<p>worktree 解决了文件隔离，但多 Agent 的其他问题还在。Orca 官方文档把工作流压缩成：<strong>添加仓库 → 开工作区（worktree）→ 选 Agent → 分屏 → 看改动 → 提交</strong>。几个设计要点：</p>
+<ul>
+<li><strong>不自带模型</strong>：运行你已有的 Claude Code、Codex、Cursor CLI、OpenCode 等，用你自己的订阅。这也回应了上一篇「被一家厂商的额度绑住」的问题：可以在不同 worktree 里用不同厂商的 Agent。</li>
+<li><strong>每个 worktree 都是真实的 git worktree</strong>，可以随时进入目录用原生 git，不会被锁在工具里。</li>
+<li><strong>默认在本地桌面运行</strong>，远程计算使用你自己控制的机器（SSH、自托管服务器或云 VM）。</li>
+</ul>
+<p><strong>让新 worktree 一进门就能干活。</strong> 这是上一篇「跑不起来」问题的解法。新 worktree 是从 Git 检出的干净代码，未被 Git 管理的 <code>.env</code>、依赖目录都不在里面，Agent 一启动就会报错。前述 X 上的开发者介绍，Orca 可以配置哪些文件为每个副本复制一份（如 <code>.env</code>）、哪些目录共享一份（如依赖包）。</p>
+<p><strong>通知与审阅。</strong> 这是「盯不过来、看不过来」的解法。据该开发者介绍，Agent 从干活变为空闲时，Orca 会弹通知；改动视图支持逐行批注，并一次性发回给 Agent，还能标出哪些行是 AI 写的。</p>
+<p><strong>共享规则。</strong> 项目规则靠 Agent 自己会读的文件：Claude Code 读 CLAUDE.md，Codex 读 AGENTS.md。<strong>必须提交到 Git</strong>，否则新 worktree 中的 Agent 看不到。这是一个非常容易踩的坑：规则在主目录里写好了却没提交，新 worktree 里的 Agent 就像一个没读过规范的新人。</p>
+<h2>四、worktree 隔离不了什么？</h2>
+<p>worktree 隔离的是<strong>文件</strong>，而不是<strong>运行时</strong>：</p>
 <table>
 <thead>
 <tr>
-<th>维度</th>
-<th>赛跑</th>
-<th>流水线</th>
+<th>资源</th>
+<th>是否隔离</th>
+<th>风险</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>对付的问题</td>
-<td>难：改错代价高的单点问题</td>
-<td>大：可拆分的大任务</td>
+<td>工作目录文件</td>
+<td>是</td>
+<td>—</td>
 </tr>
 <tr>
-<td>成本</td>
-<td>N 倍 token</td>
-<td>按阶段累加</td>
+<td>检出分支</td>
+<td>是</td>
+<td>—</td>
 </tr>
 <tr>
-<td>人的工作</td>
-<td>比较、挑选、合并</td>
-<td>定义接口与验收</td>
+<td>仓库历史、对象库</td>
+<td>否（共享）</td>
+<td>一般无害</td>
 </tr>
 <tr>
-<td>主要风险</td>
-<td>审阅负担成倍增加</td>
-<td>交接丢失信息</td>
+<td>端口</td>
+<td>否</td>
+<td>两个 Agent 同时启动开发服务器，都想占 3000 端口</td>
+</tr>
+<tr>
+<td>本地数据库</td>
+<td>否</td>
+<td>A 的测试清空了 B 正在用的测试数据</td>
+</tr>
+<tr>
+<td>外部服务</td>
+<td>否</td>
+<td>都在调同一个测试环境的接口</td>
 </tr>
 </tbody>
 </table>
-<p>两者也可以组合：在流水线里，对风险最高的那一个环节（比如支付回调的修改）单独做一次赛跑。</p>
-<p><strong>赛跑只用在关键处。</strong> 前述开发者的建议是：只在支付、权限、数据迁移这类改错了很麻烦的地方赛跑，改文案就别这么干。</p>
-<h2>四、常见误区</h2>
+<p>所以，并行跑测试时还要为每个 worktree 配置不同的端口、独立的数据库或者容器。</p>
+<h2>五、工程要点</h2>
 <ul>
-<li><strong>「赛跑越多越好。」</strong> 收益递减，而成本线性增长，审阅负担也成倍增加。从 1 个到 3 个，多出的「分歧地图」很有价值；从 3 个到 10 个，多出来的主要是审阅工作。</li>
-<li><strong>「流水线角色分得越细越好。」</strong> 每次交接都可能丢失信息。Anthropic 也提醒，多 Agent 间依赖多的任务目前不适合。</li>
-<li><strong>「三个 Agent 结果一致就一定对。」</strong> 一致性提高了可信度，但仍需测试验证，尤其当它们用的是同一个模型时。</li>
+<li><strong>任务命名</strong>：一个 worktree 对应一个明确的任务和分支，便于事后清理。</li>
+<li><strong>用完即删</strong>：落选或完成的 worktree 及其分支要及时清理，否则磁盘和分支列表会越来越乱。</li>
+<li><strong>适用边界</strong>：该开发者坦言，如果只用一家的 Agent、一次只做一件事，Orca 帮不上太多忙，官方客户端就够了；<strong>它的价值与同时运行的 Agent 数量和需要验收的改动量成正比。</strong></li>
+</ul>
+<p>Orca 由 Stably 出品，MIT 协议开源；GitHub 仓库创建于 2026 年 3 月 17 日，截至本文核实时约 9.4 万 star。</p>
+<h2>六、常见误区</h2>
+<ul>
+<li><strong>「多开几个终端也一样。」</strong> 可以，但缺依赖、盯不过来、审不过来这些问题需要自己解决。</li>
+<li><strong>「worktree 之间完全隔离。」</strong> 它们共享仓库历史和对象库；端口、数据库、外部服务等运行时资源仍可能冲突。</li>
+<li><strong>「Orca 是一个模型或托管服务。」</strong> 官方文档明确说明，它不是模型，也不是托管的 VPS 产品。</li>
 </ul>

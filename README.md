@@ -2,7 +2,7 @@
 
 # AI-Native Engineering Atlas
 
-A hand-drawn style, bilingual (English / 中文) atlas of AI-native software engineering, **from Copilot to Agent Harness**: 36 diagrams + 6 chapter pages.
+A hand-drawn style, bilingual (English / 中文) atlas of AI-native software engineering, **from Copilot to Agent Harness**: 37 diagrams + 6 chapter pages.
 
 **Live site:** [English](https://davinqi.github.io/ai-atlas/?lang=en) · [中文](https://davinqi.github.io/ai-atlas/?lang=zh)
 
@@ -19,7 +19,7 @@ A hand-drawn style, bilingual (English / 中文) atlas of AI-native software eng
 - **Hand-drawn diagrams:** sketch-style inline SVG with animated arrows. Click any diagram to zoom and pan.
 - **Keyboard shortcuts:** `←` `→` page · `Enter` zoom · `F` fullscreen · `G` overview grid · `R` replay animation · `Esc` close.
 - **Handbook guides:** every diagram has a **Read the guide** button that opens a long-form article that explains mechanisms, reasoning, worked examples, trade-offs and pitfalls, structured to fit each topic, with KaTeX-rendered formulas; sources are collected on the final References page. On desktop it opens as a side reading panel; on phones it opens full screen with a back button. It follows the language toggle, and you can link to it directly, e.g. [`#7/guide`](https://davinqi.github.io/ai-atlas/?lang=en#7/guide).
-- **References page:** the last page, [`#refs`](https://davinqi.github.io/ai-atlas/?lang=en#refs), lists 30 core sources (papers, docs, X posts) grouped by chapter, with type badges, links and the diagrams each one supports; the full list of 121 sources is in [`docs/references.json`](docs/references.json).
+- **References page:** the last page, [`#refs`](https://davinqi.github.io/ai-atlas/?lang=en#refs), lists 30 core sources (papers, docs, X posts) grouped by chapter, with type badges, links and the diagrams each one supports; the full list of 131 sources is in [`docs/references.json`](docs/references.json).
 - **Mobile friendly:** on phones and tablets the sidebar becomes a drawer (☰). On phones held upright, every diagram and chapter cover has its own hand-drawn portrait version, which is also used in the zoom view and the overview. you swipe left/right to change pages, tap a diagram to open the zoom view (pinch, double-tap to toggle fit/zoom, a Reset button), and every button is a ≥44px touch target. The desktop layout is unchanged.
 - **Deep links:** `#12` opens diagram 12, `#ch3` opens the chapter 3 cover, e.g. [`?lang=en#ch3`](https://davinqi.github.io/ai-atlas/?lang=en#ch3). Add `&static` to disable animations.
 

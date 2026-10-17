@@ -1,70 +1,57 @@
-<h1>Many People, Many Agents: Humans Define and Review, Digital Employees Execute</h1>
+<h1>The Orchestration Layer: One Agent as Project Manager, Humans Guard the Gates</h1>
 <blockquote>
 <p>Companion to diagram #33 · Chapter 5 &quot;Multi-Agent Programming&quot;</p>
 </blockquote>
-<p>When not one person but a whole team works with many agents at once, the problem shifts from tools to organisation: who defines tasks? Who reviews? How are agents' identities and permissions managed? The AIDC digital ad-buyer team in Alibaba's practice handbook went through three periods, &quot;super-individual → digital employees → Scrum in the cloud&quot;, and offers a real sample answer. This article follows their experience.</p>
-<h2>1. Stage one: the super-individual</h2>
-<p>According to the handbook, after the team standardised on one mainstream agent tool, one person directing 3–5 sessions became normal, some long-running tasks completed overnight, and it felt like one person was doing the work of two or three. It helped the team ship its first MVP.</p>
-<p>It sounds great, but two kinds of problems soon appeared:</p>
+<p>When more agents run at once than a person can track, you need an <strong>orchestration layer</strong>: one agent acts as &quot;project manager&quot;, breaking down the task, dispatching work to worker agents, tracking progress and consolidating results, while humans step in only at key <strong>decision gates</strong>. This is what Anthropic calls the orchestrator–workers pattern: a central LLM dynamically breaks down tasks, delegates them to worker LLMs and synthesises the results, well suited to coding tasks whose subtasks can't be predicted in advance.</p>
+<h2>1. Why an orchestration layer?</h2>
+<p>In the previous two articles a human did the orchestrating: deciding how many worktrees to open, what to give each agent, when to check, how to merge. That is manageable with three agents; with ten, a person's whole day fills up with switching windows, checking status and copy-pasting errors.</p>
+<p><strong>The orchestration layer hands scheduling itself to an agent</strong>, turning the person from dispatcher back into decision-maker. It continues the thread of Chapter 3: each generation of tools hands one more layer of detail to the machine.</p>
+<h2>2. Subagents: the basic unit</h2>
+<p>Mainstream tools all have subagents built in:</p>
 <ul>
-<li><strong>Indigestion.</strong> Intermediate output produced at great token cost was hard for people to understand, review and apply. When discussing designs with colleagues, the colleagues could not explain them either and could only pass the question back to an agent.</li>
-<li><strong>No reuse.</strong> After a task was delivered, the experience was hard for others to reuse.</li>
+<li><strong>Claude Code</strong>: subagents are Markdown files with YAML front matter; each runs in its own context window with a custom system prompt, specific tool access and independent permissions.</li>
+<li><strong>Codex</strong>: can spawn specialised agents in parallel and collect their results into one response; current versions enable subagent workflows by default.</li>
+<li><strong>Cursor</strong>: subagents are specialised assistants the main agent can delegate to; each works in its own context and returns results to the parent, used to break down complex tasks, work in parallel and keep the main conversation's context clean.</li>
 </ul>
-<p>Both have the same root: <strong>output and understanding came apart.</strong> Code a person wrote, they understood; code a person &quot;directed&quot; into existence, they may not fully understand. Everyone became a super-individual, but knowledge didn't flow between them. The larger the team, the worse this gets.</p>
-<h2>2. Stage two: agents as &quot;digital employees&quot;</h2>
-<p><strong>From &quot;does this person have permission?&quot; to &quot;who is doing what on whose behalf?&quot;</strong> The handbook treats agents as independent actors in enterprise systems. Platforms used to answer only &quot;does this person have permission?&quot;; now they must answer: <strong>which agent, in which runtime, on behalf of which user, for which task, accessing which resource, doing what, and does it need human approval?</strong></p>
-<p>Why not just use a person's account? The handbook's analysis: reusing a person's account means audits can't tell whether the person or an agent acted; reusing a service account obscures who is responsible, who authorised it and who can switch it off. Imagine a production config changed at 3 a.m. If the log says only &quot;Zhang San&quot;, you can't tell whether Zhang San did it, or one of Zhang San's agents did it during some task, let alone which task.</p>
-<p><strong>The trust boundary moves outward.</strong> The handbook divides human–agent collaboration into roughly three stages, essentially an outward shift of the trust boundary:</p>
-<table>
-<thead>
-<tr>
-<th>Stage</th>
-<th>Trust boundary</th>
-<th>Human responsibilities</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Local assistance</td>
-<td>Person + local tools</td>
-<td>Provide context, approve commands, check results</td>
-</tr>
-<tr>
-<td>Cloud autonomy</td>
-<td>Person + cloud runtime + repository</td>
-<td>Set goals, review MRs, approve key steps</td>
-</tr>
-<tr>
-<td>Multi-agent team</td>
-<td>Lead agent + specialist agents + many systems</td>
-<td>Design collaboration, govern boundaries, own final responsibility</td>
-</tr>
-</tbody>
-</table>
-<p>Going down the table, the person's work involves fewer concrete operations and more <strong>rules and responsibility.</strong></p>
-<p><strong>The &quot;intern&quot; metaphor only goes halfway.</strong> The handbook cautions that thinking of an agent as an intern is only half right: agents do need mentors, duties, permission boundaries and review, but they lack professional ethics and tacit common sense. A human intern knows not to delete the production database even if nobody says so; an agent may not. Governance therefore also needs <strong>machine-enforceable guardrails</strong>, in line with the OWASP advice from Chapter 2 (human approval for high-risk operations, least privilege) and the MCP specification (explicit user consent before tool calls).</p>
-<h2>3. Redividing responsibilities</h2>
-<p>The digital ad-buyer team arrived at this split:</p>
+<p>These subagents usually live within one session. Larger, longer-running orchestration needs a more structured coordination mechanism.</p>
+<h2>3. An example of structured orchestration: Orca</h2>
+<p>Orca's docs describe orchestration as a structured multi-agent layer (experimental), built on five concepts:</p>
 <ul>
-<li><strong>Systems</strong> handle <strong>high-certainty</strong> matters such as state, permissions and rules;</li>
-<li><strong>AI</strong> handles analysis, generation and long-running multi-step execution;</li>
-<li><strong>People</strong> handle goal setting, key decisions, risk trade-offs and final accountability.</li>
+<li><strong>Run</strong>: a durable namespace and coordinator inbox.</li>
+<li><strong>Task</strong>: a work item with a spec, dependencies and status; tasks can form a DAG (directed acyclic graph).</li>
+<li><strong>Dispatch</strong>: one attempt to execute a task on a particular terminal.</li>
+<li><strong>Message</strong>: <code>worker_done</code>, <code>escalation</code>, <code>question</code>, <code>heartbeat</code> and so on.</li>
+<li><strong>Decision gate</strong>: a question created by the coordinator that blocks the relevant tasks until a decision is recorded.</li>
 </ul>
-<p>The unit of delivery changed with it: from &quot;people collaborating with people to finish a task&quot; to &quot;<strong>people define goals and acceptance criteria; digital employees divide up and execute.</strong>&quot;</p>
-<p>The three-way split is instructive: it doesn't simply say &quot;AI executes, humans decide&quot;; it singles out <strong>systems</strong>. Permission checks and state transitions are more reliable in deterministic code than in AI. That returns to Chapter 3's conclusion: probabilistic AI needs deterministic tools behind it.</p>
-<h2>4. Stage three: Scrum in the cloud</h2>
-<p>To fix stage one's reuse problem, the team built two &quot;cloud Scrum&quot; supply lines:</p>
+<p>A pre-release review shows how they fit. The developer on X who shared how they use Orca gives this example: before launch, one agent acts as project manager and leads two agents reviewing front end and back end separately, and the person reads only the final summary; the database migration step has a gate that a human must approve. Mapped onto the model:</p>
+<pre><code>Run: pre-release review
+├─ Task A: review front end → Dispatch to terminal 1 → worker_done
+├─ Task B: review back end  → Dispatch to terminal 2 → worker_done
+├─ Task C: run migration    (depends on A, B)
+│    └─ Decision gate: &quot;May the migration script run?&quot; ← human
+└─ Coordinator summarises → hands to the human
+</code></pre>
+<p>Task C depends on A and B, forming a DAG; the decision gate stops C from running until the human answers.</p>
+<p><strong>The worker contract.</strong> Orca sets explicit requirements for workers: send <code>worker_done</code> <strong>exactly once</strong>, whether successful or not, stating the outcome; include a summary of what was done, what was found and what remains; send heartbeats during long work; and ask blocking questions through the coordinator rather than waiting locally.</p>
+<p>These rules may look fussy, but each addresses a classic distributed-systems problem:</p>
 <ul>
-<li><strong>Experience loop</strong>: two digital employees responsible respectively for discovering strategies and putting them live; strategy delivery time fell from about 10 days to 2.</li>
-<li><strong>Hands-and-feet loop</strong>: turns production failure traces into capability-building requirements; about 80% of core capabilities have become Skills.</li>
+<li><strong>Exactly once</strong>: prevents a task being marked done twice, or never receiving a completion signal.</li>
+<li><strong>Completion messages carry both the task ID and the dispatch ID</strong>: Orca requires this so a stale retry cannot complete the wrong task. If a dispatch timed out and was re-dispatched, and the old attempt reported completion later, a task ID alone could overwrite the new attempt's result.</li>
+<li><strong>Heartbeats</strong>: let the coordinator tell &quot;still working&quot; from &quot;stuck&quot;.</li>
+<li><strong>Questions via the coordinator</strong>: workers don't wait forever locally, and all blockers gather where a person can see them.</li>
 </ul>
-<p>The hands-and-feet loop is especially worth borrowing: <strong>wherever an agent fails is the next capability to build.</strong> Failure traces are not discarded logs but a source of requirements. It is the same idea as Chapter 4's &quot;add a rule when the agent keeps making a mistake&quot; and &quot;turn it into a Skill after three repeats&quot;, upgraded from personal habit to team process.</p>
-<h2>5. The limits of digital employees</h2>
-<p>The handbook is clear-eyed about limits: discovering growth opportunities still depends heavily on people's business understanding, and goal setting, business thresholds, release gates and high-risk decisions still rest with people. Digital employees are best at executing, to a high standard, work that <strong>has already been thought through and has clear standards.</strong></p>
-<p>Review is still a team-level bottleneck. The developer on X advises keeping each MR small and focusing human review on business logic and on whether the test results are enough to support delivery.</p>
+<h2>4. Humans guard the gates</h2>
+<p>Gates belong on <strong>irreversible or high-risk</strong> steps: merging shared components, database migrations, releases. That matches the guardrail principle from Chapter 2: let reversible operations go, require confirmation for irreversible ones.</p>
+<p>Gates also <strong>concentrate</strong> decisions. Without an orchestration layer, ten agents ask for confirmation at ten different times in ten windows; with one, requests collect at the coordinator and a person can handle them in one sitting.</p>
+<h2>5. Engineering points</h2>
+<ul>
+<li><strong>The orchestrator is itself an agent.</strong> The developer notes that Orca is built for agents as well as people: an agent can open new workspaces itself and read errors from other windows, and the &quot;project manager&quot; uses exactly these abilities to assign tasks and collect results.</li>
+<li><strong>Start small.</strong> Anthropic cautions that LLM agents are not yet good at coordinating and delegating in real time. Pilot with two or three workers and well-bounded tasks.</li>
+<li><strong>Verification decides.</strong> A worker reporting &quot;done&quot; is a signal; whether the task is really done depends on tests and checks.</li>
+</ul>
 <h2>6. Common misconceptions</h2>
 <ul>
-<li><strong>&quot;More agents means fewer people needed.&quot;</strong> The work of defining, reviewing and governing grows with the number of agents.</li>
-<li><strong>&quot;Running agents under personal accounts is easiest.&quot;</strong> Audit and accountability become blurred.</li>
-<li><strong>&quot;Digital employees can replace organisational consensus.&quot;</strong> They execute what has been thought through; they cannot think it through for the team.</li>
+<li><strong>&quot;With an orchestrator, humans can step out entirely.&quot;</strong> High-risk decisions still need a responsible person; gates are part of the design.</li>
+<li><strong>&quot;The more elaborate the orchestration, the stronger.&quot;</strong> Every layer adds tokens and failure points; add them as needed.</li>
+<li><strong>&quot;If a worker says it's done, it's done.&quot;</strong> Completion is judged by verification results, not the agent's self-report.</li>
 </ul>

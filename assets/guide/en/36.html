@@ -1,74 +1,66 @@
-<h1>The Future Shape: Humans Set Goals and Acceptance, Agent Teams Deliver</h1>
+<h1>AIOps Self-Healing Loops: Low Risk Runs Automatically, High Risk Goes Through People</h1>
 <blockquote>
 <p>Companion to diagram #36 · Chapter 6 &quot;How AI Reshapes the Dev Lifecycle&quot;</p>
 </blockquote>
-<p>A note first: this article is a <strong>trend assessment</strong>, not established fact. The diagram's future shape has people defining goals and acceptance criteria while agent teams do most of the delivery from requirement clarification to release and archiving, with people stepping in only at key points. The view extends the practices in Chapters 4 and 5 and matches the evolution path described in Alibaba's practice handbook, which itself admits that many of these directions are &quot;visible as trends but not yet working end to end&quot;.</p>
-<p>So the focus here is not to paint a pretty picture but to answer: <strong>what is still missing to get there?</strong></p>
-<h2>1. Three stages</h2>
-<p>Per Alibaba's handbook, human–agent collaboration evolves in roughly three stages:</p>
+<p>Connecting agents to operations makes a self-healing loop possible: <strong>detect → collect evidence → diagnose → generate a fix → verify → release → observe.</strong> The key design question is not how much the agent can fix but how to <strong>tier by risk</strong>: low-risk operations that can be rolled back quickly may run automatically; high-risk, irreversible ones must go through a person.</p>
+<h2>1. Follow one incident around the loop</h2>
+<p>2 a.m.: a service's error rate starts climbing.</p>
 <ol>
-<li><strong>Full assistance</strong>: people use coding agents to do the work, and people stay in charge. This is where most teams are today.</li>
-<li><strong>Cloud autonomy</strong>: cloud-hosted agents receive a task, then independently pull code, run environments, produce changes and wait for review. Several products already work at this stage, such as the Copilot cloud coding agent mentioned in Chapter 3.</li>
-<li><strong>Multi-agent collaboration</strong>: several agents in different roles handle clarification, design, coding, testing, release and archiving, with people stepping in only at key points.</li>
+<li><strong>Detect.</strong> The alert fires. Traditionally, the first thing is to wake the on-call engineer; in a self-healing loop the alert creates a task for a diagnosis agent directly.</li>
+<li><strong>Evidence.</strong> Following Chapter 4's evidence chain, the agent gathers facts first: take the TraceIds of a few failed requests, check logs and upstream/downstream state along the chain, and compare against code locations and recent changes. It finds that every failure happens after a newly released config value is read, and that value is malformed.</li>
+<li><strong>Diagnose.</strong> The evidence is clear, an &quot;obvious error&quot;, so the diagnosis agent locates it directly. If evidence were insufficient or contradictory, it would escalate to an agent with full code context or to a person.</li>
+<li><strong>Fix.</strong> Two options: roll the config back to the previous version (low risk), or change the parsing code to accept the new format (medium risk). The agent does the former to stop the bleeding and prepares a patch for the latter, plus a regression test that reproduces the problem.</li>
+<li><strong>Verify.</strong> The patch goes through layered verification: compile, unit tests, integration tests.</li>
+<li><strong>Release and observe.</strong> After the config rollback, the error rate returns to normal. The code patch does not go live automatically at 2 a.m.; it becomes a change awaiting approval, which a person approves with one click in the morning before a gradual rollout.</li>
 </ol>
-<p>The handbook notes that this path is essentially a continual <strong>outward shift of the trust boundary</strong>: from the person, to the cloud runtime, to agent teams, toolchains, task state and cross-system authorisation. Each step outward demands stronger isolation, authorisation and observability to back that trust.</p>
-<h2>2. Two paths: embed in the old process, or reorganise</h2>
-<p>The handbook distinguishes two paths:</p>
-<ul>
-<li><strong>Workflow retrofitting</strong> (the current mainstream): embed AI into the existing development process. Each node gets a local speed-up, but the whole still runs along a process designed for people.</li>
-<li><strong>The agentic direction</strong> (seen as more promising): agents obtain verification signals themselves and keep advancing the task on that basis. Process still exists, but it mainly handles scheduling, permissions, state, audit and high-risk checks, rather than prescribing how the agent thinks at each step.</li>
-</ul>
-<p>The handbook draws an analogy with electrification: early factories simply replaced the steam engine with an electric motor, keeping the line shafts and layout; the real productivity leap came after every machine got its own motor and production was reorganised.</p>
-<p>The analogy fits well. In a steam-age factory every machine connected through a long line shaft to one central engine, so the layout had to follow the shaft. Swap in one central electric motor and the shaft and layout stay; the gains are limited. Only when each machine had its own small motor could the shaft be removed and the factory laid out by the logic of the work.</p>
-<p>For software: many of today's processes (requirement review meetings, staged hand-offs to QA, hand-offs organised by job title) were designed for &quot;limited manpower and expensive communication&quot;. Inserting AI into each step is like swapping in an electric motor; <strong>the real change may require redesigning the process itself.</strong></p>
-<h2>3. Prerequisites: what is still missing</h2>
-<p>For agent teams to deliver reliably, at least four things are needed, each corresponding to an earlier chapter:</p>
+<p>At 9 a.m. the engineer sees a structured report: symptom, evidence, root cause, the mitigation already taken, and the fix awaiting approval. <strong>Nobody was woken, but the key decision was still made by a person.</strong></p>
+<h2>2. Risk tiers: the heart of the loop</h2>
+<p>The crucial move in the example is step 4, treating &quot;roll back the config&quot; and &quot;change the code&quot; differently. Behind that sits a risk tiering:</p>
 <table>
 <thead>
 <tr>
-<th>Prerequisite</th>
-<th>Meaning</th>
-<th>Related chapter</th>
+<th>Risk</th>
+<th>Examples</th>
+<th>Handling</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Reproducible, callable development environments</td>
-<td>Agents can build, start services, prepare data, drive browsers, read logs and metrics on their own</td>
-<td>Ch. 4 layered verification, Ch. 5 worktrees</td>
+<td>Low</td>
+<td>Restart stateless instances, scale out, roll back to the previous version</td>
+<td>Run automatically and notify</td>
 </tr>
 <tr>
-<td>A layered verification system</td>
-<td>Second- and minute-level machine feedback; people look only at what machines can't judge</td>
-<td>Ch. 4</td>
+<td>Medium</td>
+<td>Config changes, small code fixes</td>
+<td>Generate automatically; one-click human approval</td>
 </tr>
 <tr>
-<td>Agent identity, delegated authorisation and end-to-end observability</td>
-<td>Knowing which agent did what on whose behalf</td>
-<td>Ch. 5 digital employees</td>
-</tr>
-<tr>
-<td>Structured organisational knowledge</td>
-<td>Knowledge agents can retrieve, understand and cite</td>
-<td>Ch. 4 context engineering</td>
+<td>High</td>
+<td>DB migrations, permission changes, anything involving money</td>
+<td>A person must decide</td>
 </tr>
 </tbody>
 </table>
-<h2>4. Real-world constraints</h2>
-<p><strong>Technically.</strong> Anthropic notes that most coding tasks have limited parallelisable parts and that LLM agents are not yet good at real-time coordination and delegation.</p>
-<p><strong>In adoption.</strong> The handbook's teams went through a curve from excitement to pragmatism, hitting four sticking points: <strong>environments that won't come up, context that won't come together, verification that won't run, and releases stuck in process.</strong> Notably, none of the four is &quot;the model isn't smart enough&quot;.</p>
-<p>The handbook also sees three gaps between model capability and gains in enterprise R&amp;D efficiency: <strong>agent infrastructure, context and organisation.</strong> Model progress fills only a small part of them.</p>
-<h2>5. Preparation you can do today</h2>
-<p>The future shape hasn't arrived, but preparing for it pays off now, and these steps improve efficiency even if it never arrives:</p>
+<p>Tiering rests on two dimensions: <strong>reversibility</strong> (can a mistake be recovered quickly?) and <strong>blast radius</strong> (how many users and how much data does a mistake affect?). Rolling back to the previous version &quot;returns to a known good state&quot;: reversible and low risk. A database migration may be irreversible and touch all the data.</p>
+<p>This matches security guidance. OWASP's mitigations call explicitly for human-in-the-loop control of privileged operations and human approval for high-risk ones, with separate tokens and least privilege for applications. The MCP specification likewise requires explicit user consent before invoking tools.</p>
+<h2>3. Gradual release: fixes face the test too</h2>
+<p>Even an agent-generated fix that passes every test can fail in production; test-environment data and traffic never fully match production. So fixes also go <strong>canary, observe, then widen.</strong></p>
+<p>Anthropic uses &quot;rainbow deployments&quot; in its multi-agent system: old and new versions run side by side and traffic shifts gradually from old to new, so updates don't break agents mid-run. The same idea applies to agent-generated fixes.</p>
+<h2>4. Manual nodes swallow automation gains</h2>
+<p>Chapter 4 cited the handbook's &quot;paradoxical&quot; figure: more than 60% of bugs fixed automatically, yet the same-day bug closure rate rose only from 53% to at most 63%, because <strong>triggering depends on people and verification depends on people.</strong></p>
+<p>Against the loop above, the problem is plain: if step 1 waits for a person to notice and create the task, and step 5 waits for a person to check each fix, then however fast steps 2–4 are, throughput won't rise. <strong>For the loop to really close, triggering and low-risk verification must be automated too</strong>, leaving to people only what genuinely needs judgement.</p>
+<h2>5. The hardest last mile</h2>
+<p>The handbook is also sober about this: build, integration testing, canary release, production verification and recovery involve real environments, real data and real users; the tolerance for error is tiny, and the demands on sandbox isolation, credential management, guardrails and observability far exceed what exists today.</p>
+<p>So build trust step by step:</p>
 <ul>
-<li><strong>Turn internal systems into tools agents can call</strong> (MCP / CLI / Skills).</li>
-<li><strong>Make verification give feedback in seconds and minutes.</strong></li>
-<li><strong>Give agents their own identities and least privilege.</strong></li>
+<li><strong>Start with read-only access</strong> and earn trust in diagnosis. How accurate are the agent's diagnostic reports? Let people &quot;shadow&quot; it for a while.</li>
+<li><strong>Then open up low-risk write operations gradually</strong>, such as restart, scale-out and rollback.</li>
+<li><strong>Leave a trace for every automatic action</strong>: who (which agent), on whose behalf, for which task, did what (Chapter 5, &quot;digital employees&quot;).</li>
 </ul>
-<p>The handbook advises accepting the uncertainty of fast technical change while <strong>not postponing necessary infrastructure while &quot;waiting for a better model&quot;.</strong></p>
 <h2>6. Common misconceptions</h2>
 <ul>
-<li><strong>&quot;The future is fully unmanned.&quot;</strong> The handbook's team says plainly that AI Native is not about removing people but about redrawing the responsibilities of systems, AI and people.</li>
-<li><strong>&quot;A strong enough model will make it happen.&quot;</strong> Of the three gaps, model capability is only a small part.</li>
-<li><strong>&quot;This is far off.&quot;</strong> The second stage (cloud autonomy) is already in use across several products.</li>
+<li><strong>&quot;Self-healing means fully automatic.&quot;</strong> Risk tiers and human gates are core parts of a self-healing system.</li>
+<li><strong>&quot;Tests pass after the fix, so release it everywhere.&quot;</strong> Production verification needs gradual rollout and observation.</li>
+<li><strong>&quot;Agents make too many mistakes for operations.&quot;</strong> The key is to limit their scope so errors can be rolled back and audited. People make mistakes too; operations systems were always designed for mistakes.</li>
 </ul>

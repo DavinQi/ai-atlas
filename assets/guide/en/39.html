@@ -1,0 +1,30 @@
+<h1>Open Questions, and Five Things You Can Do Tomorrow</h1>
+<blockquote>
+<p>Companion to diagram #39 · Chapter 6 &quot;How AI Reshapes the Dev Lifecycle&quot;</p>
+</blockquote>
+<p>This is the last article of the handbook, and it comes back to two questions: <strong>what still has no answer, and what can you do tomorrow?</strong> The open questions draw mainly on Alibaba's practice handbook; the &quot;five things&quot; are the speaker's suggestions based on the whole book.</p>
+<h2>1. Four unsolved problems</h2>
+<p>Per Alibaba's handbook:</p>
+<p><strong>1. Getting from writing code to reliable delivery still involves many technical problems.</strong> The last mile of delivery (build, integration testing, canary release, production verification, recovery) has tiny tolerance for error, and its demands on sandbox isolation, credential management, guardrails and observability far exceed current capabilities. The infrastructure's own engineering complexity may rival that of the agent application layer.</p>
+<p>What does that mean? Recall SWE-bench from Chapter 3: fix an issue in a prepared repository, judged by existing tests. Real delivery is much harder: you build the environment yourself, tests may be incomplete, releases go through process, and failures must be reversible. <strong>Benchmarks measure &quot;writing correct code&quot;; delivery requires &quot;getting code to users safely&quot;.</strong></p>
+<p><strong>2. Enterprise knowledge is not yet agent-friendly.</strong> Much organisational knowledge is scattered across documents, word of mouth and personal experience; even in a knowledge base it is often only &quot;findable by people&quot;, far from being efficiently retrieved, accurately understood and reliably cited by agents. The difference: people fill in context and judge whether a document is outdated; agents often don't.</p>
+<p><strong>3. Organisational design matters deeply and has no settled answer.</strong> New incentives are needed to unlock individual potential, while &quot;distillation anxiety&quot; is real (previous article).</p>
+<p><strong>4. The pace of technical change keeps disrupting current architectures.</strong> SWE-bench Verified scores jumped from under 30% to around 80% in two years. Architectures, tools and processes designed today may need rethinking within six months. One concrete example from Chapter 4: as models get stronger, some once-useful constraints and processes (such as heavyweight spec and TDD Skills) are turning into noise.</p>
+<h2>2. Two often-underestimated problems</h2>
+<p><strong>Review is the bottleneck.</strong> A developer on X reports that as generation gets faster, people no longer read every line; they rely on small MRs, end-to-end tests and focused review of core business logic. That itself is a trade-off: code nobody reads can only rely on tests. How review capacity keeps up with generation speed is still being worked out, from individuals to organisations.</p>
+<p><strong>There is no foolproof security.</strong> As Chapter 2 explained, research on indirect prompt injection (2023) showed that external content an agent reads may contain malicious instructions; OWASP LLM01 lists prompt injection as the top risk and notes there is no foolproof defence. The more an agent can do, the more this matters.</p>
+<p><strong>Effects still need careful measurement.</strong> METR's 2025 RCT is a reminder that AI's real effect on experienced developers must be measured with objective data.</p>
+<h2>3. Five things you can do tomorrow</h2>
+<p>The book has covered many principles; here they are compressed into five actions. Each maps to an earlier chapter, and none depends on solving the open problems:</p>
+<p><strong>1. Write a project rule file</strong> (AGENTS.md / CLAUDE.md): stack, build and test commands, prohibitions, operations that require asking; commit it to Git. → Chapter 4, context engineering.</p>
+<p><strong>2. Make verification one command.</strong> Compile, type-check, lint and unit-test in one go, and have the agent run it after every change. → Chapter 3, &quot;the more autonomy, the more verification&quot;; Chapter 4, layered verification.</p>
+<p><strong>3. Write a spec for your next requirement.</strong> Let the agent ask clarifying questions, write constraints and assumptions separately, and make acceptance criteria convertible into tests. → Chapter 4, spec-driven development.</p>
+<p><strong>4. Measure a baseline.</strong> Record lead time from request to release and rework counts, not the share of AI-written code. → Chapter 4, Amdahl's Law and metrics.</p>
+<p><strong>5. Draw permission boundaries for agents.</strong> Read-only first, human confirmation for high-risk operations, and external content treated as data, not instructions. → Chapter 2, guardrails; Chapter 6, risk tiers.</p>
+<p>The five share one thing: <strong>none optimises the model; all build what surrounds it</strong>: context, verification, requirements, measurement and boundaries. That is the theme that recurs throughout the book, from Chapter 1's &quot;the model only knows what is in its context&quot;, to Chapter 3's &quot;the more autonomy, the more verification&quot;, to Chapter 4's &quot;the bottleneck is outside coding&quot;.</p>
+<h2>4. Common misconceptions</h2>
+<ul>
+<li><strong>&quot;Wait until the technology matures.&quot;</strong> The handbook explicitly warns against postponing necessary infrastructure while waiting for better models.</li>
+<li><strong>&quot;These problems must be solved before using AI.&quot;</strong> The open problems concern scale and high-risk stages; individuals and small teams can build their loops today.</li>
+<li><strong>&quot;Copy one company's approach.&quot;</strong> The handbook calls itself neither a mature methodology nor a standard answer; adapt to your own constraints.</li>
+</ul>

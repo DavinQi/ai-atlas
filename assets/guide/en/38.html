@@ -1,30 +1,40 @@
-<h1>Open Questions, and Five Things You Can Do Tomorrow</h1>
+<h1>Roles and Organisation: From Writing Code to Defining Problems and Designing Verification</h1>
 <blockquote>
 <p>Companion to diagram #38 · Chapter 6 &quot;How AI Reshapes the Dev Lifecycle&quot;</p>
 </blockquote>
-<p>This is the last article of the handbook, and it comes back to two questions: <strong>what still has no answer, and what can you do tomorrow?</strong> The open questions draw mainly on Alibaba's practice handbook; the &quot;five things&quot; are the speaker's suggestions based on the whole book.</p>
-<h2>1. Four unsolved problems</h2>
-<p>Per Alibaba's handbook:</p>
-<p><strong>1. Getting from writing code to reliable delivery still involves many technical problems.</strong> The last mile of delivery (build, integration testing, canary release, production verification, recovery) has tiny tolerance for error, and its demands on sandbox isolation, credential management, guardrails and observability far exceed current capabilities. The infrastructure's own engineering complexity may rival that of the agent application layer.</p>
-<p>What does that mean? Recall SWE-bench from Chapter 3: fix an issue in a prepared repository, judged by existing tests. Real delivery is much harder: you build the environment yourself, tests may be incomplete, releases go through process, and failures must be reversible. <strong>Benchmarks measure &quot;writing correct code&quot;; delivery requires &quot;getting code to users safely&quot;.</strong></p>
-<p><strong>2. Enterprise knowledge is not yet agent-friendly.</strong> Much organisational knowledge is scattered across documents, word of mouth and personal experience; even in a knowledge base it is often only &quot;findable by people&quot;, far from being efficiently retrieved, accurately understood and reliably cited by agents. The difference: people fill in context and judge whether a document is outdated; agents often don't.</p>
-<p><strong>3. Organisational design matters deeply and has no settled answer.</strong> New incentives are needed to unlock individual potential, while &quot;distillation anxiety&quot; is real (previous article).</p>
-<p><strong>4. The pace of technical change keeps disrupting current architectures.</strong> SWE-bench Verified scores jumped from under 30% to around 80% in two years. Architectures, tools and processes designed today may need rethinking within six months. One concrete example from Chapter 4: as models get stronger, some once-useful constraints and processes (such as heavyweight spec and TDD Skills) are turning into noise.</p>
-<h2>2. Two often-underestimated problems</h2>
-<p><strong>Review is the bottleneck.</strong> A developer on X reports that as generation gets faster, people no longer read every line; they rely on small MRs, end-to-end tests and focused review of core business logic. That itself is a trade-off: code nobody reads can only rely on tests. How review capacity keeps up with generation speed is still being worked out, from individuals to organisations.</p>
-<p><strong>There is no foolproof security.</strong> As Chapter 2 explained, research on indirect prompt injection (2023) showed that external content an agent reads may contain malicious instructions; OWASP LLM01 lists prompt injection as the top risk and notes there is no foolproof defence. The more an agent can do, the more this matters.</p>
-<p><strong>Effects still need careful measurement.</strong> METR's 2025 RCT is a reminder that AI's real effect on experienced developers must be measured with objective data.</p>
-<h2>3. Five things you can do tomorrow</h2>
-<p>The book has covered many principles; here they are compressed into five actions. Each maps to an earlier chapter, and none depends on solving the open problems:</p>
-<p><strong>1. Write a project rule file</strong> (AGENTS.md / CLAUDE.md): stack, build and test commands, prohibitions, operations that require asking; commit it to Git. → Chapter 4, context engineering.</p>
-<p><strong>2. Make verification one command.</strong> Compile, type-check, lint and unit-test in one go, and have the agent run it after every change. → Chapter 3, &quot;the more autonomy, the more verification&quot;; Chapter 4, layered verification.</p>
-<p><strong>3. Write a spec for your next requirement.</strong> Let the agent ask clarifying questions, write constraints and assumptions separately, and make acceptance criteria convertible into tests. → Chapter 4, spec-driven development.</p>
-<p><strong>4. Measure a baseline.</strong> Record lead time from request to release and rework counts, not the share of AI-written code. → Chapter 4, Amdahl's Law and metrics.</p>
-<p><strong>5. Draw permission boundaries for agents.</strong> Read-only first, human confirmation for high-risk operations, and external content treated as data, not instructions. → Chapter 2, guardrails; Chapter 6, risk tiers.</p>
-<p>The five share one thing: <strong>none optimises the model; all build what surrounds it</strong>: context, verification, requirements, measurement and boundaries. That is the theme that recurs throughout the book, from Chapter 1's &quot;the model only knows what is in its context&quot;, to Chapter 3's &quot;the more autonomy, the more verification&quot;, to Chapter 4's &quot;the bottleneck is outside coding&quot;.</p>
-<h2>4. Common misconceptions</h2>
+<p>As agents take on more coding and execution, engineers' value shifts. The Qwen team in Alibaba's practice handbook summarised three-plus months of change like this: the biggest change was not &quot;writing code faster&quot; but <strong>a shift in the centre of gravity of development work</strong>. Engineers need to put more effort into defining problems, organising context, designing boundaries, writing clearly and verifying results.</p>
+<p>This article works at two levels: how individual roles change, and why organisations must change.</p>
+<h2>1. Individuals: four shifts</h2>
+<p><strong>1. From writing code to defining problems.</strong> Chapter 4's spec-driven approach showed that the faster agents write, the more a misread requirement costs. Turning vague business intent into a complete, precise, verifiable spec has become one of the most important skills. Can &quot;let documents be shared publicly&quot; be broken down into explicit decisions about revocation, expiry, permissions and idempotency?</p>
+<p><strong>2. From implementing to designing verification.</strong> Deciding what counts as correct and how to prove it automatically. Chapter 3 concluded that &quot;the more autonomy, the more automated verification&quot;, so whoever designs verification effectively decides how far agents can be let off the leash.</p>
+<p><strong>3. From executing to reviewing and deciding.</strong> Reviewing agent output and making the call at key gates. Review is not reading code line by line; it is judging whether the approach makes business sense, whether the tests are enough to support delivery, and where the risks are.</p>
+<p><strong>4. From one stack to end-to-end ownership.</strong> The handbook notes that AI widens individual capability: teams move from &quot;several people dividing up one requirement&quot; towards &quot;one person owning a requirement end to end&quot;. That removes some communication cost but raises the bar for systems thinking and accountability. A back-end engineer can write front-end code with AI, but must be able to judge whether it is good.</p>
+<p>These new skills form a checklist: <strong>requirement clarification and spec writing, building context assets (rules, Skills, project maps), test and verification design, reviewing agent output, and risk judgement.</strong> They share one trait: they depend more on engineering experience, not less.</p>
+<h2>2. Organisations: the premises of classic laws are loosening</h2>
+<p>The handbook revisits several classic laws and the premises behind them:</p>
 <ul>
-<li><strong>&quot;Wait until the technology matures.&quot;</strong> The handbook explicitly warns against postponing necessary infrastructure while waiting for better models.</li>
-<li><strong>&quot;These problems must be solved before using AI.&quot;</strong> The open problems concern scale and high-risk stages; individuals and small teams can build their loops today.</li>
-<li><strong>&quot;Copy one company's approach.&quot;</strong> The handbook calls itself neither a mature methodology nor a standard answer; adapt to your own constraints.</li>
+<li><strong>Conway's Law</strong>: organisational structure determines system structure. The premise: communication within a team is far cheaper than across teams.</li>
+<li><strong>Brooks's Law</strong> (<em>The Mythical Man-Month</em>): adding people to a late project makes it later. The premise: communication cost grows fast with headcount; <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal">n</span></span></span></span> people have <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">n</span><span class="mopen">(</span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">1</span><span class="mclose">)</span><span class="mord">/2</span></span></span></span> communication paths, 10 for 5 people and 45 for 10.</li>
+<li><strong>Taylor's specialisation</strong>: the premise is that human attention is scarce, so specialisation raises efficiency.</li>
+</ul>
+<p>The handbook's assessment: AI has no communication decay, needs no incentives, doesn't tire and has tiny context-switching costs. <strong>Every design premised on human limitations is seeing its premise weaken.</strong> That doesn't make the laws wrong; it means the conditions they rely on change when part of the workforce is agents.</p>
+<h2>3. Organisational directions proposed by the handbook</h2>
+<p>These are the handbook authors' views and still exploratory:</p>
+<ul>
+<li><strong>Merging specialist roles</strong>: no strict separation of product, design, front end and back end, encouraging problem-focused &quot;super-individuals&quot;.</li>
+<li><strong>Small teams of 3–5</strong>: a clear owner, charging at a specific problem, possibly organised as a project. Back to Brooks: 5 people have only 10 communication paths.</li>
+<li><strong>A changed role for managers</strong>: motivation, coaching, hiring, exits and culture-building must still be done by people.</li>
+<li><strong>Divide and conquer</strong>: new businesses win on speed, established ones stress stability and safety, so the degree of management change should differ.</li>
+</ul>
+<h2>4. The real costs of transformation</h2>
+<p>The handbook doesn't dodge the hard parts, and this section is especially worth reading:</p>
+<p><strong>Evaluation must change too.</strong> If you say &quot;judgement is worth more than execution&quot; but KPIs still measure output volume, the transformation won't stick. People work the way they are measured.</p>
+<p><strong>&quot;Distillation anxiety&quot;.</strong> Every SOP an employee writes and every process they teach AI exports their knowledge into organisational assets. When employees realise &quot;the more I say, the faster I'm replaced&quot;, key knowledge gets hidden, yet building context depends on people voicing tacit conventions. It is a real dilemma: Chapter 4 calls context engineering the key to 1→N, but context engineering depends on people being willing to share. The handbook stresses making clear how the gains from AI will be shared and providing a real mechanism to &quot;catch&quot; people through the transition.</p>
+<p><strong>Entry-level roles.</strong> The handbook notes that entry-level roles face challenges, which in the long run could drain the pipeline of senior talent. Today's senior engineers grew up writing lots of basic code; if AI writes the basic code, where will newcomers gain experience? There is no answer yet.</p>
+<h2>5. Common misconceptions</h2>
+<ul>
+<li><strong>&quot;AI will put engineers out of work, so why learn?&quot;</strong> The weight shifts to defining problems and designing verification, which depend more on engineering experience.</li>
+<li><strong>&quot;Merging roles means layoffs.&quot;</strong> The handbook stresses making clear how AI gains are shared and offering a real transition path.</li>
+<li><strong>&quot;Organisational change can be copied.&quot;</strong> The handbook says plainly there is no standard answer yet.</li>
+<li><strong>&quot;If I feel faster, I am faster.&quot;</strong> METR's 2025 RCT reminds us that subjective impressions of personal productivity can contradict measurement (Chapter 3).</li>
 </ul>

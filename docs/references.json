@@ -216,72 +216,79 @@
       "title_en": "A 7-Day Roadmap: What Individuals and Small Teams Can Start This Week"
     },
     {
+      "article": "ch04/08-agent-maintenance-workflow",
+      "chapter": 4,
+      "diagram": 29,
+      "title_zh": "用 AI Agent 维护代码：小步、可验证、留痕的七步循环",
+      "title_en": "Maintaining Code with AI Agents: A Seven-Step Loop That Is Small, Verifiable and Traceable"
+    },
+    {
       "article": "ch05/01-why-multi-agent",
       "chapter": 5,
-      "diagram": 29,
+      "diagram": 30,
       "title_zh": "为什么多 Agent：用并行换时间，代价是 token 与审阅",
       "title_en": "Why Multi-Agent: Trade Parallelism for Time, Paid in Tokens and Review"
     },
     {
       "article": "ch05/02-orca-worktree",
       "chapter": 5,
-      "diagram": 30,
+      "diagram": 31,
       "title_zh": "Orca：一个任务一个 worktree，一个 worktree 一个 Agent",
       "title_en": "Orca: One Task per Worktree, One Agent per Worktree"
     },
     {
       "article": "ch05/03-race-vs-pipeline",
       "chapter": 5,
-      "diagram": 31,
+      "diagram": 32,
       "title_zh": "两种打法：赛跑挑最优，流水线分工协作",
       "title_en": "Two Approaches: Race for the Best, or Pipeline the Work"
     },
     {
       "article": "ch05/04-orchestration-layer",
       "chapter": 5,
-      "diagram": 32,
+      "diagram": 33,
       "title_zh": "编排层：一个 Agent 当项目经理，人只守关卡",
       "title_en": "The Orchestration Layer: One Agent as Project Manager, Humans Guard the Gates"
     },
     {
       "article": "ch05/05-humans-and-agents",
       "chapter": 5,
-      "diagram": 33,
+      "diagram": 34,
       "title_zh": "多人 + 多 Agent：人定义与审阅，数字员工执行",
       "title_en": "Many Humans + Many Agents: People Define and Review, Digital Employees Execute"
     },
     {
       "article": "ch06/01-traditional-cicd",
       "chapter": 6,
-      "diagram": 34,
+      "diagram": 35,
       "title_zh": "传统 CI/CD：流水线自动跑，判断仍在人",
       "title_en": "Traditional CI/CD: Pipelines Run Automatically, Judgment Stays with Humans"
     },
     {
       "article": "ch06/02-aiops-self-healing",
       "chapter": 6,
-      "diagram": 35,
+      "diagram": 36,
       "title_zh": "AIOps 自修复闭环：低风险自动，高风险过人",
       "title_en": "The AIOps Self-Healing Loop: Low Risk Runs Automatically, High Risk Goes to a Human"
     },
     {
       "article": "ch06/03-future-form",
       "chapter": 6,
-      "diagram": 36,
+      "diagram": 37,
       "title_zh": "未来形态：人定目标与验收，Agent 团队交付",
       "title_en": "The Future Form: Humans Set Goals and Accept Results, Agent Teams Deliver"
     },
     {
       "article": "ch06/04-roles-organization",
       "chapter": 6,
-      "diagram": 37,
+      "diagram": 38,
       "title_zh": "角色与组织：从写代码，到定义问题与设计验证",
       "title_en": "Roles and Organization: From Writing Code to Defining Problems and Designing Verification"
     },
     {
       "article": "ch06/05-open-questions",
       "chapter": 6,
-      "diagram": 38,
+      "diagram": 39,
       "title_zh": "未解问题，和明天就能做的 5 件事",
       "title_en": "Open Questions, and 5 Things You Can Do Tomorrow"
     }
@@ -1296,12 +1303,12 @@
         {
           "chapter": 5,
           "article": "ch05/03-race-vs-pipeline",
-          "diagram": 31
+          "diagram": 32
         },
         {
           "chapter": 5,
           "article": "ch05/04-orchestration-layer",
-          "diagram": 32
+          "diagram": 33
         }
       ],
       "core": {
@@ -1400,7 +1407,7 @@
         {
           "chapter": 6,
           "article": "ch06/02-aiops-self-healing",
-          "diagram": 35
+          "diagram": 36
         }
       ],
       "core": {
@@ -1444,7 +1451,7 @@
         {
           "chapter": 6,
           "article": "ch06/03-future-form",
-          "diagram": 36
+          "diagram": 37
         }
       ],
       "core": {
@@ -1592,12 +1599,12 @@
         {
           "chapter": 5,
           "article": "ch05/05-humans-and-agents",
-          "diagram": 33
+          "diagram": 34
         },
         {
           "chapter": 6,
           "article": "ch06/02-aiops-self-healing",
-          "diagram": 35
+          "diagram": 36
         }
       ],
       "core": {
@@ -1719,12 +1726,12 @@
         {
           "chapter": 5,
           "article": "ch05/01-why-multi-agent",
-          "diagram": 29
+          "diagram": 30
         },
         {
           "chapter": 5,
           "article": "ch05/04-orchestration-layer",
-          "diagram": 32
+          "diagram": 33
         }
       ]
     },
@@ -1744,7 +1751,7 @@
         {
           "chapter": 5,
           "article": "ch05/01-why-multi-agent",
-          "diagram": 29
+          "diagram": 30
         }
       ]
     },
@@ -1769,22 +1776,22 @@
         {
           "chapter": 5,
           "article": "ch05/01-why-multi-agent",
-          "diagram": 29
+          "diagram": 30
         },
         {
           "chapter": 5,
           "article": "ch05/04-orchestration-layer",
-          "diagram": 32
+          "diagram": 33
         },
         {
           "chapter": 6,
           "article": "ch06/02-aiops-self-healing",
-          "diagram": 35
+          "diagram": 36
         },
         {
           "chapter": 6,
           "article": "ch06/03-future-form",
-          "diagram": 36
+          "diagram": 37
         }
       ],
       "core": {
@@ -1808,12 +1815,12 @@
         {
           "chapter": 5,
           "article": "ch05/01-why-multi-agent",
-          "diagram": 29
+          "diagram": 30
         },
         {
           "chapter": 5,
           "article": "ch05/03-race-vs-pipeline",
-          "diagram": 31
+          "diagram": 32
         }
       ]
     },
@@ -1833,12 +1840,12 @@
         {
           "chapter": 5,
           "article": "ch05/01-why-multi-agent",
-          "diagram": 29
+          "diagram": 30
         },
         {
           "chapter": 5,
           "article": "ch05/03-race-vs-pipeline",
-          "diagram": 31
+          "diagram": 32
         }
       ],
       "core": {
@@ -1882,17 +1889,17 @@
         {
           "chapter": 5,
           "article": "ch05/05-humans-and-agents",
-          "diagram": 33
+          "diagram": 34
         },
         {
           "chapter": 6,
           "article": "ch06/02-aiops-self-healing",
-          "diagram": 35
+          "diagram": 36
         },
         {
           "chapter": 6,
           "article": "ch06/05-open-questions",
-          "diagram": 38
+          "diagram": 39
         }
       ],
       "core": {
@@ -1916,7 +1923,7 @@
         {
           "chapter": 6,
           "article": "ch06/05-open-questions",
-          "diagram": 38
+          "diagram": 39
         }
       ]
     },
@@ -1991,7 +1998,7 @@
         {
           "chapter": 5,
           "article": "ch05/03-race-vs-pipeline",
-          "diagram": 31
+          "diagram": 32
         }
       ],
       "core": {
@@ -2099,7 +2106,7 @@
         {
           "chapter": 6,
           "article": "ch06/03-future-form",
-          "diagram": 36
+          "diagram": 37
         }
       ]
     },
@@ -2159,32 +2166,32 @@
         {
           "chapter": 5,
           "article": "ch05/05-humans-and-agents",
-          "diagram": 33
-        },
-        {
-          "chapter": 6,
-          "article": "ch06/01-traditional-cicd",
           "diagram": 34
         },
         {
           "chapter": 6,
-          "article": "ch06/02-aiops-self-healing",
+          "article": "ch06/01-traditional-cicd",
           "diagram": 35
         },
         {
           "chapter": 6,
-          "article": "ch06/03-future-form",
+          "article": "ch06/02-aiops-self-healing",
           "diagram": 36
         },
         {
           "chapter": 6,
-          "article": "ch06/04-roles-organization",
+          "article": "ch06/03-future-form",
           "diagram": 37
         },
         {
           "chapter": 6,
-          "article": "ch06/05-open-questions",
+          "article": "ch06/04-roles-organization",
           "diagram": 38
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/05-open-questions",
+          "diagram": 39
         }
       ],
       "core": {
@@ -2218,7 +2225,7 @@
         {
           "chapter": 6,
           "article": "ch06/05-open-questions",
-          "diagram": 38
+          "diagram": 39
         }
       ]
     },
@@ -2238,7 +2245,7 @@
         {
           "chapter": 5,
           "article": "ch05/02-orca-worktree",
-          "diagram": 30
+          "diagram": 31
         }
       ]
     },
@@ -2288,12 +2295,12 @@
         {
           "chapter": 6,
           "article": "ch06/04-roles-organization",
-          "diagram": 37
+          "diagram": 38
         },
         {
           "chapter": 6,
           "article": "ch06/05-open-questions",
-          "diagram": 38
+          "diagram": 39
         }
       ],
       "core": {
@@ -2341,7 +2348,7 @@
         {
           "chapter": 6,
           "article": "ch06/03-future-form",
-          "diagram": 36
+          "diagram": 37
         }
       ]
     },
@@ -2376,7 +2383,7 @@
         {
           "chapter": 5,
           "article": "ch05/04-orchestration-layer",
-          "diagram": 32
+          "diagram": 33
         }
       ]
     },
@@ -2396,7 +2403,7 @@
         {
           "chapter": 5,
           "article": "ch05/04-orchestration-layer",
-          "diagram": 32
+          "diagram": 33
         }
       ]
     },
@@ -2416,7 +2423,7 @@
         {
           "chapter": 5,
           "article": "ch05/04-orchestration-layer",
-          "diagram": 32
+          "diagram": 33
         }
       ]
     },
@@ -2467,17 +2474,17 @@
         {
           "chapter": 5,
           "article": "ch05/03-race-vs-pipeline",
-          "diagram": 31
+          "diagram": 32
         },
         {
           "chapter": 5,
           "article": "ch05/05-humans-and-agents",
-          "diagram": 33
+          "diagram": 34
         },
         {
           "chapter": 6,
           "article": "ch06/05-open-questions",
-          "diagram": 38
+          "diagram": 39
         }
       ]
     },
@@ -2522,22 +2529,22 @@
         {
           "chapter": 5,
           "article": "ch05/01-why-multi-agent",
-          "diagram": 29
-        },
-        {
-          "chapter": 5,
-          "article": "ch05/02-orca-worktree",
           "diagram": 30
         },
         {
           "chapter": 5,
-          "article": "ch05/03-race-vs-pipeline",
+          "article": "ch05/02-orca-worktree",
           "diagram": 31
         },
         {
           "chapter": 5,
-          "article": "ch05/04-orchestration-layer",
+          "article": "ch05/03-race-vs-pipeline",
           "diagram": 32
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/04-orchestration-layer",
+          "diagram": 33
         }
       ]
     },
@@ -2557,12 +2564,12 @@
         {
           "chapter": 6,
           "article": "ch06/01-traditional-cicd",
-          "diagram": 34
+          "diagram": 35
         },
         {
           "chapter": 6,
           "article": "ch06/02-aiops-self-healing",
-          "diagram": 35
+          "diagram": 36
         }
       ],
       "core": {
@@ -2586,7 +2593,7 @@
         {
           "chapter": 6,
           "article": "ch06/01-traditional-cicd",
-          "diagram": 34
+          "diagram": 35
         }
       ],
       "core": {
@@ -2605,12 +2612,12 @@
         {
           "chapter": 5,
           "article": "ch05/02-orca-worktree",
-          "diagram": 30
+          "diagram": 31
         },
         {
           "chapter": 5,
           "article": "ch05/03-race-vs-pipeline",
-          "diagram": 31
+          "diagram": 32
         }
       ],
       "core": {
@@ -2629,7 +2636,7 @@
         {
           "chapter": 5,
           "article": "ch05/02-orca-worktree",
-          "diagram": 30
+          "diagram": 31
         }
       ],
       "core": {
@@ -2648,7 +2655,7 @@
         {
           "chapter": 5,
           "article": "ch05/02-orca-worktree",
-          "diagram": 30
+          "diagram": 31
         }
       ]
     },
@@ -2663,7 +2670,7 @@
         {
           "chapter": 5,
           "article": "ch05/04-orchestration-layer",
-          "diagram": 32
+          "diagram": 33
         }
       ]
     },
@@ -2678,7 +2685,7 @@
         {
           "chapter": 6,
           "article": "ch06/01-traditional-cicd",
-          "diagram": 34
+          "diagram": 35
         }
       ]
     },
@@ -2693,12 +2700,12 @@
         {
           "chapter": 6,
           "article": "ch06/01-traditional-cicd",
-          "diagram": 34
+          "diagram": 35
         },
         {
           "chapter": 6,
           "article": "ch06/02-aiops-self-healing",
-          "diagram": 35
+          "diagram": 36
         }
       ]
     },
@@ -2713,7 +2720,7 @@
         {
           "chapter": 6,
           "article": "ch06/01-traditional-cicd",
-          "diagram": 34
+          "diagram": 35
         }
       ],
       "core": {
@@ -2732,7 +2739,7 @@
         {
           "chapter": 6,
           "article": "ch06/01-traditional-cicd",
-          "diagram": 34
+          "diagram": 35
         }
       ],
       "core": {
@@ -2904,6 +2911,158 @@
           "diagram": 18
         }
       ]
+    },
+    {
+      "id": "R122",
+      "title": "Best practices for Claude Code",
+      "authors": "Anthropic",
+      "year": null,
+      "url": "https://code.claude.com/docs/en/best-practices",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R123",
+      "title": "Claude Code commands reference",
+      "authors": "Anthropic",
+      "year": null,
+      "url": "https://code.claude.com/docs/en/commands",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R124",
+      "title": "Claude Code CLI reference",
+      "authors": "Anthropic",
+      "year": null,
+      "url": "https://code.claude.com/docs/en/cli-reference",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R125",
+      "title": "Codex CLI slash commands and command-line options",
+      "authors": "OpenAI",
+      "year": null,
+      "url": "https://developers.openai.com/codex/cli/slash-commands",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R126",
+      "title": "Cursor rules and AGENTS.md",
+      "authors": "Cursor",
+      "year": null,
+      "url": "https://cursor.com/help/customization/rules",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R127",
+      "title": "Cursor Plan Mode",
+      "authors": "Cursor",
+      "year": null,
+      "url": "https://cursor.com/docs/agent/plan-mode",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R128",
+      "title": "Adding repository custom instructions for GitHub Copilot",
+      "authors": "GitHub",
+      "year": null,
+      "url": "https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R129",
+      "title": "AGENTS.md: a simple, open format for guiding coding agents",
+      "authors": "agentsmd",
+      "year": null,
+      "url": "https://github.com/agentsmd/agents.md",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R130",
+      "title": "Tips for using Claude Code, sourced from the Claude Code team",
+      "authors": "Boris Cherny",
+      "year": 2026,
+      "url": "https://x.com/bcherny/status/2017742741636321619",
+      "type": "X post",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ],
+      "date": "2026-01-31"
+    },
+    {
+      "id": "R131",
+      "title": "A few random notes from claude coding quite a bit last few weeks",
+      "authors": "Andrej Karpathy",
+      "year": 2026,
+      "url": "https://x.com/karpathy/status/2015883857489522876",
+      "type": "X post",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ],
+      "date": "2026-01-26"
     }
   ]
 }
