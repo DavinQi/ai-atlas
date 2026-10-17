@@ -775,3 +775,206 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <li><strong>When it fails.</strong> Implementation spiralling → do not keep prompting; revert to the plan, sharpen it, re-run. It quietly edits tests → diff against the Step-3 commit and send back on sight.</li>
 <li><strong>Done when:</strong> the plan file is still in the repo, the tests-before-implementation commits both exist, everything is green, and the PR is reviewable by a human in one sitting.</li>
 </ol>
+<h2>31. One complete teaching run: from requirements to production — adding &quot;invite a member&quot;</h2>
+<p>Section 30 broke individual cases into drills. This chapter does one thing only: <strong>take one real full-stack requirement from a one-line request all the way to production, observation and rollback readiness, without stopping in the middle.</strong> The example: adding team-member invitations to an existing multi-tenant SaaS. An admin enters an email address and gets an invite link; the invitee opens it, signs in, accepts, and lands in the same team as a regular member. This is not a toy feature — it touches a database migration, authorisation, token security, an API contract, frontend state, tenant isolation and release rollback, which is exactly where agents fail.</p>
+<p>Fix the assumptions first, or you will trip over mismatches halfway: your project already has users, teams, sessions, and admin/member roles; you have a local environment that runs the tests; production releases have some rollback path, and a feature flag (an environment variable counts) is available. This run uses one agent, one branch, tasks in order — no parallel stations. The first time through the full chain, a single thread teaches you more about cause and effect than three worktrees. Put every artefact under <code>docs/features/team-invitations/</code>: <code>SPEC.md</code> (requirements and contract), <code>PLAN.md</code> (task plan), <code>PR.md</code> (PR description draft). Replace placeholders like <code>&lt;test&gt;</code>, <code>&lt;dev&gt;</code>, <code>&lt;deploy ...&gt;</code> with the commands already recorded in your <code>AGENTS.md</code>; if they are not there, add them first (§11), then start.</p>
+<p>Three rules govern the whole run. First, no coding session opens before <code>SPEC.md</code> is frozen. Second, one task per fresh session (or <code>/clear</code> first), carrying only the contract section that task needs. Third, &quot;done&quot; always means command output or on-screen evidence — never &quot;should be fine&quot;.</p>
+<h3>31.1 Requirements analysis: turn one sentence into acceptance criteria</h3>
+<p><strong>What you do:</strong> hand the agent the raw request, but let it only ask and restate — no code. Open a fresh session (read-only/plan mode on, if your tool has it) and paste:</p>
+<pre><code class="language-text">Do not write code, and do not read anything outside this repo. The raw request is:
+&quot;Admins can invite new members to the team.&quot;
+Output four parts: 1) your restatement in one short paragraph — who does what, in which situation;
+2) acceptance criteria in Given/When/Then form, covering the happy path, no permission, duplicate invite,
+expired link, already-used link, and the invitee signing in with a different email;
+3) open questions, split into &quot;blocks starting&quot; and &quot;can proceed on a default&quot;;
+4) explicit non-goals for this version. Do not answer the open questions for me.
+</code></pre>
+<p><strong>Verification signal:</strong> its questions should at least cover who may invite (admins only?), how the invite is delivered (email or link), expiry, revocation, duplicate invites for the same email, and what happens when the invitee has no account yet. If it asks nothing and jumps to an implementation sketch, it is skipping a step — send it back.</p>
+<p><strong>Decisions you make (the teaching defaults; change them for your product, but write them down):</strong> only team admins may invite and revoke; v1 sends no real email — it produces a copyable invite link; links expire after 72 hours and work exactly once; per team and email only one pending (unexpired, unaccepted) invitation may exist, and a duplicate submission returns a conflict rather than quietly issuing another; accepting requires being signed in with the invited email address; the granted role is plain member, never admin-at-invite-time.</p>
+<p><strong>When it fails:</strong> the agent answers its own questions → reply &quot;list the questions only, leave the decision column empty.&quot; Acceptance criteria degenerate into &quot;the feature works&quot; → require Given/When/Then with a named actor and a visible outcome for every line.</p>
+<p><strong>Done when:</strong> the decisions live in <code>SPEC.md</code> under Scope / Acceptance criteria / Non-goals / Decisions made, you have read every line, and nothing says &quot;depending on the situation&quot;. This step produces one document and nothing else — <code>git status</code> should show no other change.</p>
+<h3>31.2 Codebase survey: a read-only map, no drive-by edits</h3>
+<p><strong>What you do:</strong> fresh session, still read-only, scope fenced in:</p>
+<pre><code class="language-text">Read-only survey; do not modify any file. Goal: map the existing code for a &quot;team member invitations&quot; feature.
+Output a list with real file paths only:
+1) where teams and membership are defined (model/table/query entry points);
+2) how &quot;the current user's team&quot; is obtained from the session;
+3) where admin permission is enforced — name one existing endpoint as the example;
+4) where migrations live and the exact command that runs them;
+5) whether email sending exists (entry file, if any);
+6) where team-settings pages and routes live in the frontend;
+7) how backend and frontend tests run, naming one or two existing test files as examples.
+Every item must cite a file you actually opened; write &quot;not found&quot; instead of guessing.
+</code></pre>
+<p>Then spot-check it yourself: open any three of the paths it named. Cross-check repo state with:</p>
+<pre><code class="language-bash">git status --short
+git log --oneline -5
+</code></pre>
+<p><strong>Verification signal:</strong> every claim carries an existing path; the permission item names a concrete endpoint; the test commands match what <code>AGENTS.md</code> (or the README) says.</p>
+<p><strong>When it fails:</strong> a path does not exist → that item becomes &quot;not found&quot; and it searches again; guesses are deleted, not kept. It starts proposing a membership-module refactor → reply &quot;survey only; refactors are out of scope for this requirement.&quot;</p>
+<p><strong>Done when:</strong> the list is transcribed into a &quot;Current-state map&quot; section of <code>SPEC.md</code> and committed. You should now be able to answer, without the agent: where the new table goes, which permission code gets reused, and under which route the settings page lives.</p>
+<h3>31.3 Design and contract: pin down data, endpoints and the state machine in one pass</h3>
+<p><strong>What you do:</strong> have the agent draft the design from the §31.2 map; you review and freeze it:</p>
+<pre><code class="language-text">Read the scope and current-state map in SPEC.md. Draft the technical design as a new section of SPEC.md; no code:
+1) Data model: every field of an invitations table — name, type intent, nullability, indexes, unique constraints — and why;
+2) API contract: for each endpoint — method, path, who may call it, request fields, success response,
+and which status code covers duplicate, expired, forbidden and email-mismatch;
+3) Invitation states and transitions (pending/accepted/revoked/expired — stored or derived, and what decides each);
+4) Security decisions: how the link token is generated, what the server stores, what must never appear in logs;
+5) Frontend pages and states to add (form, pending list, and the accept page's success/expired/used/email-mismatch screens);
+6) The three riskiest spots, each with the test or check that covers it.
+Flag anything that conflicts with the current-state map and ask me; do not route around it silently.
+</code></pre>
+<p><strong>The teaching contract (rename for your project, but keep the elements):</strong> an <code>invitations</code> table with at least <code>id</code>, <code>team_id</code>, <code>email</code> (stored lower-cased/normalised), <code>role</code>, <code>token_hash</code>, <code>expires_at</code>, <code>accepted_at</code>, <code>revoked_at</code>, <code>created_by</code>, <code>created_at</code>; endpoints <code>POST /api/teams/&lt;teamId&gt;/invitations</code> (admin only, 201 on success, 409 for a duplicate pending invite), <code>GET /api/teams/&lt;teamId&gt;/invitations</code> (pending only), <code>DELETE /api/teams/&lt;teamId&gt;/invitations/&lt;id&gt;</code> (revoke), <code>GET /api/invitations/&lt;token&gt;</code> (preview: team name and whether it is still usable, without over-specifying why not, to avoid probing), <code>POST /api/invitations/&lt;token&gt;/accept</code> (signed in, email must match; success makes the user a plain member of that team). Tokens come from the project's existing secure-random capability; the server stores only a hash; the raw token appears only in the creation response and the link. Every endpoint keyed by <code>teamId</code> must verify both team membership and the admin role — being signed in is not enough.</p>
+<p><strong>Verification signal:</strong> every endpoint names its error codes; the state section answers &quot;what does an expired-and-revoked invite show when opened?&quot;; the security section literally says &quot;hash only, raw token never in logs&quot;.</p>
+<p><strong>When it fails:</strong> it proposes skipping the unique constraint (&quot;the app layer can check&quot;) → make it write down what happens when two admins invite the same email concurrently; if it cannot, add the database-level constraint in your dialect. It wants to infer <code>teamId</code> from the session and drop it from paths → keep the path parameter and spell out the checks, so the contract stays testable from outside.</p>
+<p><strong>Done when:</strong> you have reviewed every line, written &quot;Contract frozen + date&quot; at the top of <code>SPEC.md</code>, and committed it alone. After freezing, contract changes go SPEC-first, code second — never code first.</p>
+<h3>31.4 Task split and plan: separate the serial spine from the parallel branches</h3>
+<p><strong>What you do:</strong> have the agent turn the design into <code>PLAN.md</code>. Every task card has the same five parts: goal, allowed paths, prohibitions, acceptance commands, delivery format. For this feature the split is:</p>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Content</th>
+<th>Depends on</th>
+<th>Parallel?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1</td>
+<td>Migration + invitation model and repository layer</td>
+<td>—</td>
+<td>spine start</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>Backend: create/list/revoke endpoints</td>
+<td>T1, frozen contract</td>
+<td>serial</td>
+</tr>
+<tr>
+<td>T3</td>
+<td>Backend: preview/accept endpoints + token and permission test coverage</td>
+<td>T2</td>
+<td>serial</td>
+</tr>
+<tr>
+<td>T4</td>
+<td>Frontend settings page: invite form, pending list, revoke</td>
+<td>frozen contract only</td>
+<td>can parallel T2/T3 (against sample responses)</td>
+</tr>
+<tr>
+<td>T5</td>
+<td>Frontend accept page: the four states</td>
+<td>frozen contract only</td>
+<td>can parallel T2/T3</td>
+</tr>
+<tr>
+<td>T6</td>
+<td>End-to-end integration and e2e cases</td>
+<td>T2–T5</td>
+<td>closing</td>
+</tr>
+<tr>
+<td>T7</td>
+<td>Feature flag, docs, release checklist</td>
+<td>prepared alongside T6</td>
+<td>closing</td>
+</tr>
+</tbody>
+</table>
+<p>Add one hard line to the prompt: &quot;For each task state its prerequisites, expected changed paths, the acceptance command I will run, and which step to fall back to when it fails.&quot; Run T1→T7 in order the first time you do this kind of feature; the T4/T5 parallelism goes in the plan but stays unused until your second similar run.</p>
+<p><strong>Verification signal:</strong> every task has an executable acceptance command rather than &quot;tested OK&quot;; the dependency graph yields one visible spine, T1→T2→T3→T6.</p>
+<p><strong>When it fails:</strong> it produces one giant &quot;implement invitations&quot; card → send back and re-split along the table. A card lacks prohibited paths → add concrete red lines such as &quot;do not touch the auth/session module; do not change the response shape of existing member endpoints.&quot;</p>
+<p><strong>Done when:</strong> <code>PLAN.md</code> is committed and you can point at the table and say which step blocks which. Then branch:</p>
+<pre><code class="language-bash">git switch -c feat/team-invitations
+</code></pre>
+<h3>31.5 Implementation: one task per session, red before green</h3>
+<p><strong>What you do:</strong> a fresh session per task, carrying only the relevant <code>SPEC.md</code> section plus that task card. The T2 template (swap section and commands for the others):</p>
+<pre><code class="language-text">Read the API contract section of docs/features/team-invitations/SPEC.md and task T2 in PLAN.md.
+This session does T2 only, in this exact order: 1) write the endpoint tests from the contract first
+(admin can create; non-admin 403; plain member 403; duplicate pending invite 409; foreign teamId 403;
+response contains the raw token while the database stores only its hash), run &lt;test&gt; and show me the red output;
+2) then write the minimal implementation to green; 3) do not edit SPEC, do not touch prohibited paths;
+4) finish with: changed-file list, commands you ran with results, and any contract point you did not
+implement or are unsure about (write &quot;none&quot; if so).
+</code></pre>
+<p>T1 carries one extra demand: the migration must actually run up and then back down on your local dev database (your <code>&lt;migrate&gt;</code> and rollback commands), with both outputs shown; a migration that cannot roll back does not proceed. T3's test list names: expired token rejected, accepted token rejected on second use, revoked token rejected, signed-in email mismatch rejected, and acceptance actually persisting membership with the plain-member role. T4/T5 build against the contract's sample responses, all four accept-page states included — error states are not &quot;later, when the backend is ready&quot;.</p>
+<p>After each task you re-run its acceptance commands with your own hands and commit; one commit per task, message naming the task.</p>
+<p><strong>Verification signal:</strong> every task's transcript shows red before green; <code>git diff --stat</code> stays inside the card's allowed paths; the raw token never appears in logs, test snapshots or committed content (search the diff for a sample token string to prove it).</p>
+<p><strong>When it fails:</strong> it edits tests to fit the implementation → reject with the contract text; tests are frozen (the §30.12 commit-the-tests-first move). It wanders into the auth module → point at the out-of-bounds file in <code>git diff</code>, revert just that file, redo. Two correction rounds on the same spot without progress → stop, throw the session away, restart smaller with the failing output in the prompt (§5 style: one failing case only).</p>
+<p><strong>Done when:</strong> T1–T5 are each green on their own acceptance, one commit each, and you can say in one sentence what every commit changed.</p>
+<h3>31.6 Self-test and integration: tick a matrix, not a feeling</h3>
+<p><strong>What you do:</strong> start the local stack with <code>&lt;dev&gt;</code>; have the agent generate a test matrix from the contract (scenario × entry point × expected status/screen × actual result), then execute it row by row. Drive the backend with curl (substitute your <code>&lt;port&gt;</code>, <code>&lt;admin-token&gt;</code>, <code>&lt;member-token&gt;</code>):</p>
+<pre><code class="language-bash"># Admin creates an invite (expect 201; the response carries inviteUrl — the only place the raw token is ever visible)
+curl -i -X POST http://localhost:&lt;port&gt;/api/teams/&lt;teamId&gt;/invitations \
+  -H &quot;Authorization: Bearer &lt;admin-token&gt;&quot; -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;email&quot;:&quot;new@example.com&quot;,&quot;role&quot;:&quot;member&quot;}'
+# Same email again (expect 409)
+# As a plain member (expect 403); with another team's teamId (expect 403)
+# List shows pending only; after revoke, accept must fail
+curl -s http://localhost:&lt;port&gt;/api/invitations/&lt;token&gt;   # preview: usable signed-out, returns team name + validity only
+</code></pre>
+<p>Walk the frontend journey by hand: admin sends an invite from the settings page → copy the link → open it in a private window → signed-out redirects to login → sign in with the invited email and accept → land in the team with yourself on the member list → reopen the same link and see &quot;already used&quot;. Then have the agent add e2e cases for that main path plus one expired-link case, and run <code>&lt;e2e&gt;</code>.</p>
+<p><strong>Verification signal:</strong> every matrix row holds an actual result (status code or screenshot), not just a tick; the stored invitation row in your database shows <code>token_hash</code> and no raw token (one look in your DB console suffices).</p>
+<p><strong>When it fails:</strong> layers disagree → go back to <code>SPEC.md</code> and decide who deviated; never let both sides bend halfway. A flaky e2e → the agent must first classify timing-vs-real-defect; re-running until green is forbidden.</p>
+<p><strong>Done when:</strong> the matrix is fully evidenced and <code>&lt;test&gt;</code>, <code>&lt;typecheck&gt;</code>, <code>&lt;lint&gt;</code>, <code>&lt;build&gt;</code>, <code>&lt;e2e&gt;</code> are all green. Paste the matrix into the <code>PR.md</code> draft.</p>
+<h3>31.7 Code review: a fresh session reads, you decide</h3>
+<p><strong>What you do:</strong> open a brand-new session (this matters — never let the writing session review itself), read-only, and paste:</p>
+<pre><code class="language-text">Read-only review; do not edit files. Scope: the whole git diff main...HEAD, checked against
+docs/features/team-invitations/SPEC.md. Output findings one by one: severity (blocking/suggestion),
+file and line, which contract section or security principle it violates, and a suggested fix.
+Stare at five things: 1) every query keyed by teamId verifies team membership AND the admin role;
+2) tokens are hash-only and never reach logs, error messages or test snapshots;
+3) emails are normalised (case) before comparison and uniqueness checks;
+4) accept is guarded by database state against concurrency and second use, not by check-then-write alone;
+5) the migration rolls back cleanly. Items with no problem still get &quot;checked, clean&quot; — no silent skips.
+</code></pre>
+<p>First run <code>git diff --stat</code> and <code>git diff main...HEAD</code> yourself so you have your own picture, then adjudicate its list item by item: fix, or record as known debt with a reason.</p>
+<p><strong>Verification signal:</strong> the list covers all five named concerns with a conclusion each; every &quot;blocking&quot; finding points at a line you can find in the diff.</p>
+<p><strong>When it fails:</strong> the review is all style, none of the five concerns mentioned → resend the five items numbered and demand a verdict per item. It flags something the contract explicitly allows → adjudicate by quoting the contract, and record the adjudication in <code>PR.md</code> so the PR does not re-litigate it.</p>
+<p><strong>Done when:</strong> blocking items are zero or fixed with §31.6's full command set re-run green; suggestions are either done or recorded as debt in <code>PR.md</code>.</p>
+<h3>31.8 Commits and PR: understandable in ten minutes</h3>
+<p><strong>What you do:</strong> first confirm the history is one-commit-per-task with no debug output or unrelated formatting mixed in:</p>
+<pre><code class="language-bash">git status --short
+git log --oneline main..HEAD
+</code></pre>
+<p>Tidy any <code>wip</code> commits now (your own unpushed branch only). Then have the agent <strong>draft</strong> <code>PR.md</code> — it writes, you edit. It must contain: the one-line requirement, a link to the contract (<code>SPEC.md</code>), the migration and its rollback, test evidence (the §31.6 matrix and command outputs), the feature-flag name and default, what to watch after release (pointing at §31.10), and the known-debt list. Open the PR and watch the gates:</p>
+<pre><code class="language-bash">gh pr create --title &quot;feat: team member invitations (link-based)&quot; --body-file docs/features/team-invitations/PR.md
+gh pr checks
+</code></pre>
+<p><strong>Verification signal:</strong> CI fully green; the PR description answers &quot;how do we roll back&quot; and &quot;what was tested&quot; without opening the code; the diff contains no <code>.env</code>, sample tokens or temp files.</p>
+<p><strong>When it fails:</strong> CI red on an unrelated legacy test → attach baseline evidence (main is red the same way) and notify its owner; do not &quot;fix it quickly&quot; inside this PR. The agent's description oversells (&quot;fully tested&quot;) → rewrite to concrete commands and results; reviewers trust evidence, not adjectives.</p>
+<p><strong>Done when:</strong> the PR is reviewable, gates are green, and a colleague can restate from the description alone what this change does, how it was verified, and how it is undone.</p>
+<h3>31.9 Merge and release: flag first, widen gradually</h3>
+<p><strong>What you do:</strong> merge through your normal path (gates and approvals complete). Release in &quot;ship it dark, then open gradually&quot; order, substituting your own release commands:</p>
+<ol>
+<li>Merge to main; confirm main's CI is green.</li>
+<li>Deploy to staging (<code>&lt;deploy staging&gt;</code>), flag on, and smoke the §31.6 journey there: invite → accept → member appears → revoke a pending invite.</li>
+<li>Deploy to production (<code>&lt;deploy production&gt;</code>) with the flag still off; confirm the migration ran with the release and every old feature is untouched (this step proves &quot;shipping a new table harms nothing old&quot;).</li>
+<li>Enable the flag for your own team (or an internal tenant) only, and run the real flow with a test account end to end.</li>
+<li>When clean, enable for everyone, recording each timestamp and flag state in <code>PR.md</code> or the release notes — during an incident, this timeline is gold.</li>
+</ol>
+<p><strong>Verification signal:</strong> each step has evidence: staging smoke results, production version, migration success, the internal account's acceptance landing with correct membership.</p>
+<p><strong>When it fails:</strong> staging smoke red → do not &quot;see how production behaves&quot;; go back to §31.6 and localise. Production up but the migration missing or wrong → invoke the §31.10 rollback triggers immediately: flag off first, no hand-editing the production schema.</p>
+<p><strong>Done when:</strong> after full enablement, one brand-new email address completes invite → accept, with correct member permissions (can see team content, cannot reach admin actions), and the screenshot or record is in the release notes.</p>
+<h3>31.10 Post-release observation and rollback readiness: write the triggers before watching the dashboard</h3>
+<p><strong>What you do:</strong> write the observation items and rollback lines into <code>PR.md</code> <em>before</em> release, not during an incident. Two windows: watch closely for the first 30 minutes after full enablement, then check three times over 24 hours. Watch: invitation-creation successes and failures, any 409 spike (scripted abuse or a double-submitting frontend), accept failures by reason (expired/email-mismatch dominating is a user-education signal; 500s are yours), any surge in cross-team 403s, and — critically — any invite link or token string appearing in error logs (that is a security incident, not a bug). When the agent helps analyse, give it exported log text only, read-only; you issue the commands.</p>
+<p><strong>Rollback triggers (any one fires → execute, no meeting):</strong> accept returning 500 in more than one case within 10 minutes; any cross-tenant data visible; a raw token found in logs; the invitation feature breaking sign-in, member lists or other old features.</p>
+<p><strong>Rollback sequence:</strong> flag off first (entry points vanish, endpoints refuse) → roll back to the previous release (your <code>&lt;rollback&gt;</code> command) → leave the <code>invitations</code> table exactly as it is (the rolled-back app does not know it, which is fine; the data stays for forensics and for the fixed re-release) → write the trigger and timestamps into the release record. Note what is being rolled back: the application, not the data. That exit exists because §31.3 designed the migration as &quot;new table only, no old table touched&quot;.</p>
+<p><strong>Verification signal:</strong> the observation record holds real numbers (created how many, succeeded how many, failure breakdown), not &quot;looks normal&quot;; the flag-off drill has actually been performed once, proving the settings entry disappears and the endpoints refuse.</p>
+<p><strong>When it fails:</strong> volume too small for ratios → read absolute counts and per-case logs; percentages lie at small N. Flag off but the endpoints still answer → the flag was only checked in the frontend; after rollback, put &quot;the flag must be enforced at the endpoint layer&quot; on the retrospective list.</p>
+<p><strong>Done when:</strong> 24 hours of observation are recorded, the rollback path is proven (at least the flag drill), and no failure sample is unexplained. Only here is the requirement &quot;released&quot; — merging the code was the halfway point.</p>
+<h3>31.11 Retrospective and sediment: turn this run's lessons into next run's defaults</h3>
+<p><strong>What you do:</strong> one final session; the agent read-only summarises this run's materials (<code>SPEC.md</code>, <code>PLAN.md</code>, PR discussion, review list, observation record) and drafts three things for you to cut down: a short retrospective (which step caught which problem, which step missed, where the agent most wanted to run off-rails); a candidate rule list, every rule phrased as an executable &quot;when X, do Y&quot;; and an invitation troubleshooting cheat-sheet (expired, email mismatch, 409, 403 — where to look first for each). Accept at most three rules into <code>AGENTS.md</code> — the ones this run usually earns are of this kind:</p>
+<pre><code class="language-text">- Token/secret features: server stores hashes only; raw values never appear in logs, error messages or
+  test snapshots; self-check the diff before committing.
+- Any endpoint querying by team/tenant id must verify membership and role; &quot;signed in&quot; alone counts as unfinished.
+- Migrations must run up and down locally with output pasted into the PR; new-table-only migrations are preferred.
+</code></pre>
+<p><strong>Verification signal:</strong> the <code>AGENTS.md</code> diff is exactly the lines you approved; the cheat-sheet lives in <code>docs/</code> linked from <code>SPEC.md</code>; every <code>PLAN.md</code> task card is marked with its final state.</p>
+<p><strong>When it fails:</strong> the agent writes a praise piece → demand &quot;problems and interception points only&quot;, adjectives deleted. Ten-plus candidate rules → cut by &quot;will we hit this again&quot; down to three; the rest stay in the retrospective as reference, not in the rule file (over-long rule files go unread — see §13).</p>
+<p><strong>Done when:</strong> retrospective, rules and cheat-sheet are committed, and you can state three numbers: how many sessions the run took, how many blocking findings review caught, and how many unplanned problems surfaced after release. On your next similar feature, those three numbers are the baseline you improve against.</p>
+<p>Walk this chapter once end to end and what you have trained is not &quot;the invitations feature&quot; — it is the chain itself as muscle memory: acceptance before code, contract frozen before tasks, red before green, review in a fresh session, flag-first release, rollback lines written before dashboards, and lessons sedimented into rules at the end. Swap in payments, permissions, import/export — only the contents of <code>SPEC.md</code> change; the chain does not.</p>
