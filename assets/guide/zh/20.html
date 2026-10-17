@@ -2,35 +2,75 @@
 <blockquote>
 <p>对应图 #20 · 第三章「编程的进化」</p>
 </blockquote>
-<h2>概述</h2>
 <p>Coding Agent 把开发者从「逐行指挥」中解放出来：人描述任务，Agent 自己读代码、改文件、跑命令、看结果、修正错误，最后交付一个可审阅的变更。Claude Code 文档的定义是：一个能读取代码库、编辑文件、运行命令并与开发工具集成的 agentic 编码工具，可在终端、IDE、桌面应用和浏览器中使用。OpenAI 的 Codex CLI 则是一个在本地终端运行的编码 Agent，另有云端版本。</p>
-<h2>核心机制</h2>
-<p><strong>1. 闭环。</strong> 一次任务的典型循环：</p>
+<p>这一篇用一个具体任务，把 Agent 的一次完整运行从头走到尾，看清每一步发生了什么、为什么这样设计。</p>
+<h2>一、一次真实的运行</h2>
+<p>假设任务是：「用户反馈导出 CSV 时，中文文件名变成乱码，请修复。」</p>
+<p><strong>第 1 步：理解与定位。</strong> Agent 没有现成的「项目地图」，它先用搜索工具找线索：</p>
+<pre><code>$ grep -rn &quot;Content-Disposition&quot; src/
+src/export/handler.py:48:    resp.headers[&quot;Content-Disposition&quot;] = f&quot;attachment; filename={name}&quot;
+</code></pre>
+<p>只用一条命令就定位到了可疑代码。这体现了 Anthropic 描述的设计思路：Claude Code 会把 CLAUDE.md 等文件直接放入上下文，同时用 <code>glob</code>、<code>grep</code> 这类原语<strong>即时</strong>浏览环境、检索文件，而不是依赖预先建好的索引。好处是绕开了索引过期和复杂语法树的问题：代码刚改过，搜索结果就是最新的。</p>
+<p><strong>第 2 步：形成假设并计划。</strong> Agent 读了附近的代码，判断问题是文件名没有按 RFC 5987 的 <code>filename*=UTF-8''...</code> 形式编码。计划：修改响应头、补一个测试。</p>
+<p><strong>第 3 步：先写会失败的测试。</strong> 写一个用例，导出名为「报表.csv」的文件，断言响应头包含正确编码的文件名。运行测试，确认它<strong>失败</strong>。这一步很关键：一个从未失败过的测试，证明不了任何东西。</p>
+<p><strong>第 4 步：修改代码，再跑测试。</strong> 修改第 48 行，重新运行。假设新测试通过了，但另一个旧测试失败：它断言的是旧格式的响应头。</p>
+<p><strong>第 5 步：读输出，修正。</strong> Agent 读失败信息，判断旧测试的断言基于错误的旧行为，于是更新该断言，并在最终说明里明确写出「修改了一个既有测试，原因是……」。</p>
+<p><strong>第 6 步：全量验证并交付。</strong> 运行完整测试、类型检查和 lint，全部通过后提交，开 PR，附上改动说明。</p>
+<p><strong>第 7 步：人审阅。</strong> 人看 PR：改动是否合理？那个被修改的旧测试，改得对吗？</p>
+<p>把这七步和上一篇对照：人只出现在开头（定义任务）和结尾（审阅）；中间的定位、修改、验证、纠错，全部由 Agent 在循环中完成。</p>
+<h2>二、闭环为什么能工作？</h2>
+<p>抽象出来，循环是这样的：</p>
 <pre><code>理解任务 → 搜索与阅读代码 → 制定计划
 → 修改文件 → 运行构建 / 测试 / lint
 → 读取输出 → 修正 → … → 全部通过
 → 提交 / 开 PR → 人审阅
 </code></pre>
-<p>这正是 Anthropic 所说的「LLM 在循环中根据环境反馈使用工具」。环境反馈（编译错误、测试失败、日志）是 Agent 能自我纠错的根本原因。</p>
-<p><strong>2. 即时检索上下文。</strong> Anthropic 介绍，Claude Code 会把 CLAUDE.md 等文件直接放入上下文，同时用 <code>glob</code>、<code>grep</code> 等原语即时浏览环境、检索文件，绕开了索引过期和复杂语法树的问题。</p>
-<p><strong>3. 子 Agent 与上下文隔离。</strong> Claude Code 的每个子 Agent 都在自己的上下文窗口中运行，有自定义的系统提示、特定的工具权限和独立的权限设置。例如在计划模式下，它把代码库调研委派给只读的 Plan 子 Agent，让探索输出留在独立的上下文中。Codex 和 Cursor 也都支持子 Agent：并行派生专门的 Agent，再把结果汇总回来。</p>
-<p><strong>4. 权限与沙箱。</strong> Agent 能执行命令，就必须控制它能做什么：哪些命令自动允许、哪些需要确认、能否访问网络、能写哪些目录。</p>
-<h2>关键论文与里程碑</h2>
+<p>这正是 Anthropic 所说的「LLM 在循环中根据环境反馈使用工具」。<strong>环境反馈是 Agent 能自我纠错的根本原因。</strong> 模型单次生成的代码可能有错，但编译器、测试和日志会告诉它错在哪；它读到具体的报错，再修改，再验证。第 4 步里那个失败的旧测试，就是环境在「纠正」Agent。</p>
+<p>反过来说，如果项目没有测试，第 4、5 步就失去了依据：Agent 只能「觉得改好了」。<strong>Agent 的上限，很大程度上由它能拿到的反馈质量决定。</strong></p>
+<h2>三、上下文管理：子 Agent</h2>
+<p>一个大任务里，Agent 可能要读几十个文件、跑很多次命令，这些输出会迅速填满上下文。第一章讲过，上下文越长，中间的信息越容易被忽略。</p>
+<p>解决办法之一是<strong>子 Agent</strong>。Claude Code 的每个子 Agent 都在自己的上下文窗口中运行，有自定义的系统提示、特定的工具权限和独立的权限设置。例如在计划模式下，它把代码库调研委派给只读的 Plan 子 Agent，让大量的探索输出留在独立的上下文里，只把结论带回主会话。Codex 和 Cursor 也都支持子 Agent：并行派生专门的 Agent，再把结果汇总回来。</p>
+<p>可以把子 Agent 理解成一次「函数调用」：主 Agent 交给它一个明确的问题（「找出所有调用导出接口的地方」），拿回一个简短的答案，而不必背负整个搜索过程。</p>
+<h2>四、权限与沙箱</h2>
+<p>Agent 能执行命令，就必须控制它能做什么。一个实用的划分：</p>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>例子</th>
+<th>策略</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>只读</td>
+<td>读文件、grep、跑测试</td>
+<td>自动允许</td>
+</tr>
+<tr>
+<td>本地可逆</td>
+<td>修改工作区文件</td>
+<td>自动允许，Git 可回滚</td>
+</tr>
+<tr>
+<td>有副作用</td>
+<td>安装依赖、访问网络</td>
+<td>需确认或白名单</td>
+</tr>
+<tr>
+<td>不可逆 / 高风险</td>
+<td>数据库迁移、生产环境、推送、密钥</td>
+<td>必须人工确认</td>
+</tr>
+</tbody>
+</table>
+<p>沙箱限制它能写哪些目录、能否访问网络。原则是：<strong>让「做错了」的代价可控</strong>，而不是指望它不犯错。</p>
+<h2>五、人在新分工里做什么？</h2>
+<p>一位开发者在 X 上分享的工作流很典型：先把 PRD、会议纪要等材料交给 Agent，通过连续追问对齐需求，把结论沉淀到 Spec 或 CONTEXT.md；复杂需求拆成可独立验收的 Issue，只有能独立推进的部分才交给子 Agent，在不同 worktree 中并行开发；编码 Agent 先写测试，再引入其他 Agent 做交叉审查；人工 Review 之前跑端到端测试，并保持每个 MR 足够小。</p>
+<p>总结起来，人的工作集中在三件事：<strong>把任务说清楚、提供可执行的验证、审阅结果。</strong> 规则文件里应写清技术栈、禁止事项，以及需要停下来请示的操作（如数据库迁移、生产环境、密钥）。</p>
+<h2>六、几个容易踩的坑</h2>
 <ul>
-<li><strong>2023 SWE-bench</strong>：用真实 GitHub issue 评测「修 bug」的能力</li>
-<li><strong>2024 SWE-agent</strong>：证明 Agent-计算机接口的设计对效果影响很大</li>
-<li><strong>2024 Agentless</strong>：固定的「定位—修复—验证」流程也很有竞争力</li>
-<li><strong>2025 年 2 月 Claude Code</strong>、<strong>2025 年 4 月 Codex CLI 开源</strong></li>
-</ul>
-<h2>工程实践与数字</h2>
-<ul>
-<li><strong>人的角色转为定义任务和审阅结果</strong>。一位开发者在 X 上分享的工作流很典型：先把 PRD、会议纪要等材料交给 Agent，通过连续追问对齐需求，把结论沉淀到 Spec 或 CONTEXT.md；复杂需求拆成可独立验收的 Issue，只有能独立推进的部分才交给子 Agent 在不同 worktree 中并行开发；编码 Agent 先写测试，再引入其他 Agent 做交叉审查；人工 Review 之前跑端到端测试，并保持每个 MR 足够小。</li>
-<li><strong>给 Agent 可执行的验证</strong>：测试、类型检查、lint、构建。没有这些，Agent 只能靠「觉得对」。</li>
-<li><strong>规则文件</strong>写清技术栈、禁止事项和需要停下来请示的操作（如数据库迁移、生产环境、密钥）。</li>
-</ul>
-<h2>常见误区</h2>
-<ul>
-<li><strong>「Agent 交付的就能直接合并。」</strong> Agent 会过度设计，也会在测试不足时宣布完成，人审阅仍不可少。</li>
+<li><strong>「Agent 交付的就能直接合并。」</strong> Agent 会过度设计，也会在测试不足时宣布完成。上面第 5 步那种「修改了旧测试」，正是人审阅时最该盯住的地方：它可能是对的，也可能是 Agent 为了让测试通过而改掉了正确的断言。</li>
 <li><strong>「上下文越多越好。」</strong> 子 Agent 的意义之一正是隔离上下文，让主会话保持干净。</li>
 <li><strong>「Agent 能替代测试。」</strong> 恰恰相反，Agent 越自主，越依赖自动化测试。</li>
 </ul>

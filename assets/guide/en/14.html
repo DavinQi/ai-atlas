@@ -2,35 +2,87 @@
 <blockquote>
 <p>Companion to diagram #14 · Chapter 2 &quot;Agent Design: Principles &amp; Patterns&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>Model weights are fixed after deployment and the context window is finite. For an agent to use private knowledge, fresh information and long-term experience, it must solve one problem: <strong>put the right content into context at the right time.</strong> Retrieval-augmented generation (RAG) and layered memory are the two main tools. Anthropic frames this as &quot;context engineering&quot;: context is a finite resource with diminishing marginal returns, and good context engineering means finding the smallest set of high-signal tokens that maximizes the likelihood of the desired outcome.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. Basic RAG.</strong> Lewis et al. (2020) combined pre-trained parametric memory (model weights) with non-parametric memory (a retrievable document index) for generation. The paper notes this helps provide provenance for answers and makes knowledge easier to update. Typical flow:</p>
-<pre><code>Docs → chunk → embed → index
-Query → retrieve Top-K → rerank → insert into prompt → generate
-</code></pre>
-<p><strong>2. Evolution.</strong> The survey by Gao et al. divides RAG into three generations: Naive RAG (retrieve-then-generate), Advanced RAG (pre- and post-retrieval optimizations such as query rewriting and reranking) and Modular RAG (composable pipelines). For global questions like &quot;what are the main themes in this corpus?&quot;, plain retrieval does poorly; Microsoft's GraphRAG first uses an LLM to build an entity knowledge graph, pre-generates community summaries for groups of related entities, and at query time aggregates partial answers from each community.</p>
-<p><strong>3. Layered memory.</strong> MemGPT borrows hierarchical memory management from operating systems, moving data between fast and slow tiers to give an agent the effect of &quot;more memory&quot; within a limited window — for analyzing documents far larger than the window and for long multi-session chat. Generative Agents store a complete record of experiences in natural language, synthesize them over time into higher-level reflections, and retrieve them dynamically to plan.</p>
-<p><strong>4. Long context does not remove the need for retrieval.</strong> The &quot;Lost in the Middle&quot; study found performance is highest when relevant information is at the beginning or end of the input and degrades significantly when it sits in the middle of long contexts — even for explicitly long-context models. Anthropic also notes the &quot;context rot&quot; seen in needle-in-a-haystack style evaluations: as the number of tokens in context grows, the model's ability to accurately recall information from it decreases.</p>
-<h2>Key Papers and Milestones</h2>
+<p>Once deployed, a model's weights are fixed and its context window is finite. To use private knowledge, current information and long-term experience, an agent must keep solving the same problem: <strong>what should go into the context right now?</strong> Too little and the model can only guess from memory; too much and cost rises, attention is diluted, and the key information gets buried.</p>
+<p>Diagram #14 has two halves: the top shows four kinds of memory (context window, session summary, vector store and documents, rule files); the bottom shows RAG's two pipelines (offline indexing, online querying). A sentence at the bottom ties them together: parametric memory lives in the weights, non-parametric memory lives in the retrieval index. This article first explains why layered memory is needed, then takes RAG apart step by step to show where quality is usually lost.</p>
+<h2>1. Four kinds of memory, like a computer's storage hierarchy</h2>
+<p>The easiest way to understand an agent's memory is to compare it with a computer's storage hierarchy:</p>
+<table>
+<thead>
+<tr>
+<th>Memory</th>
+<th>Analogy</th>
+<th>Capacity</th>
+<th>Access</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Context window (working memory)</td>
+<td>Registers / RAM</td>
+<td>Small, billed per token</td>
+<td>Seen directly by the model</td>
+<td>The current conversation, a file just read</td>
+</tr>
+<tr>
+<td>Session summary (short-term memory)</td>
+<td>Cache</td>
+<td>Medium</td>
+<td>Compressed and put back into context</td>
+<td>Key points of the previous 50 turns</td>
+</tr>
+<tr>
+<td>Vector store · documents (long-term memory)</td>
+<td>Disk</td>
+<td>Large</td>
+<td>Retrieved and put back into context</td>
+<td>Product docs, past tickets</td>
+</tr>
+<tr>
+<td>Rule files (procedural memory)</td>
+<td>Configuration</td>
+<td>Small and stable</td>
+<td>Loaded at the start of each session</td>
+<td>AGENTS.md, coding conventions</td>
+</tr>
+</tbody>
+</table>
+<p>MemGPT turned this analogy into a real system: borrowing hierarchical memory management from operating systems, it lets the agent move data between fast and slow storage itself, getting the effect of &quot;more memory&quot; within a limited context window, for analysing documents far longer than the window and for long multi-session conversations. Generative Agents store a complete record of experiences in natural language, synthesise higher-level reflections over time, and retrieve by relevance, recency and importance when planning.</p>
+<p><strong>Core insight:</strong> the context window is the only place the model can &quot;see&quot;; all other memory is merely a candidate. A memory system is essentially a policy for deciding what to bring into context, and when.</p>
+<h2>2. RAG: bring the open-book exam's books into the exam room</h2>
+<p><strong>The basic idea.</strong> Lewis et al. proposed retrieval-augmented generation (RAG) in 2020: generate answers by combining pretrained parametric memory (the weights) with non-parametric memory (a retrievable document index). The paper notes that this helps provide provenance for answers and makes knowledge easier to update: just change the documents, without retraining the model.</p>
+<p><strong>The offline pipeline: documents → chunks → embeddings → vector store.</strong></p>
+<ol>
+<li><strong>Chunking.</strong> Documents are cut into pieces of a few hundred tokens. Too large and a chunk mixes several topics, retrieval is imprecise and context is wasted; too small and context is lost (a table split into several pieces separates headers from data). Cutting at semantic boundaries such as headings and paragraphs, with a little overlap, usually beats cutting at fixed lengths.</li>
+<li><strong>Embedding.</strong> An embedding model turns each chunk into a vector; semantically similar chunks have similar vectors.</li>
+<li><strong>Indexing.</strong> Store them in a vector store with metadata (source, date, permissions, product line), so you can filter before retrieving.</li>
+</ol>
+<p><strong>The online pipeline: query → retrieve top-k → rerank → insert into the prompt → LLM.</strong></p>
+<ol>
+<li><strong>Retrieval.</strong> Embed the user's question too and find the k most similar chunks. Pure vector search is good at semantic similarity but insensitive to exact names, version numbers and error codes, so in practice it's often combined with keyword search (BM25).</li>
+<li><strong>Reranking (optional, but usually worth it).</strong> A finer model rescores the candidates and puts the truly relevant ones first.</li>
+<li><strong>Prompt assembly.</strong> Put the chunks and their sources into the context, and ask the model to answer from them, cite sources, and say so when the material is insufficient.</li>
+</ol>
+<p><strong>Where is quality usually lost?</strong> Not in generation but in retrieval. If the model is handed wrong or incomplete material, it can't answer well however strong it is. Gao et al.'s survey divides RAG's evolution into three generations: Naive RAG (retrieval wired straight to generation), Advanced RAG (adding optimisations such as query rewriting and reranking before and after retrieval) and Modular RAG (composable modular pipelines). <strong>Chunk granularity, metadata filtering and reranking are often more effective than switching to a bigger model.</strong></p>
+<p><strong>What about global questions?</strong> For questions like &quot;what are the main themes of this document collection?&quot;, the answer is spread across all documents, and the few chunks ordinary retrieval returns can't answer it. Microsoft's GraphRAG first uses an LLM to extract entities and relationships from the documents into a knowledge graph, pre-generates community summaries for groups of related entities, and at answer time aggregates partial answers from each community.</p>
+<h2>3. Can long context replace RAG?</h2>
+<p>Context windows keep growing, so a natural thought is: stuff everything in and skip retrieval. Research says no.</p>
+<p><strong>Information in the middle gets overlooked.</strong> Liu et al.'s &quot;Lost in the Middle&quot; study found that performance is best when relevant information is at the beginning or end of the input and drops markedly when it's in the middle of a long context, even for models built for long contexts.</p>
+<p><strong>More context, weaker recall.</strong> Anthropic describes the &quot;context rot&quot; revealed by needle-in-a-haystack evaluations: the more tokens in the context, the weaker the model's ability to recall information from it accurately. They liken context to a finite attention budget with diminishing returns.</p>
+<p><strong>Cost rises with length.</strong> As Chapter 1 explained, prefill attention grows with the square of length and the KV cache grows linearly.</p>
+<p>So Anthropic frames the problem as <strong>context engineering</strong>: find the smallest set of high-signal tokens that maximises the likelihood of the desired outcome.</p>
+<h2>4. The new approach in the agent era: just-in-time context</h2>
+<p>Traditional RAG is &quot;retrieve first, then insert everything at once&quot;. Anthropic observes that more and more agents use <strong>just-in-time context</strong> instead: keep only lightweight identifiers (file paths, queries, links) and load content with tools at run time. A coding agent browsing a codebase with <code>grep</code> and <code>glob</code> is the classic case: it doesn't need to embed the whole repository in advance; like a person, it looks at the directory, searches for keywords, then opens the relevant files.</p>
+<p>For long tasks spanning hours, they summarise three techniques:</p>
 <ul>
-<li><strong>2020 RAG</strong> (Lewis et al.)</li>
-<li><strong>2023 Lost in the Middle</strong></li>
-<li><strong>2023 MemGPT</strong>, <strong>Generative Agents</strong></li>
-<li><strong>2023 RAG survey</strong> (Naive / Advanced / Modular)</li>
-<li><strong>2024 GraphRAG</strong></li>
-<li><strong>2025 Anthropic, <em>Effective context engineering for AI agents</em></strong></li>
+<li><strong>Compaction</strong>: when the conversation nears the window limit, summarise it and continue in a new window with the summary.</li>
+<li><strong>Structured notes</strong>: the agent writes progress, to-dos and key decisions to files outside the context and reads them back when needed.</li>
+<li><strong>Multi-agent architectures</strong>: subagents explore in their own contexts and return only the essentials to the main agent (next article).</li>
 </ul>
-<h2>Engineering Practice and Numbers</h2>
+<h2>5. Common misconceptions</h2>
 <ul>
-<li><strong>&quot;Just-in-time&quot; context</strong>: Anthropic observes that more agents no longer pre-process all relevant data upfront; they keep lightweight identifiers (file paths, stored queries, links) and load data at runtime with tools. Coding agents navigating a codebase with <code>grep</code> and <code>glob</code> are the typical example.</li>
-<li><strong>Three techniques for long tasks</strong>: compaction (summarize a conversation nearing the limit and restart with a new window), structured note-taking (the agent writes progress to files outside the context), and multi-agent architectures (subagents explore in their own contexts and return only the distilled essentials).</li>
-<li><strong>Retrieval quality sets the ceiling</strong>: chunk size, metadata filtering and reranking often matter more than a bigger model.</li>
-<li><strong>Put key content at the start and end</strong>, exploiting the &quot;Lost in the Middle&quot; pattern.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;With a big enough window, RAG is unnecessary.&quot;</strong> Long contexts suffer mid-context degradation and context rot, and cost grows with length.</li>
-<li><strong>&quot;RAG eliminates hallucination.&quot;</strong> It reduces ungrounded generation but still fails when retrieval is wrong or the documents themselves are wrong.</li>
-<li><strong>&quot;Memory means a vector store.&quot;</strong> Memory also includes summaries, structured notes and rules files; what to select and when to put it in context is what matters.</li>
+<li><strong>&quot;With a big enough context window, you don't need RAG.&quot;</strong> Long contexts suffer reduced use of middle information and context rot, and cost rises with length.</li>
+<li><strong>&quot;RAG eliminates hallucination.&quot;</strong> It lowers the chance of unsupported generation, but retrieval errors or faulty documents still cause errors. Require citations and allow &quot;I don't know&quot; when material is insufficient.</li>
+<li><strong>&quot;Memory means a vector store.&quot;</strong> Memory also includes summaries, structured notes and rule files. What to choose and when to put it in context is what matters.</li>
+<li><strong>&quot;It doesn't matter where key content goes.&quot;</strong> Following &quot;Lost in the Middle&quot;, put the most important instructions and material at the beginning or end.</li>
 </ul>

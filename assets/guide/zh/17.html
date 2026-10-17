@@ -1,43 +1,66 @@
-<h1>编程的进化：人的关注点从语法，到代码，再到任务</h1>
+<h1>编程进化时间轴：每一次跃迁，都把一层细节交给机器</h1>
 <blockquote>
 <p>对应图 #17 · 第三章「编程的进化」</p>
 </blockquote>
-<h2>概述</h2>
-<p>编程史可以看作一部「人把什么交给机器」的历史。每一次跃迁，都把一层细节从人的注意力中移走：高级语言让人不必关心机器指令，IDE 和代码补全让人少记 API，AI 补全让人少敲样板代码，而 Coding Agent 开始让人从「写代码」转向「定义任务和验收结果」。</p>
-<h2>核心机制</h2>
-<p>图中的时间轴可以分成三个阶段，每个阶段人的关注点不同：</p>
-<p><strong>1. 关注语法（高级语言与 IDE 时代）。</strong></p>
+<p>图 #17 是一条从 1950 年代到 2025 年的时间轴：汇编 → 高级语言（FORTRAN、C、Java）→ IDE 智能提示（IntelliSense、Eclipse、IDEA）→ Copilot 补全 → AI IDE（Cursor）→ Coding Agent（Claude Code、Codex）。下方一条渐宽的楔形表示 AI 自主度由低到高，底部三格写着人的关注点：语法 → 代码 → 任务。</p>
+<p>读这条时间轴，最有用的视角是问一个问题：<strong>每一次跃迁，人把什么交给了机器？</strong> 答案出奇地一致：每一代工具都把一层细节从人的注意力中移走，让人能在更高的层次上思考。理解了这条规律，就能判断 Coding Agent 处在哪一步，以及下一步人该把注意力放在哪里。</p>
+<h2>一、第一阶段：人关注「语法」</h2>
+<p><strong>汇编时代，人要替机器想每一步。</strong> 写一个循环，要自己安排寄存器、计算跳转地址、记住每条指令的格式。程序员的大部分注意力花在「怎么让机器听懂」上，而不是「要解决什么问题」。</p>
+<p><strong>高级语言把「指令」交给了编译器。</strong> 1957 年，Backus 等人发表《The FORTRAN Automatic Coding System》，FORTRAN 让科学家可以直接写公式，由编译器翻译成机器指令。这是第一次大规模的抽象跃迁：<strong>人不必再关心机器指令，只需关心算法。</strong> 当时有不少人怀疑编译器生成的代码效率不如手写汇编；事实证明，编译器做得足够好，人省下的注意力远比那点效率值钱。</p>
+<p><strong>平台差异交给了虚拟机。</strong> 1995 年 5 月，Java 作为 Sun Java 平台的核心组件发布，「一次编写，到处运行」靠 JVM 屏蔽了操作系统和硬件的差异。人又少关心了一层：程序跑在哪台机器上。</p>
+<p><strong>API 细节交给了 IDE。</strong> 1996 年，微软的代码补全功能 IntelliSense 首次出现在主流产品中（Visual Basic 5.0 控件创建版），依靠静态分析提示类的成员和函数的参数。之后的 Eclipse、IntelliJ IDEA 把补全、跳转、重构做到了极致。人不必再记住每个 API 的拼写和参数顺序。</p>
+<p>这个阶段的共同点是：<strong>工具是确定性的</strong>。编译器、虚拟机、静态分析给出的结果是可预测、可证明的。人的关注点始终是「代码怎么写对」，也就是语法和结构。</p>
+<h2>二、第二阶段：人关注「代码」</h2>
+<p><strong>样板代码交给了模型。</strong> 2021 年，OpenAI 发表 Codex 论文：在 GitHub 公开代码上微调的 GPT 模型，在新发布的 HumanEval 基准上解决了 28.8% 的问题，而原版 GPT-3 是 0%。论文同时说明，GitHub Copilot 由 Codex 的一个生产版本驱动。同年 6 月 29 日，GitHub 发布 Copilot 技术预览版，定位为「AI 结对程序员」。</p>
+<p>这是一次性质不同的跃迁。之前的工具都是确定性的，Copilot 是<strong>概率性的</strong>：它给出的是「很可能是你想写的代码」，而不是「一定正确的代码」。人的角色从「写每一行」变成了「判断这一行该不该接受」。</p>
+<p><strong>项目级上下文交给了 AI IDE。</strong> 以 Cursor 为代表的 AI IDE 把模型从「光标处补全」扩展到对整个项目的理解：可以对话、可以跨多个文件修改、可以按需检索代码库。人的关注点从单行代码上升到「这次修改涉及哪些文件、diff 对不对」。</p>
+<h2>三、第三阶段：人关注「任务」</h2>
+<p><strong>「串联」交给了 Agent。</strong> 2025 年 2 月 24 日，Anthropic 随 Claude 3.7 Sonnet 发布了命令行 agentic 编码工具 Claude Code；同年 4 月，OpenAI 开源了在本地终端运行的轻量级编码 Agent Codex CLI。</p>
+<p>Agent 和前两代工具的根本区别是：它不再嵌入编辑器、等待人逐条下指令，而是在「行动—验证—纠错」的闭环里自主推进任务。它自己读代码、改文件、跑测试、看报错、再修改。<strong>人把「把各种工具串成一次交付」这件事也交了出去</strong>，关注点上升到「任务是什么、做完的标准是什么」。</p>
+<h2>四、评测基准也在跟着「升层」</h2>
+<p>一个很好的旁证是：衡量 AI 编程能力的基准，也随着关注点一起上升了。</p>
 <ul>
-<li><strong>1957 年 FORTRAN</strong>：Backus 等人发表《The FORTRAN Automatic Coding System》，高级语言把公式翻译成机器指令。</li>
-<li><strong>1995 年 Java</strong>：1995 年 5 月作为 Sun Java 平台的核心组件发布，「一次编写，到处运行」，靠 JVM 屏蔽平台差异。</li>
-<li><strong>1996 年 IntelliSense</strong>：微软的代码补全功能，1996 年首次出现在主流微软产品中（Visual Basic 5.0 控件创建版），依靠静态分析提示成员和参数。</li>
+<li><strong>HumanEval（2021）</strong> 测的是「根据文档字符串写一个函数」，用单元测试判断对错。这是「代码层」的能力。</li>
+<li><strong>SWE-bench（2023）</strong> 收录了来自 12 个流行 Python 仓库的 2,294 个真实 GitHub issue，要求模型在真实代码库里修复问题，用仓库原有的测试判断是否修好。这需要跨函数、跨文件协调修改，与执行环境交互，处理很长的上下文。发布时最好的模型 Claude 2 只解决了 1.96%。</li>
+<li><strong>SWE-agent（2024）</strong> 证明为 Agent 专门设计计算机接口，能把 SWE-bench 的 pass@1 提高到 12.5%。</li>
 </ul>
-<p><strong>2. 关注代码（AI 补全与 AI IDE 时代）。</strong></p>
+<p>阿里巴巴《AI Native 研发范式实践手册》（解读版）记录：截至 2026 年中，主流模型在 SWE-bench Verified 上的通过率已从两年前的不足 30% 提升到 80% 左右。行业共识随之转向：<strong>瓶颈不再是生成代码本身，而是需求理解、环境构建、测试验证、发布运维等占研发生命周期 70%～80% 的环节。</strong> 这正是第四章要展开的内容。</p>
+<h2>五、规律：抽象层每升一级，重心就往上移一层</h2>
+<p>把三个阶段放在一起看：</p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>交给机器的</th>
+<th>人的关注点</th>
+<th>工具性质</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>汇编 → 高级语言 → IDE</td>
+<td>指令、平台、API 细节</td>
+<td>语法与结构</td>
+<td>确定性</td>
+</tr>
+<tr>
+<td>Copilot → AI IDE</td>
+<td>样板代码、跨文件修改</td>
+<td>代码是否正确</td>
+<td>概率性，人逐条审</td>
+</tr>
+<tr>
+<td>Coding Agent</td>
+<td>读、改、跑、修的串联</td>
+<td>任务与验收</td>
+<td>概率性，靠验证兜底</td>
+</tr>
+</tbody>
+</table>
+<p>有两点值得注意。第一，<strong>每一次跃迁都伴随着同样的怀疑</strong>：编译器生成的代码不如手写，AI 写的代码不可靠。怀疑并非全无道理，但历史上，省下的注意力最终都被用在了更有价值的地方。第二，<strong>从确定性到概率性是一个真正的断层</strong>。编译器的输出可以信任，模型的输出必须验证。这就是为什么越往后，测试和验证越重要（本章第 5 篇）。</p>
+<h2>六、常见误解</h2>
 <ul>
-<li><strong>2021 年 Codex 与 Copilot</strong>：OpenAI 的 Codex 论文报告，在新发布的 HumanEval 基准上，Codex 解决了 28.8% 的问题，而 GPT-3 为 0%；论文同时说明 GitHub Copilot 由 Codex 的一个生产版本驱动。同年 6 月 29 日，GitHub 发布 Copilot 技术预览版，定位为「AI 结对程序员」。</li>
-<li>之后出现了以 Cursor 为代表的 AI IDE，把模型从「光标处补全」扩展到对整个编辑器、多文件和对话的深度集成。</li>
-</ul>
-<p><strong>3. 关注任务（Coding Agent 时代）。</strong></p>
-<ul>
-<li><strong>2025 年 2 月 24 日</strong>：Anthropic 随 Claude 3.7 Sonnet 发布命令行 agentic 编码工具 Claude Code。</li>
-<li><strong>2025 年 4 月</strong>：OpenAI 开源 Codex CLI，一个在本地终端运行的轻量级编码 Agent。</li>
-<li>Agent 不再嵌入编辑器等待逐条指令，而是在「行动—验证—纠错」的闭环中自主推进任务。</li>
-</ul>
-<h2>关键论文与里程碑</h2>
-<ul>
-<li><strong>2021 Codex / HumanEval</strong></li>
-<li><strong>2023 SWE-bench</strong>：2,294 个来自 12 个流行 Python 仓库真实 GitHub issue 的任务；发布时最好的模型 Claude 2 仅解决 1.96%</li>
-<li><strong>2024 SWE-agent</strong>：为 Agent 专门设计的计算机接口，在 SWE-bench 上 pass@1 达到 12.5%</li>
-<li><strong>2024 年 11 月 MCP 发布</strong></li>
-</ul>
-<h2>工程实践与数字</h2>
-<ul>
-<li><strong>评测基准的演进反映了关注点的变化</strong>：HumanEval 测「根据文档字符串写一个函数」；SWE-bench 测「在真实代码库里修一个 issue」，需要跨函数、跨文件协调修改，与执行环境交互，处理很长的上下文。</li>
-<li>阿里巴巴《AI Native 研发范式实践手册》（解读版）记录：截至 2026 年中，主流模型在 SWE-bench Verified 上的通过率已从两年前的不足 30% 提升到 80% 左右；行业共识随之转向——瓶颈不再是生成代码本身，而是需求理解、环境构建、测试验证、发布运维等占研发生命周期 70%～80% 的环节。</li>
-</ul>
-<h2>常见误区</h2>
-<ul>
-<li><strong>「AI 会让编程技能变得不重要。」</strong> 每一次抽象层提升，都把重心转向更高层的能力：问题定义、架构判断和验证设计。</li>
-<li><strong>「基准分数高就等于能交付。」</strong> 手册明确指出，基准高分不等于生产环境中的真实交付能力。</li>
+<li><strong>「AI 会让编程技能变得不重要。」</strong> 每一次抽象层提升，都把重心转向更高层的能力：问题定义、架构判断和验证设计。会写编译器的人少了，但懂系统的人更值钱了。</li>
+<li><strong>「基准分数高就等于能交付。」</strong> 手册明确指出，基准高分不等于生产环境中的真实交付能力：真实项目有模糊的需求、复杂的环境和不完整的测试。</li>
 <li><strong>「Agent 是 Copilot 的增强版。」</strong> 两者的交互模式不同：补全是人主导、逐行接受；Agent 是人给任务、审结果。</li>
 </ul>

@@ -2,38 +2,44 @@
 <blockquote>
 <p>对应图 #4 · 第一章「大模型如何训练」</p>
 </blockquote>
-<h2>概述</h2>
-<p>模型从不直接「看」文字。原始文本先经过<strong>清洗与去重</strong>，再由<strong>分词器（tokenizer）</strong>切成离散 token，每个 token 对应一个整数 id，最后通过<strong>嵌入矩阵（embedding）</strong>查表变成向量，进入 Transformer。数据质量决定模型上限，分词方式则决定同样的算力能「读」多少文本、各语言的成本是否公平。</p>
-<h2>核心机制</h2>
-<p><strong>1. 数据管线。</strong> 以 FineWeb 为例：它从 96 个 Common Crawl 快照中构建出 15T token 的数据集，并对去重和过滤策略做了系统消融；从中筛出的 1.3T token 教育类子集 FineWeb-Edu，在 MMLU、ARC 等知识与推理基准上带来显著提升。典型步骤包括：文本抽取 → 语言识别 → 启发式与模型打分的质量过滤 → MinHash 等去重 → 隐私信息与有害内容过滤。</p>
-<p><strong>2. 子词分词（BPE）。</strong> Sennrich 等人把字节对编码（BPE）引入神经机器翻译：从字符（或字节）开始，反复把语料中出现频率最高的相邻符号对合并成新符号，直到词表达到目标大小。这样常见词是一个 token，罕见词被拆成若干子词，不存在「未登录词」。SentencePiece 把原始文本（含空格）直接当作序列处理，不依赖语言相关的预分词，适合中文等不以空格分词的语言。</p>
-<p>Karpathy 在讲解中强调：分词器是 LLM 流水线中<strong>完全独立的一个阶段</strong>，有自己的训练集和训练算法（BPE），训练完后提供 <code>encode()</code> 和 <code>decode()</code> 两个函数。</p>
-<p><strong>3. 嵌入。</strong> 设词表大小为 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.2222em;">V</span></span></span></span>、隐藏维度为 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">d</span></span></span></span>，嵌入矩阵 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord mathnormal" style="margin-right:0.0576em;">E</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∈</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8491em;"></span><span class="mord"><span class="mord mathbb">R</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8491em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.2222em;">V</span><span class="mbin mtight">×</span><span class="mord mathnormal mtight">d</span></span></span></span></span></span></span></span></span></span></span></span>，token id <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6595em;"></span><span class="mord mathnormal">i</span></span></span></span> 的向量就是 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0576em;">E</span></span></span></span> 的第 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6595em;"></span><span class="mord mathnormal">i</span></span></span></span> 行。位置信息由位置编码注入，现代模型多用 RoPE，它对 query/key 按位置施加旋转，使注意力分数只依赖相对位置。</p>
-<h2>关键论文与里程碑</h2>
+<p>模型从不直接「看」文字。一句 <code>public class UserService</code> 在进入 Transformer 之前，要先后经过三道工序：<strong>数据管线</strong>决定哪些文本有资格被读；<strong>分词器</strong>把文本切成一串离散的 token，并换成整数 id；<strong>嵌入矩阵</strong>再把每个 id 查表变成一个向量。图 #4 的左半边画的是第一道工序，右半边画的是后两道。三者看似是「预处理」，却直接决定了模型能力的上限、训练算力的效率，以及不同语言用户付出的成本是否公平。</p>
+<h2>一、数据管线：从网页到训练语料</h2>
+<p>预训练语料的主体来自网页抓取，最常用的源头是 Common Crawl。原始网页里充满导航栏、广告、乱码、重复页面和机器生成的垃圾，直接拿来训练既浪费算力，也会教坏模型。所以典型的管线是一串过滤器：</p>
+<ol>
+<li><strong>文本抽取</strong>：从 HTML 中取出正文，丢掉模板和脚本。</li>
+<li><strong>语言识别</strong>：按语言分流，方便后续按比例配比。</li>
+<li><strong>质量过滤</strong>：先用启发式规则（太短、符号比例异常、重复行过多）剔除明显的垃圾，再用小模型给文本打分。</li>
+<li><strong>去重</strong>：用 MinHash 等近似去重方法删除大量重复或近似重复的页面。</li>
+<li><strong>安全过滤</strong>：去掉个人隐私信息和有害内容。</li>
+</ol>
+<p>这条管线到底值多少？FineWeb 给出了少见的系统证据。团队从 96 个 Common Crawl 快照构建出 15T token 的数据集，并对每一步去重和过滤策略做了消融实验：用相同规模的小模型分别在不同版本的数据上训练，比较下游表现。更有意思的是它的子集 FineWeb-Edu：用一个分类器挑出「有教育价值」的网页，得到 1.3T token，在 MMLU、ARC 等知识与推理基准上带来了显著提升。<strong>结论很反直觉：经过筛选的较小子集，可以明显优于更大的未筛选数据。</strong></p>
+<p>去重还有一层容易被忽略的作用：评测的可信度。如果训练数据里混入了评测题，分数就会虚高，而模型并没有真的学会。另外，下一篇会讲到，被重复很多次的文本更容易被模型逐字记住，这同时带来隐私和版权风险。</p>
+<h2>二、分词：为什么不是按字，也不是按词？</h2>
+<p>假设我们直接按字符喂给模型。英文只有几十个字符，词表很小，但一句话会变成很长的序列：模型每生成一个 token 都要完整算一遍，序列越长，计算越多，能看到的上下文也越短。反过来按完整单词切，序列短了，但词表会爆炸，而且总会遇到没见过的词（新名词、拼写错误、代码里的变量名），只能标成「未知」。</p>
+<p><strong>子词（subword）分词</strong>是两者的折中：常见的词是一个 token，罕见的词拆成几个常见片段。Sennrich 等人 2015 年把<strong>字节对编码（BPE）</strong>引入神经机器翻译，算法简单到可以手算：</p>
+<ol>
+<li>从单个字符（或字节）开始，每个字符都是一个符号。</li>
+<li>统计语料中所有相邻符号对的出现次数。</li>
+<li>把出现最多的一对合并成一个新符号，加入词表。</li>
+<li>重复第 2、3 步，直到词表达到预定大小。</li>
+</ol>
+<p>举个手算的例子。语料里有 <code>low</code> 出现 5 次、<code>lower</code> 2 次、<code>newest</code> 6 次、<code>widest</code> 3 次。第一轮统计，<code>e s</code> 和 <code>s t</code> 都出现了 6+3=9 次，并列最多（假设按顺序先合并 <code>e s</code>，得到 <code>es</code>）；下一轮 <code>es t</code> 同样出现 9 次，合并成 <code>est</code>。（这里为了演示省略了论文中的词尾标记。）几轮之后，<code>est</code> 成了一个 token，<code>newest</code> 就能切成 <code>new</code> + <code>est</code>。<strong>合并规则完全由语料频率决定</strong>：常一起出现的片段被「焊」成整体，模型就不必反复去猜这种显而易见的搭配，同样长度的上下文也能装下更多内容。</p>
+<p>BPE 也天然没有「未登录词」：最坏情况下，任何字符串都能退回到单个字节表示。SentencePiece 则把原始文本连同空格一起当作序列处理，不需要先按空格切词，所以对中文、日文这类不用空格分词的语言更友好。</p>
+<p>Karpathy 在讲解分词器时强调一个工程事实：<strong>分词器是 LLM 流水线中完全独立的一个阶段</strong>。它有自己的训练集和训练算法（BPE），训练完提供 <code>encode()</code> 和 <code>decode()</code> 两个函数；之后才训练语言模型。这意味着分词器的选择一旦定下，就和嵌入矩阵绑死了：换分词器通常等于重训模型，或者至少要大量继续训练。</p>
+<h2>三、分词的连锁反应</h2>
+<p>分词粒度看似是个技术细节，却会一路影响到用户体验和账单。</p>
+<p><strong>压缩率决定「读」多少。</strong> Llama 3 把词表扩到 128K（100K 来自 tiktoken，另加 28K 非英语 token）。相比 Llama 2 的分词器，英文样本上每个 token 平均对应的字符数从 3.17 提高到 3.94。作者指出，这让模型在同样的训练算力下能「读」更多文本。新增的 28K 非英语 token 改善了这些语言的压缩率和下游表现，对英文分词没有影响。</p>
+<p><strong>token 数就是成本。</strong> API 按 token 计费，上下文窗口也按 token 计算。同样一段中文，在不同模型的分词器下 token 数可能差很多。估算成本或判断「这份文档能不能放进上下文」时，应该用对应模型的分词器实测，而不是按字数估算。</p>
+<p><strong>词表大小是一个权衡。</strong> 词表越大，序列越短，注意力计算和 KV Cache 都更省；但嵌入层和输出层的参数随词表线性增长，罕见 token 得到的训练也更少。</p>
+<p><strong>一些「低级错误」源自分词。</strong> 让模型数 strawberry 里有几个 r、把一个长数字倒过来写、做精确的多位数运算，常常出错。原因之一是模型看到的不是一个个字符，而是几个子词 id：它要从「这些片段由哪些字母组成」的间接知识里推出答案。实践中的应对很简单：让模型写一段代码来数，或者调用计算工具。</p>
+<h2>四、嵌入：从 id 到向量</h2>
+<p>分词之后，<code>public class UserService</code> 变成了一串整数，比如 <code>[1212, 1888, 2938, 1860]</code>（图中数字为示意）。整数本身没有「意思」：1888 和 1889 并不比 1888 和 50000 更相近。模型需要的是能表达相似性的表示，这就是<strong>嵌入（embedding）</strong>。</p>
+<p>设词表大小为 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.2222em;">V</span></span></span></span>、隐藏维度为 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord mathnormal">d</span></span></span></span>，嵌入矩阵 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7224em;vertical-align:-0.0391em;"></span><span class="mord mathnormal" style="margin-right:0.0576em;">E</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∈</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.8491em;"></span><span class="mord"><span class="mord mathbb">R</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8491em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.2222em;">V</span><span class="mbin mtight">×</span><span class="mord mathnormal mtight">d</span></span></span></span></span></span></span></span></span></span></span></span>，token id 为 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6595em;"></span><span class="mord mathnormal">i</span></span></span></span> 的向量就是 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em;"></span><span class="mord mathnormal" style="margin-right:0.0576em;">E</span></span></span></span> 的第 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6595em;"></span><span class="mord mathnormal">i</span></span></span></span> 行。这一步只是查表，但表里的数字是和模型其余部分一起训练出来的。训练会把在相似上下文中出现的 token 推到相近的位置，向量之间的点积可以用来衡量「有多像」。</p>
+<p><strong>位置也要编码进去。</strong> 注意力本身只看相关程度，不知道顺序：把「狗咬人」的「狗」和「人」交换位置，如果不加位置信息，注意力的计算结果完全一样。原始 Transformer 把正弦、余弦函数生成的位置向量加到 token 向量上；现代模型多用<strong>旋转位置编码（RoPE）</strong>。RoPE 不改 token 向量本身，而是在计算注意力时把 query 和 key 按「与位置成正比的角度」旋转。两个向量的点积只取决于长度和夹角，旋转后多出的夹角只和两者的位置差有关，所以注意力分数只依赖相对距离，而不是绝对位置。Llama 3 还把 RoPE 的基频提高到 500,000，以支持更长的上下文。</p>
+<h2>五、几个值得记住的判断</h2>
 <ul>
-<li><strong>2015 BPE 子词</strong></li>
-<li><strong>2018 SentencePiece</strong></li>
-<li><strong>2021 RoPE</strong></li>
-<li><strong>2024 FineWeb / FineWeb-Edu</strong>：公开 15T token 数据集及其构建流程与消融实验。</li>
-<li><strong>2024 Llama 3</strong>：128K 词表。</li>
-</ul>
-<h2>工程实践与数字</h2>
-<p>Llama 3 报告给出了词表设计的直接证据：</p>
-<ul>
-<li>词表 128K：100K 来自 tiktoken，另加 28K 非英语 token。</li>
-<li>相比 Llama 2 的分词器，英文样本上的压缩率从每 token 3.17 个字符提高到 3.94 个，作者指出这让模型在同样的训练算力下能「读」更多文本。</li>
-<li>增加 28K 非英语 token 改善了这些语言的压缩率和下游表现，对英文分词没有影响。</li>
-<li>RoPE 基频提高到 500,000 以支持更长上下文。</li>
-</ul>
-<p>工程含义：</p>
-<ul>
-<li><strong>API 计费按 token</strong>，同样的中文内容在不同模型上 token 数可能差很多，估算成本前应用对应分词器实测。</li>
-<li><strong>词表越大</strong>，嵌入层和输出层参数越多，但序列越短，注意力的计算和 KV Cache 都更省。</li>
-<li><strong>数据去重</strong>同时影响质量和评测可信度：训练集若混入评测题，分数会虚高。</li>
-</ul>
-<h2>常见误区</h2>
-<ul>
-<li><strong>「模型按字/词理解文本。」</strong> 模型看到的是子词 id。数字、拼写、字符计数类任务出错，很多源于分词粒度。</li>
-<li><strong>「数据越多越好。」</strong> FineWeb-Edu 说明经过筛选的较小子集可以明显优于更大的未筛选数据。</li>
-<li><strong>「分词器可以随便换。」</strong> 嵌入矩阵与词表一一对应，换分词器通常意味着重新训练或大量继续训练。</li>
+<li><strong>数据质量比数据数量更值钱。</strong> 在算力固定时，把预算花在过滤和去重上，往往比单纯加数据更有效，FineWeb-Edu 就是例证。</li>
+<li><strong>分词器决定了「同样的钱能读多少」。</strong> 对中文等非英语场景，先实测 token 数再谈成本和上下文容量。</li>
+<li><strong>拼写、计数、精确计算类错误，先怀疑分词，再怀疑模型。</strong> 工具调用通常比提示技巧更可靠。</li>
+<li><strong>分词器不能随便换。</strong> 它和嵌入矩阵一一对应，是模型的一部分，而不是一个可插拔的预处理脚本。</li>
 </ul>

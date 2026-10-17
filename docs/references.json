@@ -1,0 +1,2909 @@
+{
+  "generated": "2026-10-17",
+  "chapters": [
+    {
+      "chapter": 1,
+      "title_zh": "大模型如何训练",
+      "title_en": "How LLMs Are Trained"
+    },
+    {
+      "chapter": 2,
+      "title_zh": "Agent 设计原理与范式",
+      "title_en": "Agent Design: Principles & Patterns"
+    },
+    {
+      "chapter": 3,
+      "title_zh": "编程的进化",
+      "title_en": "The Evolution of Programming"
+    },
+    {
+      "chapter": 4,
+      "title_zh": "当前如何做 AI 编程",
+      "title_en": "AI Coding Today"
+    },
+    {
+      "chapter": 5,
+      "title_zh": "多 Agent 编程",
+      "title_en": "Multi-Agent Programming"
+    },
+    {
+      "chapter": 6,
+      "title_zh": "AI 改变研发流程",
+      "title_en": "How AI Reshapes the Dev Lifecycle"
+    }
+  ],
+  "articles": [
+    {
+      "article": "ch01/01-training-overview",
+      "chapter": 1,
+      "diagram": 3,
+      "title_zh": "训练全景：预训练学会语言，后训练学会听指令与推理",
+      "title_en": "The Training Pipeline: Pretraining Teaches Language, Post-training Teaches Instructions and Reasoning"
+    },
+    {
+      "article": "ch01/02-data-tokenizer",
+      "chapter": 1,
+      "diagram": 4,
+      "title_zh": "数据与分词：文本先切成 token，再映射成向量",
+      "title_en": "Data and Tokenization: Text Becomes Tokens, Tokens Become Vectors"
+    },
+    {
+      "article": "ch01/03-transformer-attention",
+      "chapter": 1,
+      "diagram": 5,
+      "title_zh": "Transformer：注意力让每个 token 按相关性汇聚上下文",
+      "title_en": "The Transformer: Attention Lets Each Token Gather Context by Relevance"
+    },
+    {
+      "article": "ch01/04-pretraining-scaling",
+      "chapter": 1,
+      "diagram": 6,
+      "title_zh": "预训练与规模定律：预测下一个 token，规模按幂律换来更低 loss",
+      "title_en": "Pretraining and Scaling Laws: Predict the Next Token, Trade Scale for Lower Loss"
+    },
+    {
+      "article": "ch01/05-post-training",
+      "chapter": 1,
+      "diagram": 7,
+      "title_zh": "后训练：从「会续写」到「会听指令、会推理」",
+      "title_en": "Post-training: From \"Continues Text\" to \"Follows Instructions and Reasons\""
+    },
+    {
+      "article": "ch01/06-inference-kvcache-moe",
+      "chapter": 1,
+      "diagram": 8,
+      "title_zh": "推理部署：Prefill 一次算完，Decode 逐 token 生成",
+      "title_en": "Inference and Serving: Prefill Once, Decode Token by Token"
+    },
+    {
+      "article": "ch01/07-misconceptions",
+      "chapter": 1,
+      "diagram": 9,
+      "title_zh": "常见误区澄清：看起来像，不等于就是",
+      "title_en": "Common Misconceptions: Looking Like It Isn't Being It"
+    },
+    {
+      "article": "ch01/08-training-cost",
+      "chapter": 1,
+      "diagram": 10,
+      "title_zh": "训练成本：规模每大一档，费用跳一个量级",
+      "title_en": "Training Cost: Each Step Up in Scale Is a Jump in Order of Magnitude"
+    },
+    {
+      "article": "ch02/01-agent-components",
+      "chapter": 2,
+      "diagram": 11,
+      "title_zh": "Agent 的组成：LLM + 规划 + 记忆 + 工具，在环境反馈中循环",
+      "title_en": "Agent Components: LLM + Planning + Memory + Tools, Looping on Environment Feedback"
+    },
+    {
+      "article": "ch02/02-react-plan-reflection",
+      "chapter": 2,
+      "diagram": 12,
+      "title_zh": "三种范式：边想边做、先规划后执行、做完自我修正",
+      "title_en": "Three Paradigms: Think While Acting, Plan Then Execute, Self-Correct Afterwards"
+    },
+    {
+      "article": "ch02/03-mcp",
+      "chapter": 2,
+      "diagram": 13,
+      "title_zh": "MCP：用同一协议，把工具与数据接入任意 Agent",
+      "title_en": "MCP: One Protocol to Connect Tools and Data to Any Agent"
+    },
+    {
+      "article": "ch02/04-memory-rag",
+      "chapter": 2,
+      "diagram": 14,
+      "title_zh": "记忆与 RAG：在对的时候，把对的知识放进上下文",
+      "title_en": "Memory and RAG: Put the Right Knowledge into Context at the Right Time"
+    },
+    {
+      "article": "ch02/05-multi-agent-harness",
+      "chapter": 2,
+      "diagram": 15,
+      "title_zh": "多 Agent 与 Harness：在受控闭环里迭代到验证通过",
+      "title_en": "Multi-Agent and Harness: Iterate in a Controlled Loop Until Verification Passes"
+    },
+    {
+      "article": "ch02/06-guardrails-decision",
+      "chapter": 2,
+      "diagram": 16,
+      "title_zh": "安全护栏与范式选择：能用简单方案，就别上多 Agent",
+      "title_en": "Guardrails and Choosing a Paradigm: If a Simple Solution Works, Skip Multi-Agent"
+    },
+    {
+      "article": "ch03/01-evolution-timeline",
+      "chapter": 3,
+      "diagram": 17,
+      "title_zh": "编程的进化：人的关注点从语法，到代码，再到任务",
+      "title_en": "The Evolution of Programming: From Syntax, to Code, to Tasks"
+    },
+    {
+      "article": "ch03/02-traditional-ide",
+      "chapter": 3,
+      "diagram": 18,
+      "title_zh": "传统 IDE：工具齐全，但串联全靠人",
+      "title_en": "The Traditional IDE: Every Tool Is There, but Humans Do the Wiring"
+    },
+    {
+      "article": "ch03/03-copilot-to-cursor",
+      "chapter": 3,
+      "diagram": 19,
+      "title_zh": "从补全到 AI IDE：模型先进了光标，再进了编辑器",
+      "title_en": "From Completion to AI IDEs: The Model Entered the Cursor, Then the Editor"
+    },
+    {
+      "article": "ch03/04-coding-agent-loop",
+      "chapter": 3,
+      "diagram": 20,
+      "title_zh": "Coding Agent：人给任务、审 PR，Agent 自己跑完闭环",
+      "title_en": "Coding Agents: Humans Give Tasks and Review PRs; the Agent Runs the Loop"
+    },
+    {
+      "article": "ch03/05-four-generations",
+      "chapter": 3,
+      "diagram": 21,
+      "title_zh": "四代工具对比：自主度越高，越依赖自动验证",
+      "title_en": "Four Generations of Tools: More Autonomy Demands More Automated Verification"
+    },
+    {
+      "article": "ch04/01-amdahl",
+      "chapter": 4,
+      "diagram": 22,
+      "title_zh": "阿姆达尔定律：只加速编码，整体收益有上限",
+      "title_en": "Amdahl's Law: Speeding Up Only Coding Caps the Overall Gain"
+    },
+    {
+      "article": "ch04/02-context-engineering",
+      "chapter": 4,
+      "diagram": 23,
+      "title_zh": "上下文工程：0→1 靠生成能力，1→N 靠上下文",
+      "title_en": "Context Engineering: 0→1 Runs on Generation, 1→N Runs on Context"
+    },
+    {
+      "article": "ch04/03-spec-driven",
+      "chapter": 4,
+      "diagram": 24,
+      "title_zh": "Spec 驱动：先澄清再动手，约束与假设分开写",
+      "title_en": "Spec-Driven: Clarify Before Building; Write Constraints and Assumptions Separately"
+    },
+    {
+      "article": "ch04/04-layered-verification",
+      "chapter": 4,
+      "diagram": 25,
+      "title_zh": "分层验证：让 Agent 先过机器的关，再来找人",
+      "title_en": "Layered Verification: Agents Pass the Machine Gates Before Reaching Humans"
+    },
+    {
+      "article": "ch04/05-evidence-chain",
+      "chapter": 4,
+      "diagram": 26,
+      "title_zh": "排障证据链：先收集证据，再推断根因",
+      "title_en": "The Troubleshooting Evidence Chain: Collect Evidence First, Then Infer the Root Cause"
+    },
+    {
+      "article": "ch04/06-metrics",
+      "chapter": 4,
+      "diagram": 27,
+      "title_zh": "度量：看交付结果，不看 AI 代码占比",
+      "title_en": "Metrics: Measure Delivery Outcomes, Not the Share of AI-Written Code"
+    },
+    {
+      "article": "ch04/07-7-day-roadmap",
+      "chapter": 4,
+      "diagram": 28,
+      "title_zh": "7 天落地路线图：个人 / 小团队这周就能开始",
+      "title_en": "A 7-Day Roadmap: What Individuals and Small Teams Can Start This Week"
+    },
+    {
+      "article": "ch05/01-why-multi-agent",
+      "chapter": 5,
+      "diagram": 29,
+      "title_zh": "为什么多 Agent：用并行换时间，代价是 token 与审阅",
+      "title_en": "Why Multi-Agent: Trade Parallelism for Time, Paid in Tokens and Review"
+    },
+    {
+      "article": "ch05/02-orca-worktree",
+      "chapter": 5,
+      "diagram": 30,
+      "title_zh": "Orca：一个任务一个 worktree，一个 worktree 一个 Agent",
+      "title_en": "Orca: One Task per Worktree, One Agent per Worktree"
+    },
+    {
+      "article": "ch05/03-race-vs-pipeline",
+      "chapter": 5,
+      "diagram": 31,
+      "title_zh": "两种打法：赛跑挑最优，流水线分工协作",
+      "title_en": "Two Approaches: Race for the Best, or Pipeline the Work"
+    },
+    {
+      "article": "ch05/04-orchestration-layer",
+      "chapter": 5,
+      "diagram": 32,
+      "title_zh": "编排层：一个 Agent 当项目经理，人只守关卡",
+      "title_en": "The Orchestration Layer: One Agent as Project Manager, Humans Guard the Gates"
+    },
+    {
+      "article": "ch05/05-humans-and-agents",
+      "chapter": 5,
+      "diagram": 33,
+      "title_zh": "多人 + 多 Agent：人定义与审阅，数字员工执行",
+      "title_en": "Many Humans + Many Agents: People Define and Review, Digital Employees Execute"
+    },
+    {
+      "article": "ch06/01-traditional-cicd",
+      "chapter": 6,
+      "diagram": 34,
+      "title_zh": "传统 CI/CD：流水线自动跑，判断仍在人",
+      "title_en": "Traditional CI/CD: Pipelines Run Automatically, Judgment Stays with Humans"
+    },
+    {
+      "article": "ch06/02-aiops-self-healing",
+      "chapter": 6,
+      "diagram": 35,
+      "title_zh": "AIOps 自修复闭环：低风险自动，高风险过人",
+      "title_en": "The AIOps Self-Healing Loop: Low Risk Runs Automatically, High Risk Goes to a Human"
+    },
+    {
+      "article": "ch06/03-future-form",
+      "chapter": 6,
+      "diagram": 36,
+      "title_zh": "未来形态：人定目标与验收，Agent 团队交付",
+      "title_en": "The Future Form: Humans Set Goals and Accept Results, Agent Teams Deliver"
+    },
+    {
+      "article": "ch06/04-roles-organization",
+      "chapter": 6,
+      "diagram": 37,
+      "title_zh": "角色与组织：从写代码，到定义问题与设计验证",
+      "title_en": "Roles and Organization: From Writing Code to Defining Problems and Designing Verification"
+    },
+    {
+      "article": "ch06/05-open-questions",
+      "chapter": 6,
+      "diagram": 38,
+      "title_zh": "未解问题，和明天就能做的 5 件事",
+      "title_en": "Open Questions, and 5 Things You Can Do Tomorrow"
+    }
+  ],
+  "references": [
+    {
+      "id": "R001",
+      "title": "Attention Is All You Need",
+      "authors": "Vaswani et al",
+      "year": 2017,
+      "url": "https://arxiv.org/abs/1706.03762",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/03-transformer-attention",
+          "diagram": 5
+        }
+      ],
+      "core": {
+        "chapter": 1,
+        "order": 0
+      }
+    },
+    {
+      "id": "R002",
+      "title": "Deep Dive into LLMs like ChatGPT",
+      "authors": "Andrej Karpathy (@karpathy)",
+      "year": 2025,
+      "date": "2025-02-05",
+      "url": "https://x.com/karpathy/status/1887211193099825254",
+      "type": "X post",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        }
+      ]
+    },
+    {
+      "id": "R003",
+      "title": "DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning",
+      "authors": "DeepSeek-AI",
+      "year": 2025,
+      "url": "https://arxiv.org/abs/2501.12948",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/05-post-training",
+          "diagram": 7
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/05-four-generations",
+          "diagram": 21
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/04-layered-verification",
+          "diagram": 25
+        }
+      ],
+      "core": {
+        "chapter": 1,
+        "order": 4
+      }
+    },
+    {
+      "id": "R004",
+      "title": "DeepSeek-V3 Technical Report",
+      "authors": "DeepSeek-AI",
+      "year": 2024,
+      "url": "https://arxiv.org/abs/2412.19437",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/06-inference-kvcache-moe",
+          "diagram": 8
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/08-training-cost",
+          "diagram": 10
+        }
+      ]
+    },
+    {
+      "id": "R005",
+      "title": "Direct Preference Optimization: Your Language Model is Secretly a Reward Model",
+      "authors": "Rafailov et al",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2305.18290",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/05-post-training",
+          "diagram": 7
+        }
+      ]
+    },
+    {
+      "id": "R006",
+      "title": "LIMA: Less Is More for Alignment",
+      "authors": "Zhou et al",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2305.11206",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/05-post-training",
+          "diagram": 7
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        }
+      ]
+    },
+    {
+      "id": "R007",
+      "title": "Language Models are Few-Shot Learners",
+      "authors": "Brown et al",
+      "year": 2020,
+      "url": "https://arxiv.org/abs/2005.14165",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/04-pretraining-scaling",
+          "diagram": 6
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        }
+      ]
+    },
+    {
+      "id": "R008",
+      "title": "RLHF is just barely RL",
+      "authors": "Andrej Karpathy (@karpathy)",
+      "year": 2024,
+      "date": "2024-08-07",
+      "url": "https://x.com/karpathy/status/1821277264996352246",
+      "type": "X post",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/05-post-training",
+          "diagram": 7
+        }
+      ]
+    },
+    {
+      "id": "R009",
+      "title": "Scaling Laws for Neural Language Models",
+      "authors": "Kaplan et al",
+      "year": 2020,
+      "url": "https://arxiv.org/abs/2001.08361",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/04-pretraining-scaling",
+          "diagram": 6
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/08-training-cost",
+          "diagram": 10
+        }
+      ],
+      "core": {
+        "chapter": 1,
+        "order": 1
+      }
+    },
+    {
+      "id": "R010",
+      "title": "The Llama 3 Herd of Models",
+      "authors": "Llama Team, Meta",
+      "year": 2024,
+      "url": "https://arxiv.org/abs/2407.21783",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/02-data-tokenizer",
+          "diagram": 4
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/03-transformer-attention",
+          "diagram": 5
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/04-pretraining-scaling",
+          "diagram": 6
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/05-post-training",
+          "diagram": 7
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/06-inference-kvcache-moe",
+          "diagram": 8
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/08-training-cost",
+          "diagram": 10
+        }
+      ],
+      "core": {
+        "chapter": 1,
+        "order": 5
+      }
+    },
+    {
+      "id": "R011",
+      "title": "Training Compute-Optimal Large Language Models",
+      "authors": "Hoffmann et al",
+      "year": 2022,
+      "url": "https://arxiv.org/abs/2203.15556",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/04-pretraining-scaling",
+          "diagram": 6
+        }
+      ],
+      "core": {
+        "chapter": 1,
+        "order": 2
+      }
+    },
+    {
+      "id": "R012",
+      "title": "Training language models to follow instructions with human feedback",
+      "authors": "Ouyang et al",
+      "year": 2022,
+      "url": "https://arxiv.org/abs/2203.02155",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/05-post-training",
+          "diagram": 7
+        }
+      ],
+      "core": {
+        "chapter": 1,
+        "order": 3
+      }
+    },
+    {
+      "id": "R013",
+      "title": "Let's build the GPT Tokenizer",
+      "authors": "Andrej Karpathy (@karpathy)",
+      "year": 2024,
+      "date": "2024-02-20",
+      "url": "https://x.com/karpathy/status/1759996549109776702",
+      "type": "X post",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/02-data-tokenizer",
+          "diagram": 4
+        }
+      ]
+    },
+    {
+      "id": "R014",
+      "title": "Neural Machine Translation of Rare Words with Subword Units",
+      "authors": "Sennrich et al",
+      "year": 2015,
+      "url": "https://arxiv.org/abs/1508.07909",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/02-data-tokenizer",
+          "diagram": 4
+        }
+      ]
+    },
+    {
+      "id": "R015",
+      "title": "RoFormer: Enhanced Transformer with Rotary Position Embedding",
+      "authors": "Su et al",
+      "year": 2021,
+      "url": "https://arxiv.org/abs/2104.09864",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/02-data-tokenizer",
+          "diagram": 4
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/03-transformer-attention",
+          "diagram": 5
+        }
+      ]
+    },
+    {
+      "id": "R016",
+      "title": "SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing",
+      "authors": "Kudo & Richardson",
+      "year": 2018,
+      "url": "https://arxiv.org/abs/1808.06226",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/02-data-tokenizer",
+          "diagram": 4
+        }
+      ]
+    },
+    {
+      "id": "R017",
+      "title": "The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale",
+      "authors": "Penedo et al",
+      "year": 2024,
+      "url": "https://arxiv.org/abs/2406.17557",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/02-data-tokenizer",
+          "diagram": 4
+        }
+      ]
+    },
+    {
+      "id": "R018",
+      "title": "Fast Transformer Decoding: One Write-Head is All You Need",
+      "authors": "Shazeer",
+      "year": 2019,
+      "url": "https://arxiv.org/abs/1911.02150",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/03-transformer-attention",
+          "diagram": 5
+        }
+      ]
+    },
+    {
+      "id": "R019",
+      "title": "FlashAttention-2: Faster Attention with Better Parallelism and Work Partitioning",
+      "authors": "Dao",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2307.08691",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/03-transformer-attention",
+          "diagram": 5
+        }
+      ]
+    },
+    {
+      "id": "R020",
+      "title": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness",
+      "authors": "Dao et al",
+      "year": 2022,
+      "url": "https://arxiv.org/abs/2205.14135",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/03-transformer-attention",
+          "diagram": 5
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/06-inference-kvcache-moe",
+          "diagram": 8
+        }
+      ]
+    },
+    {
+      "id": "R021",
+      "title": "GLU Variants Improve Transformer",
+      "authors": "Shazeer",
+      "year": 2020,
+      "url": "https://arxiv.org/abs/2002.05202",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/03-transformer-attention",
+          "diagram": 5
+        }
+      ]
+    },
+    {
+      "id": "R022",
+      "title": "GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints",
+      "authors": "Ainslie et al",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2305.13245",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/03-transformer-attention",
+          "diagram": 5
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/06-inference-kvcache-moe",
+          "diagram": 8
+        }
+      ]
+    },
+    {
+      "id": "R023",
+      "title": "Root Mean Square Layer Normalization",
+      "authors": "Zhang & Sennrich",
+      "year": 2019,
+      "url": "https://arxiv.org/abs/1910.07467",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/03-transformer-attention",
+          "diagram": 5
+        }
+      ]
+    },
+    {
+      "id": "R024",
+      "title": "Are Emergent Abilities of Large Language Models a Mirage?",
+      "authors": "Schaeffer et al",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2304.15004",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/04-pretraining-scaling",
+          "diagram": 6
+        }
+      ]
+    },
+    {
+      "id": "R025",
+      "title": "Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM",
+      "authors": "Narayanan et al",
+      "year": 2021,
+      "url": "https://arxiv.org/abs/2104.04473",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/04-pretraining-scaling",
+          "diagram": 6
+        }
+      ]
+    },
+    {
+      "id": "R026",
+      "title": "Emergent Abilities of Large Language Models",
+      "authors": "Wei et al",
+      "year": 2022,
+      "url": "https://arxiv.org/abs/2206.07682",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/04-pretraining-scaling",
+          "diagram": 6
+        }
+      ]
+    },
+    {
+      "id": "R027",
+      "title": "Scaling Language Models: Methods, Analysis & Insights from Training Gopher",
+      "authors": "Rae et al",
+      "year": 2021,
+      "url": "https://arxiv.org/abs/2112.11446",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/04-pretraining-scaling",
+          "diagram": 6
+        }
+      ]
+    },
+    {
+      "id": "R028",
+      "title": "ZeRO: Memory Optimizations Toward Training Trillion Parameter Models",
+      "authors": "Rajbhandari et al",
+      "year": 2019,
+      "url": "https://arxiv.org/abs/1910.02054",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/04-pretraining-scaling",
+          "diagram": 6
+        }
+      ]
+    },
+    {
+      "id": "R029",
+      "title": "Constitutional AI: Harmlessness from AI Feedback",
+      "authors": "Bai et al",
+      "year": 2022,
+      "url": "https://arxiv.org/abs/2212.08073",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/05-post-training",
+          "diagram": 7
+        }
+      ]
+    },
+    {
+      "id": "R030",
+      "title": "Deep reinforcement learning from human preferences",
+      "authors": "Christiano et al",
+      "year": 2017,
+      "url": "https://arxiv.org/abs/1706.03741",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/05-post-training",
+          "diagram": 7
+        }
+      ]
+    },
+    {
+      "id": "R031",
+      "title": "DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models",
+      "authors": "Shao et al",
+      "year": 2024,
+      "url": "https://arxiv.org/abs/2402.03300",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/05-post-training",
+          "diagram": 7
+        }
+      ]
+    },
+    {
+      "id": "R032",
+      "title": "Learning to summarize from human feedback",
+      "authors": "Stiennon et al",
+      "year": 2020,
+      "url": "https://arxiv.org/abs/2009.01325",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/05-post-training",
+          "diagram": 7
+        }
+      ]
+    },
+    {
+      "id": "R033",
+      "title": "Proximal Policy Optimization Algorithms",
+      "authors": "Schulman et al",
+      "year": 2017,
+      "url": "https://arxiv.org/abs/1707.06347",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/05-post-training",
+          "diagram": 7
+        }
+      ]
+    },
+    {
+      "id": "R034",
+      "title": "Tulu 3: Pushing Frontiers in Open Language Model Post-Training",
+      "authors": "Lambert et al",
+      "year": 2024,
+      "url": "https://arxiv.org/abs/2411.15124",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/05-post-training",
+          "diagram": 7
+        }
+      ]
+    },
+    {
+      "id": "R035",
+      "title": "AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration",
+      "authors": "Lin et al",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2306.00978",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/06-inference-kvcache-moe",
+          "diagram": 8
+        }
+      ]
+    },
+    {
+      "id": "R036",
+      "title": "DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language Model",
+      "authors": "DeepSeek-AI",
+      "year": 2024,
+      "url": "https://arxiv.org/abs/2405.04434",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/06-inference-kvcache-moe",
+          "diagram": 8
+        }
+      ]
+    },
+    {
+      "id": "R037",
+      "title": "Efficient Memory Management for Large Language Model Serving with PagedAttention",
+      "authors": "Kwon et al",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2309.06180",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/06-inference-kvcache-moe",
+          "diagram": 8
+        }
+      ],
+      "core": {
+        "chapter": 1,
+        "order": 6
+      }
+    },
+    {
+      "id": "R038",
+      "title": "Fast Inference from Transformers via Speculative Decoding",
+      "authors": "Leviathan et al",
+      "year": 2022,
+      "url": "https://arxiv.org/abs/2211.17192",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/06-inference-kvcache-moe",
+          "diagram": 8
+        }
+      ]
+    },
+    {
+      "id": "R039",
+      "title": "GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers",
+      "authors": "Frantar et al",
+      "year": 2022,
+      "url": "https://arxiv.org/abs/2210.17323",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/06-inference-kvcache-moe",
+          "diagram": 8
+        }
+      ]
+    },
+    {
+      "id": "R040",
+      "title": "Mixtral of Experts",
+      "authors": "Jiang et al",
+      "year": 2024,
+      "url": "https://arxiv.org/abs/2401.04088",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/06-inference-kvcache-moe",
+          "diagram": 8
+        }
+      ]
+    },
+    {
+      "id": "R041",
+      "title": "Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer",
+      "authors": "Shazeer et al",
+      "year": 2017,
+      "url": "https://arxiv.org/abs/1701.06538",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/06-inference-kvcache-moe",
+          "diagram": 8
+        }
+      ]
+    },
+    {
+      "id": "R042",
+      "title": "Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity",
+      "authors": "Fedus et al",
+      "year": 2021,
+      "url": "https://arxiv.org/abs/2101.03961",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/06-inference-kvcache-moe",
+          "diagram": 8
+        }
+      ]
+    },
+    {
+      "id": "R043",
+      "title": "Chain-of-Thought Prompting Elicits Reasoning in Large Language Models",
+      "authors": "Wei et al",
+      "year": 2022,
+      "url": "https://arxiv.org/abs/2201.11903",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        }
+      ]
+    },
+    {
+      "id": "R044",
+      "title": "Extracting Training Data from Large Language Models",
+      "authors": "Carlini et al",
+      "year": 2020,
+      "url": "https://arxiv.org/abs/2012.07805",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        }
+      ]
+    },
+    {
+      "id": "R045",
+      "title": "Quantifying Memorization Across Neural Language Models",
+      "authors": "Carlini et al",
+      "year": 2022,
+      "url": "https://arxiv.org/abs/2202.07646",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        }
+      ]
+    },
+    {
+      "id": "R046",
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "authors": "Lewis et al",
+      "year": 2020,
+      "url": "https://arxiv.org/abs/2005.11401",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        },
+        {
+          "chapter": 2,
+          "article": "ch02/04-memory-rag",
+          "diagram": 14
+        }
+      ],
+      "core": {
+        "chapter": 2,
+        "order": 4
+      }
+    },
+    {
+      "id": "R047",
+      "title": "Siren's Song in the AI Ocean (hallucination survey)",
+      "authors": "Zhang et al",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2309.01219",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        }
+      ]
+    },
+    {
+      "id": "R048",
+      "title": "asking the average data labeler",
+      "authors": "Andrej Karpathy (@karpathy)",
+      "year": 2024,
+      "date": "2024-11-29",
+      "url": "https://x.com/karpathy/status/1862565643436138619",
+      "type": "X post",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        }
+      ]
+    },
+    {
+      "id": "R049",
+      "title": "system prompt learning",
+      "authors": "Andrej Karpathy (@karpathy)",
+      "year": 2025,
+      "date": "2025-05-11",
+      "url": "https://x.com/karpathy/status/1921368644069765486",
+      "type": "X post",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        }
+      ]
+    },
+    {
+      "id": "R050",
+      "title": "H100 Tensor Core GPU",
+      "authors": "NVIDIA",
+      "year": null,
+      "url": "https://www.nvidia.com/en-us/data-center/h100/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/08-training-cost",
+          "diagram": 10
+        }
+      ]
+    },
+    {
+      "id": "R051",
+      "title": "Post on DeepSeek-V3 training compute (2048 GPUs, ~USD 6M)",
+      "authors": "Andrej Karpathy (@karpathy)",
+      "year": 2024,
+      "date": "2024-12-26",
+      "url": "https://x.com/karpathy/status/1872362712958906460",
+      "type": "X post",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/08-training-cost",
+          "diagram": 10
+        }
+      ]
+    },
+    {
+      "id": "R052",
+      "title": "The rising costs of training frontier AI models",
+      "authors": "Cottier et al",
+      "year": 2024,
+      "url": "https://arxiv.org/abs/2405.21015",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/08-training-cost",
+          "diagram": 10
+        }
+      ]
+    },
+    {
+      "id": "R053",
+      "title": "Building effective agents",
+      "authors": "Anthropic",
+      "year": 2024,
+      "url": "https://www.anthropic.com/engineering/building-effective-agents",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/01-agent-components",
+          "diagram": 11
+        },
+        {
+          "chapter": 2,
+          "article": "ch02/02-react-plan-reflection",
+          "diagram": 12
+        },
+        {
+          "chapter": 2,
+          "article": "ch02/05-multi-agent-harness",
+          "diagram": 15
+        },
+        {
+          "chapter": 2,
+          "article": "ch02/06-guardrails-decision",
+          "diagram": 16
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/04-coding-agent-loop",
+          "diagram": 20
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/05-four-generations",
+          "diagram": 21
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/04-layered-verification",
+          "diagram": 25
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/07-7-day-roadmap",
+          "diagram": 28
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/03-race-vs-pipeline",
+          "diagram": 31
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/04-orchestration-layer",
+          "diagram": 32
+        }
+      ],
+      "core": {
+        "chapter": 2,
+        "order": 0
+      }
+    },
+    {
+      "id": "R054",
+      "title": "Cognitive Architectures for Language Agents",
+      "authors": "Sumers et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2309.02427",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/01-agent-components",
+          "diagram": 11
+        }
+      ]
+    },
+    {
+      "id": "R055",
+      "title": "Executable Code Actions Elicit Better LLM Agents",
+      "authors": "Wang et al.",
+      "year": 2024,
+      "url": "https://arxiv.org/abs/2402.01030",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/01-agent-components",
+          "diagram": 11
+        }
+      ]
+    },
+    {
+      "id": "R056",
+      "title": "Generative Agents: Interactive Simulacra of Human Behavior",
+      "authors": "Park et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2304.03442",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/01-agent-components",
+          "diagram": 11
+        },
+        {
+          "chapter": 2,
+          "article": "ch02/04-memory-rag",
+          "diagram": 14
+        }
+      ]
+    },
+    {
+      "id": "R057",
+      "title": "LLM Powered Autonomous Agents",
+      "authors": "Lilian Weng",
+      "year": 2023,
+      "url": "https://lilianweng.github.io/posts/2023-06-23-agent/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/01-agent-components",
+          "diagram": 11
+        }
+      ]
+    },
+    {
+      "id": "R058",
+      "title": "ReAct: Synergizing Reasoning and Acting in Language Models",
+      "authors": "Yao et al.",
+      "year": 2022,
+      "url": "https://arxiv.org/abs/2210.03629",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/01-agent-components",
+          "diagram": 11
+        },
+        {
+          "chapter": 2,
+          "article": "ch02/02-react-plan-reflection",
+          "diagram": 12
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/05-evidence-chain",
+          "diagram": 26
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/02-aiops-self-healing",
+          "diagram": 35
+        }
+      ],
+      "core": {
+        "chapter": 2,
+        "order": 1
+      }
+    },
+    {
+      "id": "R059",
+      "title": "SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering",
+      "authors": "Yang et al.",
+      "year": 2024,
+      "url": "https://arxiv.org/abs/2405.15793",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/01-agent-components",
+          "diagram": 11
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/01-evolution-timeline",
+          "diagram": 17
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/02-traditional-ide",
+          "diagram": 18
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/04-coding-agent-loop",
+          "diagram": 20
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/04-layered-verification",
+          "diagram": 25
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/03-future-form",
+          "diagram": 36
+        }
+      ],
+      "core": {
+        "chapter": 3,
+        "order": 2
+      }
+    },
+    {
+      "id": "R060",
+      "title": "Toolformer: Language Models Can Teach Themselves to Use Tools",
+      "authors": "Schick et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2302.04761",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/01-agent-components",
+          "diagram": 11
+        }
+      ]
+    },
+    {
+      "id": "R061",
+      "title": "Plan-and-Solve Prompting: Improving Zero-Shot Chain-of-Thought Reasoning by Large Language Models",
+      "authors": "Wang et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2305.04091",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/02-react-plan-reflection",
+          "diagram": 12
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/03-spec-driven",
+          "diagram": 24
+        }
+      ]
+    },
+    {
+      "id": "R062",
+      "title": "Reflexion: Language Agents with Verbal Reinforcement Learning",
+      "authors": "Shinn et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2303.11366",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/02-react-plan-reflection",
+          "diagram": 12
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/05-four-generations",
+          "diagram": 21
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/04-layered-verification",
+          "diagram": 25
+        }
+      ],
+      "core": {
+        "chapter": 2,
+        "order": 2
+      }
+    },
+    {
+      "id": "R063",
+      "title": "Self-Refine: Iterative Refinement with Self-Feedback",
+      "authors": "Madaan et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2303.17651",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/02-react-plan-reflection",
+          "diagram": 12
+        }
+      ]
+    },
+    {
+      "id": "R064",
+      "title": "Introducing the Model Context Protocol",
+      "authors": "Anthropic",
+      "year": 2024,
+      "url": "https://www.anthropic.com/news/model-context-protocol",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/03-mcp",
+          "diagram": 13
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/01-evolution-timeline",
+          "diagram": 17
+        }
+      ]
+    },
+    {
+      "id": "R065",
+      "title": "MCP Architecture overview",
+      "authors": "MCP project",
+      "year": 2025,
+      "url": "https://modelcontextprotocol.io/docs/learn/architecture",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/03-mcp",
+          "diagram": 13
+        }
+      ]
+    },
+    {
+      "id": "R066",
+      "title": "Model Context Protocol Specification (2025-06-18)",
+      "authors": "MCP project",
+      "year": 2025,
+      "url": "https://modelcontextprotocol.io/specification/2025-06-18",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/03-mcp",
+          "diagram": 13
+        },
+        {
+          "chapter": 2,
+          "article": "ch02/06-guardrails-decision",
+          "diagram": 16
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/02-traditional-ide",
+          "diagram": 18
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/05-humans-and-agents",
+          "diagram": 33
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/02-aiops-self-healing",
+          "diagram": 35
+        }
+      ],
+      "core": {
+        "chapter": 2,
+        "order": 3
+      }
+    },
+    {
+      "id": "R067",
+      "title": "Effective context engineering for AI agents",
+      "authors": "Anthropic",
+      "year": 2025,
+      "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/04-memory-rag",
+          "diagram": 14
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/04-coding-agent-loop",
+          "diagram": 20
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/02-context-engineering",
+          "diagram": 23
+        }
+      ],
+      "core": {
+        "chapter": 4,
+        "order": 2
+      }
+    },
+    {
+      "id": "R068",
+      "title": "From Local to Global: A Graph RAG Approach to Query-Focused Summarization",
+      "authors": "Edge et al.",
+      "year": 2024,
+      "url": "https://arxiv.org/abs/2404.16130",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/04-memory-rag",
+          "diagram": 14
+        }
+      ]
+    },
+    {
+      "id": "R069",
+      "title": "Lost in the Middle: How Language Models Use Long Contexts",
+      "authors": "Liu et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2307.03172",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/04-memory-rag",
+          "diagram": 14
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/02-context-engineering",
+          "diagram": 23
+        }
+      ],
+      "core": {
+        "chapter": 4,
+        "order": 3
+      }
+    },
+    {
+      "id": "R070",
+      "title": "MemGPT: Towards LLMs as Operating Systems",
+      "authors": "Packer et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2310.08560",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/04-memory-rag",
+          "diagram": 14
+        }
+      ]
+    },
+    {
+      "id": "R071",
+      "title": "Retrieval-Augmented Generation for Large Language Models: A Survey",
+      "authors": "Gao et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2312.10997",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/04-memory-rag",
+          "diagram": 14
+        }
+      ]
+    },
+    {
+      "id": "R072",
+      "title": "AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation",
+      "authors": "Wu et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2308.08155",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/05-multi-agent-harness",
+          "diagram": 15
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/01-why-multi-agent",
+          "diagram": 29
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/04-orchestration-layer",
+          "diagram": 32
+        }
+      ]
+    },
+    {
+      "id": "R073",
+      "title": "ChatDev: Communicative Agents for Software Development",
+      "authors": "Qian et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2307.07924",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/05-multi-agent-harness",
+          "diagram": 15
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/01-why-multi-agent",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R074",
+      "title": "How we built our multi-agent research system",
+      "authors": "Anthropic",
+      "year": 2025,
+      "url": "https://www.anthropic.com/engineering/multi-agent-research-system",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/05-multi-agent-harness",
+          "diagram": 15
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/05-four-generations",
+          "diagram": 21
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/01-why-multi-agent",
+          "diagram": 29
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/04-orchestration-layer",
+          "diagram": 32
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/02-aiops-self-healing",
+          "diagram": 35
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/03-future-form",
+          "diagram": 36
+        }
+      ],
+      "core": {
+        "chapter": 5,
+        "order": 0
+      }
+    },
+    {
+      "id": "R075",
+      "title": "Improving Factuality and Reasoning in Language Models through Multiagent Debate",
+      "authors": "Du et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2305.14325",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/05-multi-agent-harness",
+          "diagram": 15
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/01-why-multi-agent",
+          "diagram": 29
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/03-race-vs-pipeline",
+          "diagram": 31
+        }
+      ]
+    },
+    {
+      "id": "R076",
+      "title": "MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework",
+      "authors": "Hong et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2308.00352",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/05-multi-agent-harness",
+          "diagram": 15
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/01-why-multi-agent",
+          "diagram": 29
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/03-race-vs-pipeline",
+          "diagram": 31
+        }
+      ],
+      "core": {
+        "chapter": 5,
+        "order": 3
+      }
+    },
+    {
+      "id": "R077",
+      "title": "Agentless: Demystifying LLM-based Software Engineering Agents",
+      "authors": "Xia et al.",
+      "year": 2024,
+      "url": "https://arxiv.org/abs/2407.01489",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/06-guardrails-decision",
+          "diagram": 16
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/04-coding-agent-loop",
+          "diagram": 20
+        }
+      ]
+    },
+    {
+      "id": "R078",
+      "title": "LLM01:2025 Prompt Injection",
+      "authors": "OWASP Gen AI Security Project",
+      "year": 2025,
+      "url": "https://genai.owasp.org/llmrisk/llm01-prompt-injection/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/06-guardrails-decision",
+          "diagram": 16
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/05-humans-and-agents",
+          "diagram": 33
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/02-aiops-self-healing",
+          "diagram": 35
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/05-open-questions",
+          "diagram": 38
+        }
+      ],
+      "core": {
+        "chapter": 2,
+        "order": 5
+      }
+    },
+    {
+      "id": "R079",
+      "title": "Not what you've signed up for: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection",
+      "authors": "Greshake et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2302.12173",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/06-guardrails-decision",
+          "diagram": 16
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/05-open-questions",
+          "diagram": 38
+        }
+      ]
+    },
+    {
+      "id": "R080",
+      "title": "Claude 3.7 Sonnet and Claude Code",
+      "authors": "Anthropic",
+      "year": 2025,
+      "url": "https://www.anthropic.com/news/claude-3-7-sonnet",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/01-evolution-timeline",
+          "diagram": 17
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/04-coding-agent-loop",
+          "diagram": 20
+        }
+      ]
+    },
+    {
+      "id": "R081",
+      "title": "Code completion (Wikipedia; IntelliSense history)",
+      "authors": "Wikipedia",
+      "year": null,
+      "url": "https://en.wikipedia.org/wiki/Code_completion",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/01-evolution-timeline",
+          "diagram": 17
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/02-traditional-ide",
+          "diagram": 18
+        }
+      ]
+    },
+    {
+      "id": "R082",
+      "title": "Evaluating Large Language Models Trained on Code",
+      "authors": "Chen et al.",
+      "year": 2021,
+      "url": "https://arxiv.org/abs/2107.03374",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/01-evolution-timeline",
+          "diagram": 17
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/03-copilot-to-cursor",
+          "diagram": 19
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/05-four-generations",
+          "diagram": 21
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/04-layered-verification",
+          "diagram": 25
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/03-race-vs-pipeline",
+          "diagram": 31
+        }
+      ],
+      "core": {
+        "chapter": 3,
+        "order": 0
+      }
+    },
+    {
+      "id": "R083",
+      "title": "Fortran (Wikipedia)",
+      "authors": "Wikipedia",
+      "year": null,
+      "url": "https://en.wikipedia.org/wiki/Fortran",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/01-evolution-timeline",
+          "diagram": 17
+        }
+      ]
+    },
+    {
+      "id": "R084",
+      "title": "Introducing GitHub Copilot: your AI pair programmer",
+      "authors": "Nat Friedman (GitHub)",
+      "year": 2021,
+      "url": "https://github.blog/news-insights/product-news/introducing-github-copilot-ai-pair-programmer/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/01-evolution-timeline",
+          "diagram": 17
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/03-copilot-to-cursor",
+          "diagram": 19
+        }
+      ]
+    },
+    {
+      "id": "R085",
+      "title": "Java (programming language) (Wikipedia)",
+      "authors": "Wikipedia",
+      "year": null,
+      "url": "https://en.wikipedia.org/wiki/Java_(programming_language)",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/01-evolution-timeline",
+          "diagram": 17
+        }
+      ]
+    },
+    {
+      "id": "R086",
+      "title": "SWE-bench: Can Language Models Resolve Real-World GitHub Issues?",
+      "authors": "Jimenez et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2310.06770",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/01-evolution-timeline",
+          "diagram": 17
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/04-coding-agent-loop",
+          "diagram": 20
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/05-four-generations",
+          "diagram": 21
+        }
+      ],
+      "core": {
+        "chapter": 3,
+        "order": 1
+      }
+    },
+    {
+      "id": "R087",
+      "title": "openai/codex (Codex CLI repository)",
+      "authors": "OpenAI",
+      "year": 2025,
+      "url": "https://github.com/openai/codex",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/01-evolution-timeline",
+          "diagram": 17
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/04-coding-agent-loop",
+          "diagram": 20
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/03-future-form",
+          "diagram": 36
+        }
+      ]
+    },
+    {
+      "id": "R088",
+      "title": "《AI Native 研发范式实践手册》解读版 (AI Native R&D Paradigm Practice Handbook, annotated)",
+      "authors": "Alibaba (handbook); annotated by kejun",
+      "year": 2026,
+      "url": "https://kejun.github.io/ai-native-dev-handbook/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/01-evolution-timeline",
+          "diagram": 17
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/05-four-generations",
+          "diagram": 21
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/01-amdahl",
+          "diagram": 22
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/02-context-engineering",
+          "diagram": 23
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/03-spec-driven",
+          "diagram": 24
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/04-layered-verification",
+          "diagram": 25
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/05-evidence-chain",
+          "diagram": 26
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/06-metrics",
+          "diagram": 27
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/07-7-day-roadmap",
+          "diagram": 28
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/05-humans-and-agents",
+          "diagram": 33
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/01-traditional-cicd",
+          "diagram": 34
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/02-aiops-self-healing",
+          "diagram": 35
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/03-future-form",
+          "diagram": 36
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/04-roles-organization",
+          "diagram": 37
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/05-open-questions",
+          "diagram": 38
+        }
+      ],
+      "core": {
+        "chapter": 4,
+        "order": 0
+      }
+    },
+    {
+      "id": "R089",
+      "title": "AGENTS.md",
+      "authors": "AGENTS.md project",
+      "year": 2025,
+      "url": "https://agents.md/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/03-copilot-to-cursor",
+          "diagram": 19
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/02-context-engineering",
+          "diagram": 23
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/07-7-day-roadmap",
+          "diagram": 28
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/05-open-questions",
+          "diagram": 38
+        }
+      ]
+    },
+    {
+      "id": "R090",
+      "title": "Claude Code docs: Memory (CLAUDE.md)",
+      "authors": "Anthropic",
+      "year": 2026,
+      "url": "https://code.claude.com/docs/en/memory",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/03-copilot-to-cursor",
+          "diagram": 19
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/02-orca-worktree",
+          "diagram": 30
+        }
+      ]
+    },
+    {
+      "id": "R091",
+      "title": "Cursor docs: Rules",
+      "authors": "Cursor",
+      "year": 2026,
+      "url": "https://cursor.com/docs/context/rules",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/03-copilot-to-cursor",
+          "diagram": 19
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/02-context-engineering",
+          "diagram": 23
+        }
+      ]
+    },
+    {
+      "id": "R092",
+      "title": "Measuring the Impact of Early-2025 AI on Experienced Open-Source Developer Productivity",
+      "authors": "Becker et al. (METR)",
+      "year": 2025,
+      "url": "https://arxiv.org/abs/2507.09089",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/03-copilot-to-cursor",
+          "diagram": 19
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/06-metrics",
+          "diagram": 27
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/07-7-day-roadmap",
+          "diagram": 28
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/04-roles-organization",
+          "diagram": 37
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/05-open-questions",
+          "diagram": 38
+        }
+      ],
+      "core": {
+        "chapter": 3,
+        "order": 3
+      }
+    },
+    {
+      "id": "R093",
+      "title": "The Impact of AI on Developer Productivity: Evidence from GitHub Copilot",
+      "authors": "Peng et al.",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2302.06590",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/03-copilot-to-cursor",
+          "diagram": 19
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/06-metrics",
+          "diagram": 27
+        }
+      ],
+      "core": {
+        "chapter": 3,
+        "order": 4
+      }
+    },
+    {
+      "id": "R094",
+      "title": "What is GitHub Copilot?",
+      "authors": "GitHub Docs",
+      "year": 2026,
+      "url": "https://docs.github.com/en/copilot/get-started/what-is-github-copilot",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/03-copilot-to-cursor",
+          "diagram": 19
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/03-future-form",
+          "diagram": 36
+        }
+      ]
+    },
+    {
+      "id": "R095",
+      "title": "Claude Code docs: Overview",
+      "authors": "Anthropic",
+      "year": 2026,
+      "url": "https://code.claude.com/docs/en/overview",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/04-coding-agent-loop",
+          "diagram": 20
+        }
+      ]
+    },
+    {
+      "id": "R096",
+      "title": "Claude Code docs: Subagents",
+      "authors": "Anthropic",
+      "year": 2026,
+      "url": "https://code.claude.com/docs/en/sub-agents",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/04-coding-agent-loop",
+          "diagram": 20
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/04-orchestration-layer",
+          "diagram": 32
+        }
+      ]
+    },
+    {
+      "id": "R097",
+      "title": "Codex docs: Subagents",
+      "authors": "OpenAI",
+      "year": 2026,
+      "url": "https://developers.openai.com/codex/subagents",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/04-coding-agent-loop",
+          "diagram": 20
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/04-orchestration-layer",
+          "diagram": 32
+        }
+      ]
+    },
+    {
+      "id": "R098",
+      "title": "Cursor docs: Subagents",
+      "authors": "Cursor",
+      "year": 2026,
+      "url": "https://cursor.com/docs/subagents",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/04-coding-agent-loop",
+          "diagram": 20
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/04-orchestration-layer",
+          "diagram": 32
+        }
+      ]
+    },
+    {
+      "id": "R099",
+      "title": "入职大厂两个月 AI 开发心得 (Two months of AI development at a big tech company)",
+      "authors": "@huangtongxueh",
+      "year": 2026,
+      "date": "2026-10-09",
+      "url": "https://x.com/huangtongxueh/status/2108577165306687938",
+      "type": "X post",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/04-coding-agent-loop",
+          "diagram": 20
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/05-four-generations",
+          "diagram": 21
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/02-context-engineering",
+          "diagram": 23
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/03-spec-driven",
+          "diagram": 24
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/04-layered-verification",
+          "diagram": 25
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/05-evidence-chain",
+          "diagram": 26
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/07-7-day-roadmap",
+          "diagram": 28
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/03-race-vs-pipeline",
+          "diagram": 31
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/05-humans-and-agents",
+          "diagram": 33
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/05-open-questions",
+          "diagram": 38
+        }
+      ]
+    },
+    {
+      "id": "R100",
+      "title": "Validity of the single processor approach to achieving large scale computing capabilities",
+      "authors": "Gene M. Amdahl",
+      "year": 1967,
+      "url": "https://doi.org/10.1145/1465482.1465560",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/01-amdahl",
+          "diagram": 22
+        }
+      ],
+      "core": {
+        "chapter": 4,
+        "order": 1
+      }
+    },
+    {
+      "id": "R101",
+      "title": "Orca 从入门到精通 (Orca from beginner to expert)",
+      "authors": "@CopperForgeAI",
+      "year": 2026,
+      "date": "2026-10-10",
+      "url": "https://x.com/CopperForgeAI/status/2108830306014998719",
+      "type": "X post",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/02-context-engineering",
+          "diagram": 23
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/07-7-day-roadmap",
+          "diagram": 28
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/01-why-multi-agent",
+          "diagram": 29
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/02-orca-worktree",
+          "diagram": 30
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/03-race-vs-pipeline",
+          "diagram": 31
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/04-orchestration-layer",
+          "diagram": 32
+        }
+      ]
+    },
+    {
+      "id": "R102",
+      "title": "Site Reliability Engineering, Ch. 15: Postmortem Culture",
+      "authors": "Google (Beyer et al., eds.)",
+      "year": 2016,
+      "url": "https://sre.google/sre-book/postmortem-culture/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/05-evidence-chain",
+          "diagram": 26
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/01-traditional-cicd",
+          "diagram": 34
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/02-aiops-self-healing",
+          "diagram": 35
+        }
+      ],
+      "core": {
+        "chapter": 6,
+        "order": 2
+      }
+    },
+    {
+      "id": "R103",
+      "title": "DORA software delivery metrics",
+      "authors": "DORA",
+      "year": null,
+      "url": "https://dora.dev/guides/dora-metrics-four-keys/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/06-metrics",
+          "diagram": 27
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/01-traditional-cicd",
+          "diagram": 34
+        }
+      ],
+      "core": {
+        "chapter": 4,
+        "order": 4
+      }
+    },
+    {
+      "id": "R104",
+      "title": "Orca documentation",
+      "authors": "Stably",
+      "year": 2026,
+      "url": "https://onorca.dev/docs",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 5,
+          "article": "ch05/02-orca-worktree",
+          "diagram": 30
+        },
+        {
+          "chapter": 5,
+          "article": "ch05/03-race-vs-pipeline",
+          "diagram": 31
+        }
+      ],
+      "core": {
+        "chapter": 5,
+        "order": 1
+      }
+    },
+    {
+      "id": "R105",
+      "title": "git-worktree documentation",
+      "authors": "Git project",
+      "year": null,
+      "url": "https://git-scm.com/docs/git-worktree",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 5,
+          "article": "ch05/02-orca-worktree",
+          "diagram": 30
+        }
+      ],
+      "core": {
+        "chapter": 5,
+        "order": 2
+      }
+    },
+    {
+      "id": "R106",
+      "title": "stablyai/orca (GitHub repository)",
+      "authors": "Stably",
+      "year": 2026,
+      "url": "https://github.com/stablyai/orca",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 5,
+          "article": "ch05/02-orca-worktree",
+          "diagram": 30
+        }
+      ]
+    },
+    {
+      "id": "R107",
+      "title": "Orca CLI: Orchestration",
+      "authors": "Stably",
+      "year": 2026,
+      "url": "https://onorca.dev/docs/cli/orchestration",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 5,
+          "article": "ch05/04-orchestration-layer",
+          "diagram": 32
+        }
+      ]
+    },
+    {
+      "id": "R108",
+      "title": "Site Reliability Engineering, Ch. 1: Introduction",
+      "authors": "Google (Beyer et al., eds.)",
+      "year": 2016,
+      "url": "https://sre.google/sre-book/introduction/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 6,
+          "article": "ch06/01-traditional-cicd",
+          "diagram": 34
+        }
+      ]
+    },
+    {
+      "id": "R109",
+      "title": "Site Reliability Engineering, Ch. 3: Embracing Risk",
+      "authors": "Google (Beyer et al., eds.)",
+      "year": 2016,
+      "url": "https://sre.google/sre-book/embracing-risk/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 6,
+          "article": "ch06/01-traditional-cicd",
+          "diagram": 34
+        },
+        {
+          "chapter": 6,
+          "article": "ch06/02-aiops-self-healing",
+          "diagram": 35
+        }
+      ]
+    },
+    {
+      "id": "R110",
+      "title": "Site Reliability Engineering, Ch. 5: Eliminating Toil",
+      "authors": "Google (Beyer et al., eds.)",
+      "year": 2016,
+      "url": "https://sre.google/sre-book/eliminating-toil/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 6,
+          "article": "ch06/01-traditional-cicd",
+          "diagram": 34
+        }
+      ],
+      "core": {
+        "chapter": 6,
+        "order": 0
+      }
+    },
+    {
+      "id": "R111",
+      "title": "Site Reliability Engineering, Ch. 8: Release Engineering",
+      "authors": "Google (Beyer et al., eds.)",
+      "year": 2016,
+      "url": "https://sre.google/sre-book/release-engineering/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 6,
+          "article": "ch06/01-traditional-cicd",
+          "diagram": 34
+        }
+      ],
+      "core": {
+        "chapter": 6,
+        "order": 1
+      }
+    },
+    {
+      "id": "R112",
+      "title": "Prediction and Entropy of Printed English",
+      "authors": "C. E. Shannon",
+      "year": 1951,
+      "url": "https://doi.org/10.1002/j.1538-7305.1951.tb01366.x",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/04-pretraining-scaling",
+          "diagram": 6
+        }
+      ]
+    },
+    {
+      "id": "R113",
+      "title": "The Curious Case of Neural Text Degeneration",
+      "authors": "Holtzman et al",
+      "year": 2019,
+      "url": "https://arxiv.org/abs/1904.09751",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/06-inference-kvcache-moe",
+          "diagram": 8
+        }
+      ]
+    },
+    {
+      "id": "R114",
+      "title": "In-context Learning and Induction Heads",
+      "authors": "Olsson et al",
+      "year": 2022,
+      "url": "https://arxiv.org/abs/2209.11895",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/03-transformer-attention",
+          "diagram": 5
+        }
+      ]
+    },
+    {
+      "id": "R115",
+      "title": "Transformer Feed-Forward Layers Are Key-Value Memories",
+      "authors": "Geva et al",
+      "year": 2020,
+      "url": "https://arxiv.org/abs/2012.14913",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/03-transformer-attention",
+          "diagram": 5
+        }
+      ]
+    },
+    {
+      "id": "R116",
+      "title": "Why Language Models Hallucinate",
+      "authors": "Kalai et al",
+      "year": 2025,
+      "url": "https://arxiv.org/abs/2509.04664",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        }
+      ]
+    },
+    {
+      "id": "R117",
+      "title": "Towards Understanding Sycophancy in Language Models",
+      "authors": "Sharma et al",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2310.13548",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        }
+      ]
+    },
+    {
+      "id": "R118",
+      "title": "The Reversal Curse: LLMs trained on \"A is B\" fail to learn \"B is A\"",
+      "authors": "Berglund et al",
+      "year": 2023,
+      "url": "https://arxiv.org/abs/2309.12288",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/07-misconceptions",
+          "diagram": 9
+        }
+      ]
+    },
+    {
+      "id": "R119",
+      "title": "DeepSeek-R1 incentivizes reasoning in LLMs through reinforcement learning (Nature 645, 633–638)",
+      "authors": "DeepSeek-AI (Guo et al)",
+      "year": 2025,
+      "url": "https://doi.org/10.1038/s41586-025-09422-z",
+      "type": "paper",
+      "supports": [
+        {
+          "chapter": 1,
+          "article": "ch01/01-training-overview",
+          "diagram": 3
+        },
+        {
+          "chapter": 1,
+          "article": "ch01/05-post-training",
+          "diagram": 7
+        }
+      ]
+    },
+    {
+      "id": "R120",
+      "title": "RFC 5987: Character Set and Language Encoding for HTTP Header Field Parameters",
+      "authors": "J. Reschke (IETF)",
+      "year": 2010,
+      "url": "https://www.rfc-editor.org/rfc/rfc5987",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 3,
+          "article": "ch03/04-coding-agent-loop",
+          "diagram": 20
+        }
+      ]
+    },
+    {
+      "id": "R121",
+      "title": "Language Server Protocol",
+      "authors": "Microsoft",
+      "year": null,
+      "url": "https://microsoft.github.io/language-server-protocol/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 2,
+          "article": "ch02/03-mcp",
+          "diagram": 13
+        },
+        {
+          "chapter": 3,
+          "article": "ch03/02-traditional-ide",
+          "diagram": 18
+        }
+      ]
+    }
+  ]
+}

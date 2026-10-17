@@ -2,31 +2,40 @@
 <blockquote>
 <p>对应图 #34 · 第六章「AI 改变研发流程」</p>
 </blockquote>
-<h2>概述</h2>
-<p>持续集成与持续交付（CI/CD）把构建、测试、部署变成了自动运行的流水线，是过去十几年软件工程最重要的进步之一。但在传统的 CI/CD 和运维体系中，<strong>执行是自动的，判断仍然在人</strong>：测试失败了谁来看原因？告警响了谁来定位？发布要不要继续？事故之后怎么复盘？这些都依赖工程师的经验。</p>
-<h2>核心机制</h2>
-<p><strong>1. 流水线自动化。</strong> 典型流程：提交 → 构建 → 单元测试 → 集成测试 → 制品 → 预发 → 灰度 → 生产。Google SRE Book 中的发布工程章节强调了两个原则：团队要能自助发布（self-service）；构建要「封闭」（hermetic），不受构建机器上安装的库和软件影响，保证可重复。</p>
-<p><strong>2. 人负责判断的环节：</strong></p>
+<p>持续集成与持续交付（CI/CD）把构建、测试、部署变成了自动运行的流水线，是过去十几年软件工程最重要的进步之一。但在传统的 CI/CD 和运维体系中，<strong>执行是自动的，判断仍然在人</strong>：测试失败了，谁来看原因？告警响了，谁来定位？发布要不要继续？事故之后怎么复盘？这些都依赖工程师的经验。</p>
+<p>这一章从流程的视角看 AI 带来的变化。和第三章的「传统 IDE」一样，这一篇是基线：先看清流水线今天哪里自动、哪里靠人。</p>
+<h2>一、流水线：已经自动化的部分</h2>
+<p>一条典型的流水线：</p>
+<pre><code>提交 → 构建 → 单元测试 → 集成测试 → 制品 → 预发 → 灰度 → 生产
+</code></pre>
+<p>每一个箭头都是机器在推进。Google SRE Book 的发布工程章节强调了两条原则，解释了这条流水线为什么可靠：</p>
 <ul>
-<li>测试失败与构建报错的分析</li>
-<li>告警分诊与故障定位</li>
-<li>发布的继续、暂停或回滚决策</li>
-<li>事故复盘与改进措施</li>
+<li><strong>自助（self-service）</strong>：团队能自己发布，不必排队等专门的发布工程师。这去掉了一个「等人」的环节。</li>
+<li><strong>封闭（hermetic）构建</strong>：构建不受构建机器上安装的库和软件影响，同样的输入总是得到同样的输出，保证可重复。</li>
 </ul>
-<p><strong>3. 琐事（toil）。</strong> SRE Book 对琐事的定义是：与运行生产服务相关、手动的、重复的、可自动化的、战术性的、没有持久价值的，并且随服务增长线性增加的工作。Google 的目标是把每位 SRE 花在琐事上的时间控制在 50% 以下，至少一半时间用于能减少未来琐事或增加服务功能的工程工作；书中提到季度调查显示 Google SRE 平均约 33% 的时间花在琐事上。</p>
-<p><strong>4. 用数据而不是感觉做决策。</strong> SRE 用基于服务等级目标（SLO）的错误预算决定发布节奏：错误预算给出一个季度内服务允许多不可靠的客观指标。事故复盘则强调「无责」：聚焦找出导致事故的因素，而不是指责个人或团队。</p>
-<h2>关键论文与里程碑</h2>
+<p>「可重复」这一点，在 Agent 时代尤其重要。Agent 依赖环境反馈来纠错（第三章），如果同一份代码今天构建通过、明天因为机器上某个库升级而失败，Agent 就会去「修」一个不存在的问题。<strong>封闭构建，是可信反馈的前提。</strong></p>
+<h2>二、判断：仍然靠人的部分</h2>
+<p>流水线停下来的地方，就是人登场的地方：</p>
 <ul>
-<li><strong>Google SRE Book</strong>：琐事、错误预算、发布工程、无责复盘</li>
-<li><strong>DORA 指标</strong>：变更前置时间、部署频率、失败部署恢复时间、变更失败率、部署返工率</li>
+<li><strong>测试失败与构建报错的分析</strong>：是代码错了、测试错了，还是环境抖动？</li>
+<li><strong>告警分诊与故障定位</strong>：这个告警重要吗？问题在哪？</li>
+<li><strong>发布决策</strong>：继续、暂停还是回滚？</li>
+<li><strong>事故复盘与改进措施</strong>：为什么会发生？怎样防止再发生？</li>
 </ul>
-<h2>工程实践与数字</h2>
-<ul>
-<li><strong>DORA 的五个指标</strong>是衡量这条流水线的通用语言：吞吐看变更前置时间（从提交到部署到生产）、部署频率和失败部署恢复时间；不稳定性看变更失败率和部署返工率。</li>
-<li><strong>AI 最先切入的是琐事</strong>：重复、可自动化、没有持久价值的工作，正是 Agent 的理想对象。</li>
-<li><strong>阿里巴巴实践手册的观察</strong>：编码 1 小时就能完成的需求，经过多个内部平台、发布流程和环境约束，从代码完成到最终生效仍可能需要数周。流水线之外的人工节点，是端到端效率的主要瓶颈。</li>
-</ul>
-<h2>常见误区</h2>
+<p>看一个具体场景。周五下午 4 点，灰度阶段错误率从 0.1% 升到 0.3%。值班工程师要在几分钟内回答：这是新版本的问题，还是正常波动？要回滚吗？回滚会影响什么？这些判断需要经验、上下文和对风险的权衡，流水线本身给不出答案。</p>
+<h2>三、琐事：AI 最先切入的地方</h2>
+<p>SRE Book 对琐事（toil）的定义是：与运行生产服务相关、<strong>手动的、重复的、可自动化的、战术性的、没有持久价值的</strong>，并且随服务增长线性增加的工作。</p>
+<p>Google 的目标是把每位 SRE 花在琐事上的时间控制在 50% 以下，至少一半时间用于能减少未来琐事、或增加服务功能的工程工作。书中提到，季度调查显示 Google SRE 平均约 33% 的时间花在琐事上。</p>
+<p>对照这个定义，很多「判断」工作其实一半是琐事：翻日志、找 TraceId、对照最近的变更、把相似的历史事故找出来……这些步骤手动、重复、可自动化。第四章的排障证据链，正是把其中「收集证据」的部分交给 Agent。<strong>AI 最先切入的，不是需要深度判断的部分，而是判断之前的琐事。</strong></p>
+<h2>四、用数据而不是感觉做决策</h2>
+<p>SRE 的另一个重要思想，是用客观指标代替主观判断：</p>
+<p><strong>错误预算。</strong> 基于服务等级目标（SLO）的错误预算，给出一个季度内服务「允许多不可靠」的客观指标。举个例子：SLO 是 99.9% 的可用性，那么在一个 30 天的月份里，允许不可用的时间是 <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">30</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">24</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">60</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8056em;vertical-align:-0.0556em;"></span><span class="mord">0.1%</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">43.2</span></span></span></span> 分钟。预算还很充裕，就可以加快发布；预算快用完了，就放慢发布、优先修稳定性。发布节奏的争论，从「我觉得」变成了「预算还剩多少」。</p>
+<p><strong>无责复盘。</strong> 事故复盘聚焦找出导致事故的因素，而不是指责个人或团队。这在 Agent 时代有新的意义：当一次故障是 Agent 的修改引起的，复盘要问的是「哪一层验证漏掉了它、权限为什么允许它这样做」，而不是简单地说「AI 不可靠」。</p>
+<p><strong>DORA 指标</strong>则是衡量这条流水线的通用语言：吞吐看变更前置时间（从提交到部署到生产）、部署频率和失败部署恢复时间；不稳定性看变更失败率和部署返工率（第四章）。</p>
+<h2>五、流水线之外的人工节点</h2>
+<p>阿里巴巴实践手册有一个观察：编码 1 小时就能完成的需求，经过多个内部平台、发布流程和环境约束，从代码完成到最终生效仍可能需要数周。</p>
+<p>这说明，即使流水线本身已经高度自动化，<strong>流水线之外</strong>还有大量人工节点：申请资源、等待审批、协调窗口期、跨团队确认。按照阿姆达尔定律，这些才是端到端效率的主要瓶颈。</p>
+<h2>六、常见误区</h2>
 <ul>
 <li><strong>「有了 CI/CD 就是 DevOps。」</strong> 自动化执行只是基础，判断环节仍大量依赖人。</li>
 <li><strong>「琐事说明团队不够努力。」</strong> SRE Book 把琐事视为需要用工程手段系统消除的对象，而不是个人问题。</li>

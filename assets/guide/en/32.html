@@ -2,41 +2,56 @@
 <blockquote>
 <p>Companion to diagram #32 · Chapter 5 &quot;Multi-Agent Programming&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>When more agents run at once than a human can track, you need an <strong>orchestration layer</strong>: one agent acts as &quot;project manager&quot;, breaking down tasks, dispatching them to worker agents, tracking progress and aggregating results; humans step in only at key <strong>decision gates</strong>. This is Anthropic's &quot;orchestrator-workers&quot; pattern: a central LLM dynamically breaks down tasks, delegates them to worker LLMs and synthesizes the results, suited to coding tasks whose subtasks can't be predicted.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. Subagents: the basic unit of orchestration.</strong> Mainstream tools have them built in:</p>
+<p>When more agents run at once than a person can track, you need an <strong>orchestration layer</strong>: one agent acts as &quot;project manager&quot;, breaking down the task, dispatching work to worker agents, tracking progress and consolidating results, while humans step in only at key <strong>decision gates</strong>. This is what Anthropic calls the orchestrator–workers pattern: a central LLM dynamically breaks down tasks, delegates them to worker LLMs and synthesises the results, well suited to coding tasks whose subtasks can't be predicted in advance.</p>
+<h2>1. Why an orchestration layer?</h2>
+<p>In the previous two articles a human did the orchestrating: deciding how many worktrees to open, what to give each agent, when to check, how to merge. That is manageable with three agents; with ten, a person's whole day fills up with switching windows, checking status and copy-pasting errors.</p>
+<p><strong>The orchestration layer hands scheduling itself to an agent</strong>, turning the person from dispatcher back into decision-maker. It continues the thread of Chapter 3: each generation of tools hands one more layer of detail to the machine.</p>
+<h2>2. Subagents: the basic unit</h2>
+<p>Mainstream tools all have subagents built in:</p>
 <ul>
-<li><strong>Claude Code</strong>: subagents are Markdown files with YAML frontmatter; each runs in its own context window with a custom system prompt, specific tool access and independent permissions.</li>
-<li><strong>Codex</strong>: can spawn specialized agents in parallel and collect their results into one response; current releases enable subagent workflows by default.</li>
-<li><strong>Cursor</strong>: subagents are specialized assistants the main agent can delegate to; each works in its own context and returns results to the parent, used to break down complex tasks, work in parallel and keep the main conversation's context clean.</li>
+<li><strong>Claude Code</strong>: subagents are Markdown files with YAML front matter; each runs in its own context window with a custom system prompt, specific tool access and independent permissions.</li>
+<li><strong>Codex</strong>: can spawn specialised agents in parallel and collect their results into one response; current versions enable subagent workflows by default.</li>
+<li><strong>Cursor</strong>: subagents are specialised assistants the main agent can delegate to; each works in its own context and returns results to the parent, used to break down complex tasks, work in parallel and keep the main conversation's context clean.</li>
 </ul>
-<p><strong>2. Orca's orchestration layer.</strong> Orca's docs describe orchestration as a structured multi-agent layer (experimental) whose core model includes:</p>
+<p>These subagents usually live within one session. Larger, longer-running orchestration needs a more structured coordination mechanism.</p>
+<h2>3. An example of structured orchestration: Orca</h2>
+<p>Orca's docs describe orchestration as a structured multi-agent layer (experimental), built on five concepts:</p>
 <ul>
-<li><strong>Run</strong>: a durable namespace and coordinator inbox</li>
-<li><strong>Task</strong>: a work item with a spec, dependencies and status, composable into a DAG</li>
-<li><strong>Dispatch</strong>: one execution attempt of a task on a terminal</li>
-<li><strong>Message</strong>: messages such as <code>worker_done</code>, <code>escalation</code>, <code>question</code>, <code>heartbeat</code></li>
-<li><strong>Decision gate</strong>: a question created by the coordinator that blocks the related task until a decision is recorded</li>
+<li><strong>Run</strong>: a durable namespace and coordinator inbox.</li>
+<li><strong>Task</strong>: a work item with a spec, dependencies and status; tasks can form a DAG (directed acyclic graph).</li>
+<li><strong>Dispatch</strong>: one attempt to execute a task on a particular terminal.</li>
+<li><strong>Message</strong>: <code>worker_done</code>, <code>escalation</code>, <code>question</code>, <code>heartbeat</code> and so on.</li>
+<li><strong>Decision gate</strong>: a question created by the coordinator that blocks the relevant tasks until a decision is recorded.</li>
 </ul>
-<p>The worker contract includes: send exactly one <code>worker_done</code> with the outcome, success or failure; attach a summary of what was done, what was found and what remains; send heartbeats during long work; ask blocking questions through the coordinator instead of waiting locally.</p>
-<p><strong>3. Humans guard the gates.</strong> Put gates on irreversible or high-risk steps: merging shared components, database migrations, releases. The X developer sharing Orca usage gives an example: before release, one agent acts as project manager leading two agents reviewing frontend and backend separately, and the human only reads the final summary; the database migration step has a gate where a human must decide.</p>
-<h2>Key Papers and Milestones</h2>
+<p>A pre-release review shows how they fit. The developer on X who shared how they use Orca gives this example: before launch, one agent acts as project manager and leads two agents reviewing front end and back end separately, and the person reads only the final summary; the database migration step has a gate that a human must approve. Mapped onto the model:</p>
+<pre><code>Run: pre-release review
+├─ Task A: review front end → Dispatch to terminal 1 → worker_done
+├─ Task B: review back end  → Dispatch to terminal 2 → worker_done
+├─ Task C: run migration    (depends on A, B)
+│    └─ Decision gate: &quot;May the migration script run?&quot; ← human
+└─ Coordinator summarises → hands to the human
+</code></pre>
+<p>Task C depends on A and B, forming a DAG; the decision gate stops C from running until the human answers.</p>
+<p><strong>The worker contract.</strong> Orca sets explicit requirements for workers: send <code>worker_done</code> <strong>exactly once</strong>, whether successful or not, stating the outcome; include a summary of what was done, what was found and what remains; send heartbeats during long work; and ask blocking questions through the coordinator rather than waiting locally.</p>
+<p>These rules may look fussy, but each addresses a classic distributed-systems problem:</p>
 <ul>
-<li><strong>2023 AutoGen</strong>: a multi-agent conversation framework</li>
-<li><strong>2024 Anthropic's orchestrator-workers pattern</strong></li>
-<li><strong>2025 Anthropic's multi-agent research system</strong>: a lead agent plans and spawns parallel subagents</li>
-<li><strong>Claude Code / Codex / Cursor subagents</strong>, <strong>Orca Orchestration</strong></li>
+<li><strong>Exactly once</strong>: prevents a task being marked done twice, or never receiving a completion signal.</li>
+<li><strong>Completion messages carry both the task ID and the dispatch ID</strong>: Orca requires this so a stale retry cannot complete the wrong task. If a dispatch timed out and was re-dispatched, and the old attempt reported completion later, a task ID alone could overwrite the new attempt's result.</li>
+<li><strong>Heartbeats</strong>: let the coordinator tell &quot;still working&quot; from &quot;stuck&quot;.</li>
+<li><strong>Questions via the coordinator</strong>: workers don't wait forever locally, and all blockers gather where a person can see them.</li>
 </ul>
-<h2>Engineering Practice and Numbers</h2>
+<h2>4. Humans guard the gates</h2>
+<p>Gates belong on <strong>irreversible or high-risk</strong> steps: merging shared components, database migrations, releases. That matches the guardrail principle from Chapter 2: let reversible operations go, require confirmation for irreversible ones.</p>
+<p>Gates also <strong>concentrate</strong> decisions. Without an orchestration layer, ten agents ask for confirmation at ten different times in ten windows; with one, requests collect at the coordinator and a person can handle them in one sitting.</p>
+<h2>5. Engineering points</h2>
 <ul>
-<li><strong>Make completion signals structured</strong>: Orca requires completion messages to carry both the task ID and the dispatch ID, so a stale retry can't wrongly complete another task.</li>
-<li><strong>The orchestrator is itself an agent</strong>: the developer above notes Orca serves agents as well as humans — agents can open new workspaces and read errors from other panes, and the &quot;project manager&quot; uses exactly these capabilities to assign work and collect results.</li>
-<li><strong>Start small</strong>: Anthropic warns LLM agents are not yet great at real-time coordination and delegation; pilot with two or three workers on well-bounded tasks.</li>
+<li><strong>The orchestrator is itself an agent.</strong> The developer notes that Orca is built for agents as well as people: an agent can open new workspaces itself and read errors from other windows, and the &quot;project manager&quot; uses exactly these abilities to assign tasks and collect results.</li>
+<li><strong>Start small.</strong> Anthropic cautions that LLM agents are not yet good at coordinating and delegating in real time. Pilot with two or three workers and well-bounded tasks.</li>
+<li><strong>Verification decides.</strong> A worker reporting &quot;done&quot; is a signal; whether the task is really done depends on tests and checks.</li>
 </ul>
-<h2>Common Misconceptions</h2>
+<h2>6. Common misconceptions</h2>
 <ul>
-<li><strong>&quot;With an orchestrator, humans can step out entirely.&quot;</strong> High-risk decisions still need a responsible human; gates are part of the design.</li>
-<li><strong>&quot;The more complex the orchestration, the stronger.&quot;</strong> Every layer adds tokens and failure points; add them as needed.</li>
-<li><strong>&quot;If a worker says it's done, it's done.&quot;</strong> Completion is determined by verification results, not the agent's self-report.</li>
+<li><strong>&quot;With an orchestrator, humans can step out entirely.&quot;</strong> High-risk decisions still need a responsible person; gates are part of the design.</li>
+<li><strong>&quot;The more elaborate the orchestration, the stronger.&quot;</strong> Every layer adds tokens and failure points; add them as needed.</li>
+<li><strong>&quot;If a worker says it's done, it's done.&quot;</strong> Completion is judged by verification results, not the agent's self-report.</li>
 </ul>

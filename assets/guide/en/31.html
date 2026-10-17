@@ -1,28 +1,29 @@
-<h1>Two Approaches: Race for the Best, or Pipeline the Work</h1>
+<h1>Two Plays: Race for the Best Result, or Pipeline the Work</h1>
 <blockquote>
 <p>Companion to diagram #31 · Chapter 5 &quot;Multi-Agent Programming&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>Multi-agent programming has two basic approaches:</p>
+<p>Multi-agent programming has two basic plays:</p>
 <ul>
 <li><strong>Race</strong>: give the same task to several agents at once and pick the best result.</li>
-<li><strong>Pipeline</strong>: split a task into stages or parts handled by different agents.</li>
+<li><strong>Pipeline</strong>: split one task into stages or parts handled by different agents.</li>
 </ul>
-<p>They correspond to the two variants of &quot;parallelization&quot; in Anthropic's pattern catalogue: <strong>voting</strong> — running the same task multiple times for diverse outputs; and <strong>sectioning</strong> — breaking a task into independent subtasks run in parallel.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. Race: reduce risk with diversity.</strong> Orca's docs list &quot;have three agents fix the same bug and pick the winner&quot; as a typical use. The X developer sharing Orca usage relays the official rationale: different agents make different mistakes. Where all three make the same change, it's probably right; where each changes something different, that's the genuinely hard part of the problem. You spend one wait and get three answers plus a map of &quot;where they disagree&quot;.</p>
-<p>There is academic evidence too: the Codex paper found repeated sampling on the same problem an effective strategy for getting a correct solution (28.8% solved with one sample, 70.2% with 100 samples per problem); the multiagent debate study showed that multiple model instances proposing and debating their answers improves reasoning and factual accuracy.</p>
-<p><strong>2. Pipeline: handle complex tasks through division of labor.</strong> MetaGPT encodes standardized operating procedures (SOPs) into prompt sequences, using an assembly-line paradigm to assign roles to different agents, break complex tasks into subtasks handled collaboratively, and have agents with domain expertise verify intermediate results to reduce errors. A common coding pipeline:</p>
-<pre><code>Clarify → design → code → test → cross-review → integrate
+<p>They correspond to the two variants of &quot;parallelisation&quot; in Anthropic's pattern catalogue: <strong>voting</strong>, running the same task several times for diverse outputs, and <strong>sectioning</strong>, splitting a task into independent subtasks run in parallel. They solve different problems: racing tackles what is <strong>hard</strong>, pipelines tackle what is <strong>big</strong>.</p>
+<h2>1. Racing: lower risk through diversity</h2>
+<p><strong>Scenario.</strong> Payments occasionally charge customers twice in production, cause unknown. A classic &quot;hard&quot; problem: the change may be small, but getting it wrong is expensive.</p>
+<p><strong>How.</strong> Orca's docs list &quot;have three agents fix the same bug at once and pick the winner&quot; as a typical use. The three agents analyse and fix independently, each in its own worktree, and a person compares the results.</p>
+<p><strong>Why it works.</strong> The developer on X who shared how they use Orca relays the official explanation: <strong>different agents make different mistakes.</strong> Where all three change the same thing, it is probably right; where each changes something different, that is the genuinely hard part of the problem. For one wait you get three answers plus a map of where they disagree.</p>
+<p>That disagreement map is often worth more than any single answer. Say all three agents add an idempotency check to the payment callback (agreement) but choose differently between the order ID and the payment transaction ID as the idempotency key (disagreement). You can safely adopt the agreed part; the disagreement is exactly where human attention should go.</p>
+<p><strong>The research counterpart.</strong> The Codex paper found repeated sampling an effective strategy for reaching correct solutions: 28.8% solved with one sample, 70.2% with 100 samples per problem. Multi-agent debate research showed that several model instances proposing and debating answers improves reasoning and factual accuracy. Racing combines the two: more samples raise the chance of hitting a right answer, and comparing disagreements helps identify which one it is.</p>
+<p><strong>Different vendors help.</strong> If all three agents run the same model, their errors are often correlated and they may share a blind spot. Agents from different vendors (one reason Orca doesn't bind you to a model) make errors more independent, so agreement means more.</p>
+<p><strong>Races don't merge themselves.</strong> When each result is half right, let the winning agent revise once more with reference to another's changes, or pick the good parts by hand.</p>
+<h2>2. Pipelines: handle complexity through division of labour</h2>
+<p><strong>Scenario.</strong> Building a new &quot;loyalty points&quot; feature spanning requirements, design, back end, front end and tests. A &quot;big&quot; problem: no single step need be hard, but the total exceeds what one context holds comfortably.</p>
+<p><strong>How.</strong> MetaGPT encodes standard operating procedures (SOPs) into prompt sequences and uses an assembly-line paradigm to assign roles to different agents, breaking complex tasks into subtasks handled collaboratively, with agents that have domain expertise verifying intermediate results to reduce errors. A common coding pipeline:</p>
+<pre><code>clarify requirements → design → code → test → cross-review → integrate
 </code></pre>
-<h2>Key Papers and Milestones</h2>
-<ul>
-<li><strong>2021 Codex</strong>: repeated sampling raises pass rates</li>
-<li><strong>2023 Multiagent debate</strong></li>
-<li><strong>2023 MetaGPT</strong>: SOP-driven assembly-line multi-agent collaboration</li>
-<li><strong>2024 Anthropic, <em>Building effective agents</em></strong>: voting and sectioning in parallelization</li>
-</ul>
-<h2>Engineering Practice and Numbers</h2>
+<p><strong>Hand-offs go through files, not conversations.</strong> The biggest risk in a pipeline is information lost at hand-off. The remedy is for each stage to produce explicit shared artefacts: a spec, CONTEXT.md, interface definitions, test results. Downstream agents read these rather than rereading the whole upstream conversation. That is another value of Chapter 4's spec-driven approach: <strong>the spec is the pipeline's interface.</strong></p>
+<p><strong>Cross-review.</strong> Another developer has a coding agent finish, then brings in another vendor's agent for adversarial review, with all issues fed back to the main coding agent to fix and re-verify. It is a concrete form of &quot;verifying intermediate results&quot;, again relying on different agents making different mistakes.</p>
+<h2>3. Which one?</h2>
 <table>
 <thead>
 <tr>
@@ -33,31 +34,32 @@
 </thead>
 <tbody>
 <tr>
-<td>Fits</td>
-<td>Costly single-point problems</td>
-<td>Large decomposable tasks</td>
+<td>Problem it tackles</td>
+<td>Hard: single-point problems where mistakes are costly</td>
+<td>Big: large tasks that can be split</td>
 </tr>
 <tr>
 <td>Cost</td>
 <td>N× tokens</td>
-<td>Summed per stage</td>
+<td>Sum of the stages</td>
 </tr>
 <tr>
 <td>Human work</td>
-<td>Compare, pick, merge</td>
+<td>Compare, choose, merge</td>
 <td>Define interfaces and acceptance</td>
+</tr>
+<tr>
+<td>Main risk</td>
+<td>Review burden multiplies</td>
+<td>Information lost at hand-off</td>
 </tr>
 </tbody>
 </table>
+<p>They combine, too: inside a pipeline, race just the riskiest step (say, the change to the payment callback).</p>
+<p><strong>Race only where it counts.</strong> The developer's advice: race only where mistakes are painful, such as payments, permissions and data migrations; don't do it for copy edits.</p>
+<h2>4. Common misconceptions</h2>
 <ul>
-<li><strong>Race only where it matters</strong>: the developer above advises racing only where mistakes are painful, such as payments, permissions and data migrations — not for copy changes.</li>
-<li><strong>Races don't merge automatically</strong>: when each of three results is half right, have the winning agent revise once more with reference to another's changes, or pick the good parts by hand.</li>
-<li><strong>Pipeline handoffs go through files</strong>: shared artifacts like the Spec, CONTEXT.md and test results spare downstream agents from rereading the whole upstream conversation.</li>
-<li><strong>Cross-review</strong>: another developer has agents from other vendors do adversarial review after the coding agent finishes, with all issues fed back to the main coding agent for fixing and re-verification.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;The more racers, the better.&quot;</strong> Returns diminish while cost grows linearly and review burden multiplies.</li>
-<li><strong>&quot;The finer the pipeline roles, the better.&quot;</strong> Every handoff can lose information; Anthropic also warns that tasks with many inter-agent dependencies are not a good fit today.</li>
-<li><strong>&quot;If three agents agree, it must be right.&quot;</strong> Agreement raises confidence, but tests are still needed.</li>
+<li><strong>&quot;The more racers, the better.&quot;</strong> Returns diminish while cost grows linearly and review multiplies. Going from 1 to 3 buys a valuable disagreement map; going from 3 to 10 mostly buys review work.</li>
+<li><strong>&quot;The finer the pipeline roles, the better.&quot;</strong> Every hand-off can lose information, and Anthropic warns that tasks with heavy inter-agent dependencies are not currently a good fit.</li>
+<li><strong>&quot;If three agents agree, it must be right.&quot;</strong> Agreement raises confidence, but tests are still needed, especially when they run the same model.</li>
 </ul>

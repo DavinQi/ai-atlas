@@ -2,37 +2,88 @@
 <blockquote>
 <p>Companion to diagram #30 · Chapter 5 &quot;Multi-Agent Programming&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>When several agents edit the same code at once, the first problem is <strong>stepping on each other</strong>: one agent's files get overwritten by another, and switching branches interrupts running tasks. Git worktree is the infrastructure that solves this, and Orca is a multi-agent development workbench built around it. Orca's docs describe it as a desktop IDE for running multiple AI coding agents side by side, where each task gets its own git worktree, its own agent terminal and its own browser tab.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. Git worktree.</strong> Git's docs explain that a repository can support multiple working trees, allowing more than one branch to be checked out at a time; new working trees are called &quot;linked worktrees&quot;, as opposed to the main worktree created by <code>git init</code> or <code>git clone</code>. All worktrees share the repository's objects and history but each has its own working directory and checked-out branch.</p>
+<p>When several agents edit the same code at once, the first problem is <strong>trampling on each other.</strong> Git worktrees are the infrastructure that solves this, and Orca is a multi-agent development workbench built around them. Orca's docs describe it as a desktop IDE for running multiple AI coding agents side by side, where each task gets its own git worktree, its own agent terminal and its own browser tab.</p>
+<h2>1. The problem: three agents in one directory</h2>
+<p>Suppose you open three terminals in the same project directory and give three agents three jobs: A fixes a payments bug, B adds avatars, C refactors logging. Trouble starts quickly:</p>
+<ul>
+<li><strong>Files overwrite each other</strong>: A and C both edit <code>utils/logger.py</code>, and whoever saves last wins.</li>
+<li><strong>Test results contaminate each other</strong>: while A runs tests, B's half-written code is in the tree; A sees failures B caused and goes off to &quot;fix&quot; a problem that doesn't exist.</li>
+<li><strong>Branch conflicts</strong>: A wants to switch to <code>fix-payment</code> while B is working on <code>feature-avatar</code>. There is only one working directory; switching interrupts B.</li>
+</ul>
+<p>The root cause: <strong>a working directory can have only one branch checked out and one state of its files at a time.</strong></p>
+<h2>2. The fix: git worktree</h2>
+<p>Git's documentation explains that a repository can support multiple working trees, so several branches can be checked out at once; a newly added working tree is called a &quot;linked worktree&quot;, as opposed to the main working tree created by <code>git init</code> or <code>git clone</code>.</p>
 <pre><code>git worktree add ../fix-payment -b fix-payment
+git worktree add ../feature-avatar -b feature-avatar
 git worktree list
 git worktree remove ../fix-payment
 </code></pre>
-<p><strong>2. Orca's model.</strong> The docs compress the workflow to: add a repo → open a workspace (worktree) → pick an agent → split panes → review changes → commit. Key points:</p>
+<p>After the first two commands there are three directories on disk: the original project, <code>../fix-payment</code> and <code>../feature-avatar</code>, each with a different branch checked out and files that don't interfere.</p>
+<p>The key point: <strong>all worktrees share the repository's objects and history</strong>, each with its own working directory and checked-out branch. That differs from cloning three times: a clone copies the full history three times, while a worktree adds only the working directory. A commit made in one worktree is immediately visible from another (for example via <code>git log fix-payment</code>).</p>
+<h2>3. What Orca adds on top of worktrees</h2>
+<p>Worktrees solve file isolation, but the other multi-agent problems remain. Orca's docs compress the workflow into: <strong>add a repo → open a workspace (worktree) → choose an agent → split panes → review changes → commit.</strong> Some design points:</p>
 <ul>
-<li><strong>No bundled model</strong>: it runs the Claude Code, Codex, Cursor CLI, OpenCode and so on that you already have, with your own subscriptions.</li>
-<li><strong>Every worktree is a real git worktree</strong>; you can enter the directory and use native git at any time.</li>
-<li><strong>Runs locally on your desktop by default</strong>; remote compute uses machines you control (SSH, self-hosted servers or cloud VMs).</li>
+<li><strong>No bundled model</strong>: it runs the Claude Code, Codex, Cursor CLI, OpenCode and so on that you already have, on your own subscriptions. This also addresses &quot;locked into one vendor's quota&quot; from the previous article: different worktrees can run different vendors' agents.</li>
+<li><strong>Every worktree is a real git worktree</strong>, so you can step into the directory and use plain git at any time without being locked into the tool.</li>
+<li><strong>Runs on your local desktop by default</strong>; remote compute uses machines you control (SSH, self-hosted servers or cloud VMs).</li>
 </ul>
-<p><strong>3. Making a new worktree productive immediately.</strong> A new worktree is clean code checked out from Git, so untracked <code>.env</code> files and dependency directories aren't there. The X developer cited earlier explains that Orca can be configured to copy some files into each copy (e.g. <code>.env</code>) and share some directories (e.g. dependency packages).</p>
-<p><strong>4. Shared rules.</strong> Project rules rely on files agents read themselves: Claude Code reads CLAUDE.md, Codex reads AGENTS.md. They must be committed to Git, or agents in new worktrees won't see them.</p>
-<h2>Key Papers and Milestones</h2>
+<p><strong>Make new worktrees ready to work immediately.</strong> This answers &quot;they won't run&quot;. A new worktree is clean code checked out from Git; untracked <code>.env</code> files and dependency directories aren't there, so the agent errors on start. The developer on X mentioned earlier explains that Orca can be configured to copy some files into each copy (such as <code>.env</code>) and to share some directories (such as dependency packages).</p>
+<p><strong>Notifications and review.</strong> This answers &quot;can't keep track, can't keep up&quot;. According to the same developer, Orca pops a notification when an agent goes from working to idle; its change view supports line-by-line comments sent back to the agent in one go, and can mark which lines AI wrote.</p>
+<p><strong>Shared rules.</strong> Project rules rely on files the agents read themselves: Claude Code reads CLAUDE.md, Codex reads AGENTS.md. <strong>They must be committed to Git</strong>, or agents in new worktrees won't see them. This is an easy trap: rules written in the main directory but not committed leave the agent in a new worktree like a new hire who never read the handbook.</p>
+<h2>4. What worktrees don't isolate</h2>
+<p>Worktrees isolate <strong>files</strong>, not the <strong>runtime</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Resource</th>
+<th>Isolated?</th>
+<th>Risk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Working-directory files</td>
+<td>Yes</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Checked-out branch</td>
+<td>Yes</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Repository history, object store</td>
+<td>No (shared)</td>
+<td>Usually harmless</td>
+</tr>
+<tr>
+<td>Ports</td>
+<td>No</td>
+<td>Two agents both start dev servers on port 3000</td>
+</tr>
+<tr>
+<td>Local database</td>
+<td>No</td>
+<td>A's tests wipe test data B is using</td>
+</tr>
+<tr>
+<td>External services</td>
+<td>No</td>
+<td>Both call the same test environment's APIs</td>
+</tr>
+</tbody>
+</table>
+<p>So when running tests in parallel, give each worktree its own ports and its own database or container.</p>
+<h2>5. Engineering points</h2>
 <ul>
-<li><strong>git worktree</strong>: Git's native multi-worktree capability</li>
-<li><strong>Orca</strong> (by Stably, open source under MIT): GitHub repo created on March 17, 2026, with about 94k stars at the time this was checked</li>
+<li><strong>Name tasks</strong>: one worktree per clear task and branch, which makes cleanup easy.</li>
+<li><strong>Delete when done</strong>: clean up losing or finished worktrees and their branches promptly, or the disk and branch list get messy.</li>
+<li><strong>Know the limits</strong>: the developer admits that if you use one vendor's agent and do one thing at a time, Orca adds little and the official client is enough; <strong>its value scales with the number of agents running at once and the volume of changes to accept.</strong></li>
 </ul>
-<h2>Engineering Practice and Numbers</h2>
+<p>Orca is made by Stably and open-sourced under the MIT licence; its GitHub repository was created on 17 March 2026 and had about 94,000 stars when this was checked.</p>
+<h2>6. Common misconceptions</h2>
 <ul>
-<li><strong>Notifications and review</strong>: per the developer above, Orca pops a notification when an agent goes from working to idle; the changes view supports line-by-line annotations sent back to the agent in one batch, and can mark which lines AI wrote.</li>
-<li><strong>Task naming</strong>: one worktree per clear task and branch, for easy cleanup.</li>
-<li><strong>Delete when done</strong>: remove losing or finished worktrees and their branches promptly.</li>
-<li><strong>Where it fits</strong>: the developer admits that if you use one vendor's agent and do one thing at a time, Orca won't help much and the official client is enough; its value scales with the number of agents running at once and the volume of changes to accept.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;Opening a few more terminals is the same.&quot;</strong> It can be, but you must solve missing dependencies, tracking and review yourself.</li>
-<li><strong>&quot;Worktrees are fully isolated.&quot;</strong> They share repository history and the object store; runtime resources such as ports, databases and external services can still conflict.</li>
-<li><strong>&quot;Orca is a model or hosted service.&quot;</strong> The docs state explicitly it is neither a model nor a hosted VPS product.</li>
+<li><strong>&quot;Opening a few terminals is the same.&quot;</strong> It can be, but you have to solve missing dependencies, losing track and review overload yourself.</li>
+<li><strong>&quot;Worktrees are fully isolated.&quot;</strong> They share history and the object store; ports, databases and external services can still collide.</li>
+<li><strong>&quot;Orca is a model or a hosted service.&quot;</strong> Its docs say explicitly that it is neither a model nor a hosted VPS product.</li>
 </ul>

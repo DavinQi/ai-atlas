@@ -1,34 +1,43 @@
-<h1>Traditional CI/CD: Pipelines Run Automatically, Judgment Stays with Humans</h1>
+<h1>Traditional CI/CD: Pipelines Run Automatically, Judgement Stays with People</h1>
 <blockquote>
 <p>Companion to diagram #34 · Chapter 6 &quot;How AI Reshapes the Dev Lifecycle&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>Continuous integration and continuous delivery (CI/CD) turned build, test and deploy into automatically running pipelines — one of the most important advances in software engineering over the past decade and more. But in traditional CI/CD and operations, <strong>execution is automatic while judgment stays with humans</strong>: who looks into why a test failed? Who locates the fault when an alert fires? Should a release continue? How is an incident reviewed afterwards? All of these depend on engineers' experience.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. Pipeline automation.</strong> A typical flow: commit → build → unit tests → integration tests → artifact → staging → canary → production. The release engineering chapter of Google's SRE Book stresses two principles: teams should be able to release on their own (self-service), and builds should be &quot;hermetic&quot; — insensitive to the libraries and software installed on the build machine — so they are reproducible.</p>
-<p><strong>2. Where humans provide judgment:</strong></p>
+<p>Continuous integration and continuous delivery (CI/CD) turned build, test and deploy into automated pipelines, one of the most important advances in software engineering of the past decade or more. But in traditional CI/CD and operations, <strong>execution is automatic while judgement stays with people</strong>: when a test fails, who works out why? When an alert fires, who locates the problem? Should the release continue? How do we learn from the incident? All of this depends on engineers' experience.</p>
+<p>This chapter looks at what AI changes from the process perspective. Like &quot;The Traditional IDE&quot; in Chapter 3, this article is the baseline: where the pipeline is automated today and where it relies on people.</p>
+<h2>1. The pipeline: what is already automated</h2>
+<p>A typical pipeline:</p>
+<pre><code>commit → build → unit tests → integration tests → artefact → staging → canary → production
+</code></pre>
+<p>Every arrow is the machine moving things forward. The release engineering chapter of Google's SRE Book stresses two principles that explain why such pipelines are reliable:</p>
 <ul>
-<li>Analyzing test failures and build errors</li>
-<li>Alert triage and fault localization</li>
-<li>Deciding to continue, pause or roll back a release</li>
-<li>Incident retrospectives and improvement actions</li>
+<li><strong>Self-service</strong>: teams release on their own without queueing for dedicated release engineers, removing a &quot;wait for a person&quot; step.</li>
+<li><strong>Hermetic builds</strong>: builds are insensitive to the libraries and software installed on the build machine; the same inputs always give the same output, so builds are repeatable.</li>
 </ul>
-<p><strong>3. Toil.</strong> The SRE Book defines toil as work tied to running a production service that is manual, repetitive, automatable, tactical, devoid of enduring value, and that scales linearly as the service grows. Google's goal is to keep each SRE's toil below 50% of their time, with at least half spent on engineering work that reduces future toil or adds service features; the book cites quarterly surveys showing Google SREs spend about 33% of their time on toil on average.</p>
-<p><strong>4. Decide with data, not gut feeling.</strong> SRE uses error budgets based on service level objectives (SLOs) to set release pace: the error budget provides an objective metric of how unreliable the service is allowed to be within a quarter. Postmortems are &quot;blameless&quot;: they focus on identifying the contributing causes of an incident rather than blaming individuals or teams.</p>
-<h2>Key Papers and Milestones</h2>
+<p>Repeatability matters especially in the agent era. Agents rely on environmental feedback to correct themselves (Chapter 3). If the same code builds today and fails tomorrow because a library on the machine was upgraded, the agent will go off to &quot;fix&quot; a problem that doesn't exist. <strong>Hermetic builds are a prerequisite for trustworthy feedback.</strong></p>
+<h2>2. Judgement: what still relies on people</h2>
+<p>Wherever the pipeline stops is where a person steps in:</p>
 <ul>
-<li><strong>Google SRE Book</strong>: toil, error budgets, release engineering, blameless postmortems</li>
-<li><strong>DORA metrics</strong>: change lead time, deployment frequency, failed deployment recovery time, change failure rate, deployment rework rate</li>
+<li><strong>Analysing test failures and build errors</strong>: is the code wrong, the test wrong, or the environment flaky?</li>
+<li><strong>Alert triage and fault localisation</strong>: does this alert matter? Where is the problem?</li>
+<li><strong>Release decisions</strong>: continue, pause or roll back?</li>
+<li><strong>Postmortems and follow-up actions</strong>: why did it happen? How do we prevent it?</li>
 </ul>
-<h2>Engineering Practice and Numbers</h2>
+<p>Consider a concrete moment. Friday, 4 p.m.: during the canary, the error rate rises from 0.1% to 0.3%. The on-call engineer has minutes to answer: is this the new version or normal noise? Roll back? What would a rollback affect? These calls need experience, context and risk trade-offs; the pipeline itself can't answer them.</p>
+<h2>3. Toil: where AI moves in first</h2>
+<p>The SRE Book defines toil as work tied to running a production service that is <strong>manual, repetitive, automatable, tactical, devoid of enduring value</strong>, and that scales linearly as the service grows.</p>
+<p>Google aims to keep each SRE's toil below 50% of their time, with at least half spent on engineering work that reduces future toil or adds service features. The book mentions quarterly surveys showing Google SREs spend about 33% of their time on toil on average.</p>
+<p>By this definition much &quot;judgement&quot; work is half toil: digging through logs, finding TraceIds, checking recent changes, pulling up similar past incidents. These steps are manual, repetitive and automatable. Chapter 4's evidence chain hands exactly the evidence-gathering part to agents. <strong>AI moves first not into the parts needing deep judgement, but into the toil that precedes judgement.</strong></p>
+<h2>4. Decide with data, not feelings</h2>
+<p>Another key SRE idea is to replace subjective calls with objective measures:</p>
+<p><strong>Error budgets.</strong> An error budget based on a service level objective (SLO) gives an objective measure of how unreliable a service is allowed to be in a quarter. For example, with a 99.9% availability SLO, a 30-day month allows <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">30</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">24</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.7278em;vertical-align:-0.0833em;"></span><span class="mord">60</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.8056em;vertical-align:-0.0556em;"></span><span class="mord">0.1%</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="base"><span class="strut" style="height:0.6444em;"></span><span class="mord">43.2</span></span></span></span> minutes of downtime. With plenty of budget left you can release faster; when it is nearly spent, slow down and prioritise stability. Arguments about release pace change from &quot;I think&quot; to &quot;how much budget is left&quot;.</p>
+<p><strong>Blameless postmortems.</strong> Postmortems focus on identifying the contributing causes of an incident, not on blaming individuals or teams. That has new meaning in the agent era: when an agent's change causes an outage, the postmortem should ask &quot;which verification layer missed it, and why did permissions allow it?&quot;, not simply conclude &quot;AI is unreliable&quot;.</p>
+<p><strong>DORA metrics</strong> are the common language for measuring the pipeline: throughput via change lead time (from commit to production deployment), deployment frequency and failed deployment recovery time; instability via change failure rate and deployment rework rate (Chapter 4).</p>
+<h2>5. Manual nodes outside the pipeline</h2>
+<p>Alibaba's practice handbook observes that a requirement coded in an hour can still take weeks from finished code to live after going through several internal platforms, release processes and environment constraints.</p>
+<p>Even when the pipeline itself is highly automated, then, there are many manual nodes <strong>outside</strong> it: requesting resources, waiting for approvals, coordinating release windows, getting cross-team sign-off. By Amdahl's Law, these are the main bottleneck of end-to-end efficiency.</p>
+<h2>6. Common misconceptions</h2>
 <ul>
-<li><strong>DORA's five metrics</strong> are the common language for measuring this pipeline: throughput is change lead time (from commit to production deployment), deployment frequency and failed deployment recovery time; instability is change failure rate and deployment rework rate.</li>
-<li><strong>AI enters through toil first</strong>: repetitive, automatable work with no enduring value is the ideal target for agents.</li>
-<li><strong>An observation from Alibaba's handbook</strong>: a requirement whose coding takes an hour can still take weeks from code complete to live after passing through multiple internal platforms, release processes and environment constraints. Human nodes outside the pipeline are the main bottleneck of end-to-end efficiency.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;Having CI/CD means doing DevOps.&quot;</strong> Automated execution is only the foundation; judgment still relies heavily on humans.</li>
-<li><strong>&quot;Toil means the team isn't working hard enough.&quot;</strong> The SRE Book treats toil as something to eliminate systematically through engineering, not a personal failing.</li>
-<li><strong>&quot;AI will replace the pipeline.&quot;</strong> Quite the opposite: a reliable pipeline is the infrastructure from which agents get verification signals.</li>
+<li><strong>&quot;Having CI/CD means we do DevOps.&quot;</strong> Automated execution is only the foundation; judgement still relies heavily on people.</li>
+<li><strong>&quot;Toil means the team isn't working hard enough.&quot;</strong> The SRE Book treats toil as something to eliminate systematically with engineering, not a personal failing.</li>
+<li><strong>&quot;AI will replace the pipeline.&quot;</strong> The opposite: a reliable pipeline is the infrastructure that gives agents their verification signals.</li>
 </ul>

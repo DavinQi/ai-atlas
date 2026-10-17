@@ -1,20 +1,21 @@
-<h1>The AIOps Self-Healing Loop: Low Risk Runs Automatically, High Risk Goes to a Human</h1>
+<h1>AIOps Self-Healing Loops: Low Risk Runs Automatically, High Risk Goes Through People</h1>
 <blockquote>
 <p>Companion to diagram #35 · Chapter 6 &quot;How AI Reshapes the Dev Lifecycle&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>Plugging agents into operations can form a self-healing loop: <strong>detect → collect evidence → diagnose → generate a fix → verify → release → observe</strong>. The key design question is not how much agents can fix but <strong>tiering by risk</strong>: low-risk, quickly reversible actions can run automatically; high-risk, irreversible actions must go through a human.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. Each step of the loop:</strong></p>
-<ul>
-<li><strong>Detect</strong>: alerts, error rates, user reports, or CI failures.</li>
-<li><strong>Evidence</strong>: following the troubleshooting evidence chain, collect the TraceId, logs, upstream/downstream state, code location and recent changes first (see Chapter 4).</li>
-<li><strong>Diagnose</strong>: obvious errors are located directly by a diagnostic agent; escalate when evidence is insufficient or conflicting.</li>
-<li><strong>Fix</strong>: generate a patch together with a regression test that reproduces the problem.</li>
-<li><strong>Verify</strong>: layered verification, passing the machine gates first.</li>
-<li><strong>Release and observe</strong>: progressive rollout, watch key metrics, roll back on anomalies.</li>
-</ul>
-<p><strong>2. Risk tiers.</strong> OWASP's mitigations explicitly call for human-in-the-loop controls on privileged operations, with human approval for high-risk actions, and for giving the application its own tokens under least privilege. The MCP spec likewise requires explicit user consent before tools are invoked. A practical tiering:</p>
+<p>Connecting agents to operations makes a self-healing loop possible: <strong>detect → collect evidence → diagnose → generate a fix → verify → release → observe.</strong> The key design question is not how much the agent can fix but how to <strong>tier by risk</strong>: low-risk operations that can be rolled back quickly may run automatically; high-risk, irreversible ones must go through a person.</p>
+<h2>1. Follow one incident around the loop</h2>
+<p>2 a.m.: a service's error rate starts climbing.</p>
+<ol>
+<li><strong>Detect.</strong> The alert fires. Traditionally, the first thing is to wake the on-call engineer; in a self-healing loop the alert creates a task for a diagnosis agent directly.</li>
+<li><strong>Evidence.</strong> Following Chapter 4's evidence chain, the agent gathers facts first: take the TraceIds of a few failed requests, check logs and upstream/downstream state along the chain, and compare against code locations and recent changes. It finds that every failure happens after a newly released config value is read, and that value is malformed.</li>
+<li><strong>Diagnose.</strong> The evidence is clear, an &quot;obvious error&quot;, so the diagnosis agent locates it directly. If evidence were insufficient or contradictory, it would escalate to an agent with full code context or to a person.</li>
+<li><strong>Fix.</strong> Two options: roll the config back to the previous version (low risk), or change the parsing code to accept the new format (medium risk). The agent does the former to stop the bleeding and prepares a patch for the latter, plus a regression test that reproduces the problem.</li>
+<li><strong>Verify.</strong> The patch goes through layered verification: compile, unit tests, integration tests.</li>
+<li><strong>Release and observe.</strong> After the config rollback, the error rate returns to normal. The code patch does not go live automatically at 2 a.m.; it becomes a change awaiting approval, which a person approves with one click in the morning before a gradual rollout.</li>
+</ol>
+<p>At 9 a.m. the engineer sees a structured report: symptom, evidence, root cause, the mitigation already taken, and the fix awaiting approval. <strong>Nobody was woken, but the key decision was still made by a person.</strong></p>
+<h2>2. Risk tiers: the heart of the loop</h2>
+<p>The crucial move in the example is step 4, treating &quot;roll back the config&quot; and &quot;change the code&quot; differently. Behind that sits a risk tiering:</p>
 <table>
 <thead>
 <tr>
@@ -26,39 +27,40 @@
 <tbody>
 <tr>
 <td>Low</td>
-<td>Restart stateless instances, scale out, roll back to previous version</td>
-<td>Auto-execute and notify</td>
+<td>Restart stateless instances, scale out, roll back to the previous version</td>
+<td>Run automatically and notify</td>
 </tr>
 <tr>
 <td>Medium</td>
 <td>Config changes, small code fixes</td>
-<td>Auto-generate, one-click human approval</td>
+<td>Generate automatically; one-click human approval</td>
 </tr>
 <tr>
 <td>High</td>
-<td>DB migrations, permission changes, money-related</td>
-<td>Human must decide</td>
+<td>DB migrations, permission changes, anything involving money</td>
+<td>A person must decide</td>
 </tr>
 </tbody>
 </table>
-<p><strong>3. Progressive rollout.</strong> In its multi-agent system Anthropic uses &quot;rainbow deployments&quot;: old and new versions run side by side and traffic shifts gradually from old to new, so updates don't disrupt running agents. The same idea applies to agent-generated fixes: canary, observe, then widen.</p>
-<h2>Key Papers and Milestones</h2>
+<p>Tiering rests on two dimensions: <strong>reversibility</strong> (can a mistake be recovered quickly?) and <strong>blast radius</strong> (how many users and how much data does a mistake affect?). Rolling back to the previous version &quot;returns to a known good state&quot;: reversible and low risk. A database migration may be irreversible and touch all the data.</p>
+<p>This matches security guidance. OWASP's mitigations call explicitly for human-in-the-loop control of privileged operations and human approval for high-risk ones, with separate tokens and least privilege for applications. The MCP specification likewise requires explicit user consent before invoking tools.</p>
+<h2>3. Gradual release: fixes face the test too</h2>
+<p>Even an agent-generated fix that passes every test can fail in production; test-environment data and traffic never fully match production. So fixes also go <strong>canary, observe, then widen.</strong></p>
+<p>Anthropic uses &quot;rainbow deployments&quot; in its multi-agent system: old and new versions run side by side and traffic shifts gradually from old to new, so updates don't break agents mid-run. The same idea applies to agent-generated fixes.</p>
+<h2>4. Manual nodes swallow automation gains</h2>
+<p>Chapter 4 cited the handbook's &quot;paradoxical&quot; figure: more than 60% of bugs fixed automatically, yet the same-day bug closure rate rose only from 53% to at most 63%, because <strong>triggering depends on people and verification depends on people.</strong></p>
+<p>Against the loop above, the problem is plain: if step 1 waits for a person to notice and create the task, and step 5 waits for a person to check each fix, then however fast steps 2–4 are, throughput won't rise. <strong>For the loop to really close, triggering and low-risk verification must be automated too</strong>, leaving to people only what genuinely needs judgement.</p>
+<h2>5. The hardest last mile</h2>
+<p>The handbook is also sober about this: build, integration testing, canary release, production verification and recovery involve real environments, real data and real users; the tolerance for error is tiny, and the demands on sandbox isolation, credential management, guardrails and observability far exceed what exists today.</p>
+<p>So build trust step by step:</p>
 <ul>
-<li><strong>ReAct (2022)</strong>: interacting with the environment to gather information mitigates hallucination</li>
-<li><strong>Google SRE Book</strong>: error budgets, blameless postmortems</li>
-<li><strong>OWASP LLM01 (2025)</strong>: least privilege and human approval</li>
-<li><strong>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em></strong>: TraceId evidence chains and tiered diagnosis</li>
+<li><strong>Start with read-only access</strong> and earn trust in diagnosis. How accurate are the agent's diagnostic reports? Let people &quot;shadow&quot; it for a while.</li>
+<li><strong>Then open up low-risk write operations gradually</strong>, such as restart, scale-out and rollback.</li>
+<li><strong>Leave a trace for every automatic action</strong>: who (which agent), on whose behalf, for which task, did what (Chapter 5, &quot;digital employees&quot;).</li>
 </ul>
-<h2>Engineering Practice and Numbers</h2>
+<h2>6. Common misconceptions</h2>
 <ul>
-<li><strong>Human nodes swallow automation gains</strong>: the handbook records that auto-fixed bugs exceeded 60%, yet the same-day bug resolution rate rose only from 53% to at most 63%, because triggering and checking depended on people. To truly close the loop, triggering and low-risk checks must be automated too.</li>
-<li><strong>The last mile has little margin for error</strong>: the handbook notes that builds, integration testing, canary releases, production verification and failure recovery involve real environments, real data and real users, demanding sandbox isolation, credential management, guardrails and observability far beyond today's level.</li>
-<li><strong>Give agents read-only access first</strong>: build trust in diagnosis, then gradually open low-risk write operations.</li>
-<li><strong>Leave a trace for every automated action</strong>: who (which agent), on whose behalf, based on which task, did what.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;Self-healing means fully automatic.&quot;</strong> Risk tiers and human gates are core components of a self-healing system.</li>
-<li><strong>&quot;Once tests pass after the fix, roll it out to everyone.&quot;</strong> Production verification needs progressive rollout and observation.</li>
-<li><strong>&quot;Agents err too often to use in operations.&quot;</strong> The key is limiting their scope so errors are reversible and auditable.</li>
+<li><strong>&quot;Self-healing means fully automatic.&quot;</strong> Risk tiers and human gates are core parts of a self-healing system.</li>
+<li><strong>&quot;Tests pass after the fix, so release it everywhere.&quot;</strong> Production verification needs gradual rollout and observation.</li>
+<li><strong>&quot;Agents make too many mistakes for operations.&quot;</strong> The key is to limit their scope so errors can be rolled back and audited. People make mistakes too; operations systems were always designed for mistakes.</li>
 </ul>

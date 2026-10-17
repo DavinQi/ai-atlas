@@ -2,52 +2,89 @@
 <blockquote>
 <p>Companion to diagram #13 · Chapter 2 &quot;Agent Design: Principles &amp; Patterns&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>The <strong>Model Context Protocol (MCP)</strong> is an open protocol for standardized integration between LLM applications and external data sources and tools. The official specification says MCP takes inspiration from the Language Server Protocol (LSP): just as LSP standardized how programming-language support plugs into development tools, MCP standardizes how context and tools plug into the AI application ecosystem. Before MCP, every AI app needed a custom integration for every tool — an &quot;M apps × N tools&quot; explosion; with a shared protocol it becomes &quot;M + N&quot;.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. Three roles.</strong> The protocol uses JSON-RPC 2.0 messages between:</p>
+<p>Suppose your team uses three AI tools: an IDE plugin, a chat client and an internal ticketing agent. All three need access to GitHub, the company database and the file system. Without a common standard, each application writes a separate integration for each tool: 3 applications × 3 tools = 9 sets of code, each with slightly different authentication, error handling and data formats, and every new tool means changing every application. That is the &quot;M × N&quot; combinatorial explosion.</p>
+<p>The <strong>Model Context Protocol (MCP)</strong>, an open protocol released by Anthropic in November 2024, aims to solve exactly this: an application implements an MCP client once, a tool implements an MCP server once, and any combination works together, turning 9 integrations into 3 + 3 = 6 adapters. Diagram #13 shows its structure from top to bottom: a host containing the LLM and several MCP clients, connected over JSON-RPC 2.0 to their servers, which expose three kinds of capability (tools, resources and prompts), with the three-step flow of a tool call at the bottom.</p>
+<h2>1. The design reference: LSP did the same thing</h2>
+<p>The MCP specification says explicitly that it takes inspiration from the Language Server Protocol (LSP). Before LSP, every editor implemented completion, go-to-definition and diagnostics separately for each programming language; LSP pulled &quot;language intelligence&quot; out into separate servers, so each editor needed to implement only one client. As a result, VS Code, Vim, Emacs and others can all use the same TypeScript or Rust language server.</p>
+<p><strong>MCP aims to be the LSP of the AI era:</strong> just as LSP standardised how programming-language support plugs into development tools, MCP standardises how context and tools plug into AI applications. With that analogy in mind, the design decisions that follow look natural.</p>
+<h2>2. Three roles</h2>
+<p>The protocol uses JSON-RPC 2.0 messages between three roles:</p>
 <ul>
-<li><strong>Host</strong>: the LLM application that initiates connections, such as an IDE or chat client.</li>
-<li><strong>Client</strong>: a connector inside the host; each client maps to one server.</li>
-<li><strong>Server</strong>: a service that provides context and capabilities.</li>
+<li><strong>Host</strong>: the LLM application that initiates connections, such as an IDE or chat client. It owns the user interface and the final authorisation decisions.</li>
+<li><strong>Client</strong>: a connector inside the host. <strong>Each client corresponds to one server</strong>, maintaining one stateful connection one to one, which aids isolation: if one server misbehaves, other connections are unaffected.</li>
+<li><strong>Server</strong>: a service providing context and capabilities, either a local process or a remote service.</li>
 </ul>
-<p><strong>2. Three server features.</strong></p>
+<p>Note the relationship between host and LLM: the model itself doesn't &quot;connect&quot; to any server. It only sees descriptions of available tools in its context and decides which to call; it is the host and its clients that actually send requests, execute them and put results back into context.</p>
+<h2>3. Three kinds of server capability: who decides to use them?</h2>
+<p>MCP divides what a server can offer into three kinds, and the criterion is interesting: <strong>who controls their use.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Primitive</th>
+<th>What it is</th>
+<th>Controlled by</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tools</td>
+<td>Functions for the model to execute</td>
+<td>The model decides to call them (with user authorisation)</td>
+<td>Create an issue, run a query</td>
+</tr>
+<tr>
+<td>Resources</td>
+<td>Context and data</td>
+<td>The application or user chooses to put them in context</td>
+<td>A file, a table's schema</td>
+</tr>
+<tr>
+<td>Prompts</td>
+<td>Templated messages and workflows</td>
+<td>The user selects them explicitly</td>
+<td>A &quot;write release notes&quot; template</td>
+</tr>
+</tbody>
+</table>
+<p>The split corresponds to three trust levels: tools have side effects and need the most gatekeeping; resources are read-only data; prompts are shortcuts the user triggers explicitly.</p>
+<p>In the other direction, <strong>clients can also offer capabilities to servers</strong>: sampling lets a server ask the host to call an LLM on its behalf (so the server needs no model or API key of its own); roots let a server ask which URIs or file-system boundaries it may operate within; elicitation lets a server ask the user for more information when needed. This article follows the 2025-06-18 version of the specification, which is the version that added elicitation.</p>
+<h2>4. The full journey of one tool call</h2>
+<p>Take &quot;open a GitHub issue for this bug&quot;:</p>
+<ol>
+<li><strong>Initialisation and capability negotiation.</strong> When the connection is set up, client and server exchange the capabilities and protocol versions they support. The connection is stateful, so afterwards each side knows what the other can do.</li>
+<li><strong>Tool discovery.</strong> The client requests the list of tools, and the server returns each tool's name, description and JSON Schema for parameters. The host puts these descriptions into the model's context.</li>
+<li><strong>The model decides to call.</strong> Reading the description of <code>create_issue</code>, the model generates a structured <code>tool_call</code> with a title and body as parameters.</li>
+<li><strong>The user authorises; the client executes.</strong> After the host confirms with the user, the client sends the call to the GitHub server, which actually calls the GitHub API.</li>
+<li><strong>The result returns to context.</strong> The server returns the new issue's link, the host puts it into context, and the model replies to the user.</li>
+</ol>
+<p>If the server's tool list changes (say an administrator enables a new tool), the server can send a notification proactively, so the client doesn't need to poll.</p>
+<h2>5. Two layers and two transports</h2>
+<p>MCP has two layers. The <strong>data layer</strong> defines the JSON-RPC-based protocol itself: lifecycle management, capability negotiation and the primitives above. The <strong>transport layer</strong> handles how bytes are delivered, commonly in one of two ways:</p>
 <ul>
-<li><strong>Resources</strong>: context and data for the user or model.</li>
-<li><strong>Prompts</strong>: templated messages and workflows for users.</li>
-<li><strong>Tools</strong>: functions for the model to execute.</li>
+<li><strong>STDIO</strong>: the host starts the server as a local subprocess and communicates over standard input and output. Simple, no network needed, usually serving a single client; suited to tools like the file system or local Git.</li>
+<li><strong>Streamable HTTP</strong>: the client sends messages with HTTP POST, and the server can optionally stream responses with server-sent events. Remote servers usually serve many clients at once; suited to shared internal services and easy to connect to unified authentication.</li>
 </ul>
-<p><strong>3. Client features offered to servers.</strong> Sampling (server-initiated LLM calls), Roots (servers asking which URI or filesystem boundaries they may operate in), and Elicitation (servers requesting additional information from users).</p>
-<p><strong>4. Two layers.</strong> The data layer defines the JSON-RPC protocol, including lifecycle management, capability negotiation and the primitives above; the transport layer handles communication. Two common transports:</p>
-<ul>
-<li><strong>STDIO</strong>: local servers, typically serving a single client.</li>
-<li><strong>Streamable HTTP</strong>: the client sends messages via HTTP POST, optionally receiving streamed responses via Server-Sent Events; remote servers typically serve many clients.</li>
-</ul>
-<p>Connections are stateful and both sides negotiate supported capabilities at initialization; when its tool list changes, a server can notify clients without polling.</p>
-<h2>Key Papers and Milestones</h2>
-<ul>
-<li><strong>LSP</strong>: the design reference named in the MCP specification</li>
-<li><strong>November 2024: MCP announced</strong> (Anthropic)</li>
-<li><strong>Spec revision 2025-06-18</strong>: the version this article follows, including client features such as Elicitation</li>
-</ul>
-<h2>Engineering Practice and Numbers</h2>
-<p><strong>Security is a core part of the spec.</strong> It states plainly that MCP enables arbitrary data access and code execution, and implementers must take this seriously:</p>
+<p>The benefit of separating the layers: the same server implementation can turn from a local tool into a shared team service just by switching transport.</p>
+<h2>6. Security: the spec itself says &quot;the protocol cannot enforce&quot;</h2>
+<p>MCP lets models access arbitrary data and execute arbitrary code, so security is a core part of the specification. It lists several principles:</p>
 <ul>
 <li>Users must explicitly consent to and understand all data access and operations.</li>
-<li>Hosts must obtain explicit consent before exposing user data to servers.</li>
-<li>Tools represent arbitrary code execution and must be treated with caution; tool descriptions such as annotations from untrusted servers should be considered untrusted.</li>
+<li>Hosts must obtain explicit user consent before exposing user data to servers.</li>
+<li>Tools represent arbitrary code execution and must be treated with caution; <strong>tool descriptions (such as annotations) from untrusted servers should be considered untrusted.</strong></li>
 <li>Hosts must obtain explicit user consent before invoking any tool; users must approve any sampling request.</li>
 </ul>
-<p>The spec also admits the protocol itself cannot enforce these principles; implementers must build consent and authorization flows into their applications.</p>
-<p><strong>Practical advice:</strong></p>
+<p>Most notable is the specification's candour: <strong>the protocol itself cannot enforce these principles</strong>; implementers must build consent and authorisation flows into their applications. Tool descriptions are placed into the model's context, and a malicious server could hide instructions in them, which is exactly the prompt injection discussed in article 6.</p>
+<h2>7. Practical advice</h2>
 <ul>
-<li>For internal systems, start with read-only servers (query DBs, read logs), then open write operations gradually.</li>
-<li>Make tool descriptions clear and specific — this directly affects whether the model picks the right tool.</li>
-<li>Use Streamable HTTP for remote servers and plug them into unified authentication.</li>
+<li><strong>Read-only first, writes later.</strong> Start internal systems with read-only servers (query databases, logs, docs); once the value is proven, open write operations gradually, with human confirmation.</li>
+<li><strong>Tool descriptions are prompts.</strong> Be specific: when to use it, when not to, what parameters mean and their constraints, typical examples. Description quality directly affects whether the model picks the right tool.</li>
+<li><strong>Few and focused.</strong> Tool descriptions take up context, and too many similar tools make the model choose wrongly. Mount only the servers a task needs.</li>
+<li><strong>Put remote services behind unified authentication.</strong> Deploy over Streamable HTTP, connect to the company identity system and keep full call logs.</li>
 </ul>
-<h2>Common Misconceptions</h2>
+<h2>8. Three common misconceptions</h2>
 <ul>
-<li><strong>&quot;MCP is just function calling.&quot;</strong> Function calling is a model-level capability; MCP is an application-to-service protocol that also covers resources, prompts, capability negotiation and notifications.</li>
-<li><strong>&quot;Using MCP makes it secure.&quot;</strong> The spec says the protocol cannot enforce security principles; authorization and auditing are on you.</li>
-<li><strong>&quot;More tools is better.&quot;</strong> Tool descriptions consume context, and many similar tools make the model choose wrongly.</li>
+<li><strong>&quot;MCP is just function calling.&quot;</strong> Function calling is a model-level capability; MCP is a protocol between applications and services that also covers resources, prompts, capability negotiation and notifications.</li>
+<li><strong>&quot;Connecting via MCP makes it secure.&quot;</strong> The specification says plainly that the protocol cannot enforce its security principles; authorisation and auditing are up to you.</li>
+<li><strong>&quot;The more tools the better.&quot;</strong> Tool descriptions take up context, and similar tools interfere with each other.</li>
 </ul>

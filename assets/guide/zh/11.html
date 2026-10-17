@@ -1,38 +1,78 @@
-<h1>Agent 的组成：LLM + 规划 + 记忆 + 工具，在环境反馈中循环</h1>
+<h1>Agent 组成：LLM 是大脑，规划、记忆、工具和环境反馈构成闭环</h1>
 <blockquote>
 <p>对应图 #11 · 第二章「Agent 设计原理与范式」</p>
 </blockquote>
-<h2>概述</h2>
-<p>「Agent」一词的定义并不统一。Anthropic 在《Building effective agents》中把所有基于 LLM 的自动化系统统称为 agentic systems，并做了一个关键区分：<strong>工作流（workflow）</strong>是由预先写好的代码路径编排 LLM 和工具；<strong>Agent</strong> 则由 LLM 自己动态决定流程和工具调用，自主掌控完成任务的方式。</p>
-<p>Lilian Weng 在 2023 年的综述《LLM Powered Autonomous Agents》中给出了被广泛引用的组成框架：LLM 充当 Agent 的「大脑」，配合三个关键组件——<strong>规划（Planning）</strong>、<strong>记忆（Memory）</strong>和<strong>工具使用（Tool Use）</strong>。</p>
-<h2>核心机制</h2>
-<p><strong>1. 规划。</strong> 把大任务拆成可管理的子目标；并通过自我反思（self-reflection）从过去的行动中总结经验、修正错误。</p>
-<p><strong>2. 记忆。</strong> Weng 的划分是：</p>
+<p>上一章结尾讲过，模型只会预测下一个 token。那它怎么「查天气」「改代码」「订会议室」？答案出奇地朴素：<strong>模型只负责写出「要做什么」，外部程序去做，结果再变回文字交给模型。</strong> 把这个循环自动跑很多轮，就是我们说的 Agent。</p>
+<p>图 #11 画的是这个循环的组成：中间是 LLM（推理与决策核心）；四周是规划、工具、记忆和环境反馈；底部一句提醒：Workflow 与 Agent 的区别，在于路径是预设的，还是由模型自主决定。这篇文章从一次具体的工具调用讲起，逐个拆开这些组件，再回到那个最重要的设计问题：什么时候真的需要 Agent。</p>
+<h2>一、从一次工具调用说起</h2>
+<p>用户问：「今天北京天气怎么样？」模型自己并不会联网。训练让它学会在需要时输出一段特定格式的文字，大致像这样（示意）：</p>
+<pre><code>&lt;|assistant|&gt;&lt;|tool_call|&gt;search(query=&quot;北京 今天 天气&quot;)&lt;|end|&gt;
+</code></pre>
+<p>模型写完这一行就停下。外部程序识别出这个格式，真正去执行搜索，再把结果作为一段新文字拼回上下文：</p>
+<pre><code>&lt;|tool_result|&gt;北京今天晴，最高气温 22℃……
+&lt;|assistant|&gt;北京今天是晴天，最高 22℃，适合出门。
+</code></pre>
+<p>模型读到结果，接着往下预测，就写出了回答。Toolformer 证明，模型甚至可以自监督地学会何时、如何调用 API。算数、跑代码、查数据库、读文件，都是同一个套路。<strong>Agent 就是让这个循环自动跑很多轮：想好下一步 → 调用工具 → 看结果 → 再决定下一步，直到任务完成或触发停止条件。</strong></p>
+<p>Anthropic 在《Building effective agents》里的总结很直白：Agent 在实现上通常很简单，本质就是 LLM 在循环中根据环境反馈使用工具。复杂的地方不在循环本身，而在循环里的每个组件。</p>
+<h2>二、四个组件，各管一件事</h2>
+<p>Lilian Weng 2023 年的综述给出了被广泛引用的框架：LLM 充当 Agent 的「大脑」，配合规划、记忆和工具使用三个组件。Anthropic 则特别强调第四样东西：来自环境的真实反馈。</p>
+<p><strong>规划：把大任务拆成能做的小步。</strong> 「把登录模块从 session 改成 JWT」不是一步能完成的事。规划要做两件事：一是<strong>分解</strong>，拆成「找到所有用到 session 的地方 → 设计 token 结构 → 逐个修改 → 跑测试」这样的子目标；二是<strong>反思</strong>，从已经做过的步骤里总结经验、修正错误。下一篇讲的 ReAct、Plan-and-Execute、Reflexion，就是组织规划的三种典型范式。</p>
+<p><strong>工具：拿到权重里没有的东西。</strong> 模型权重里没有今天的天气、你公司的数据库、你仓库里的最新代码，也不能可靠地做精确计算。工具补上了这些：API、代码执行、搜索、文件读写。工具的形式也有讲究。CodeAct 提出用可执行的 Python 代码作为统一的动作空间，在其基准上成功率比 JSON 或文本格式的动作最高提升 20%：代码天然支持循环、条件和组合多个工具，一次动作能做的事更多。</p>
+<p><strong>记忆：上下文之内与之外。</strong> Weng 的划分是：短期记忆就是上下文中的全部内容，受窗口大小限制；长期记忆借助外部存储和检索，在长时间跨度内保存与召回信息。Generative Agents 用自然语言保存完整的经历记录，定期合成为更高层次的反思，在规划时动态检索。第 4 篇会专门讲记忆与 RAG。</p>
+<p><strong>环境反馈：Agent 的「眼睛」。</strong> 这是最容易被低估的组件。图中把它画成橙色并单独列出：观察、报错、测试输出。Anthropic 强调，Agent 执行时每一步都要从环境中获得真实反馈（工具调用结果、代码执行结果）来评估进展，并在检查点或遇到阻碍时停下来等人反馈。<strong>没有反馈的 Agent 只是在闭着眼睛连续生成。</strong> 一段代码写得再漂亮，跑一下测试才知道对不对；一个 SQL 写得再自信，查一下才知道表名存不存在。</p>
+<p>CoALA 框架从认知科学的角度给出了更形式化的描述：模块化的记忆组件、能与内部记忆和外部环境交互的结构化动作空间，以及一个选择动作的通用决策过程。名字不同，骨架一致。</p>
+<h2>三、Workflow 还是 Agent：谁决定下一步？</h2>
+<p>「Agent」一词的定义并不统一。Anthropic 把所有基于 LLM 的自动化系统统称为 agentic systems，并做了一个关键区分：</p>
 <ul>
-<li><strong>短期记忆</strong>：上下文中的全部内容（in-context learning），受上下文窗口限制。</li>
-<li><strong>长期记忆</strong>：借助外部向量库和快速检索，在长时间跨度内保存与召回信息。</li>
+<li><strong>工作流（workflow）</strong>：由预先写好的代码路径编排 LLM 和工具。比如「先让模型分类工单，再按类别调用不同的处理提示」。</li>
+<li><strong>Agent</strong>：由 LLM 自己动态决定流程和工具调用，自主掌控完成任务的方式。</li>
 </ul>
-<p><strong>3. 工具。</strong> 调用外部 API 获取模型权重中没有的信息：实时数据、代码执行、私有数据库等。Toolformer 证明模型可以自监督地学会何时、如何调用 API；CodeAct 则提出用可执行的 Python 代码作为统一的动作空间，在其基准上成功率比 JSON / 文本格式的动作最高提升 20%。</p>
-<p><strong>4. 环境反馈循环。</strong> Anthropic 强调，Agent 执行时每一步都要从环境中获得「真实反馈」（工具调用结果、代码执行结果）来评估进展，并在检查点或遇到阻碍时停下来等人反馈；同时应设置停止条件（如最大迭代次数）。它们的结论是：Agent 在实现上通常很简单，<strong>本质就是 LLM 在循环中根据环境反馈使用工具</strong>，因此工具集及其文档的设计至关重要。</p>
-<p>CoALA 框架从认知科学角度给出更形式化的描述：模块化的记忆组件、与内部记忆和外部环境交互的结构化动作空间，以及选择动作的通用决策过程。</p>
-<h2>关键论文与里程碑</h2>
+<p>区别不在于有没有工具，而在于<strong>控制流在谁手里</strong>。这个区别决定了系统的几乎所有性质：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>工作流</th>
+<th>Agent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>可预测性</td>
+<td>高，路径可枚举</td>
+<td>低，路径由模型决定</td>
+</tr>
+<tr>
+<td>适合的任务</td>
+<td>步骤固定、可预先拆解</td>
+<td>步骤不可预知、需边做边看</td>
+</tr>
+<tr>
+<td>成本与延迟</td>
+<td>可控</td>
+<td>轮次不确定，通常更高</td>
+</tr>
+<tr>
+<td>出错方式</td>
+<td>某一步失败</td>
+<td>错误会在多轮中累积</td>
+</tr>
+<tr>
+<td>调试难度</td>
+<td>低</td>
+<td>高，需要完整轨迹日志</td>
+</tr>
+</tbody>
+</table>
+<p>Anthropic 的建议是<strong>从最简单的方案开始</strong>：很多应用只需要优化单次 LLM 调用，配上检索和示例就够了。Agentic 系统通常是用延迟和成本换取更好的任务表现，只有在这笔交换值得时才加复杂度。</p>
+<h2>四、把 Agent 做好的三条原则</h2>
+<p><strong>保持简单。</strong> 能用工作流解决的，不要用 Agent；能用单 Agent 解决的，不要用多 Agent（第 6 篇的决策树）。</p>
+<p><strong>让规划可见。</strong> 明确展示 Agent 的规划步骤，人才能在它走偏时及时发现，也才能事后复盘。</p>
+<p><strong>精心设计 Agent-计算机接口（ACI）。</strong> 工具的名字、参数、文档和报错信息，是模型理解世界的唯一窗口。Anthropic 建议像设计给人用的界面一样投入精力：写清楚何时用、何时不用，给出示例，让常见错误难以发生。SWE-agent 的研究表明，专门为 Agent 设计的接口（如带行号的文件查看、带语法检查的编辑命令）能显著提升它在软件工程任务上的表现。</p>
+<p>另外，<strong>框架要慎用</strong>。框架会增加抽象层，掩盖底层的提示和响应，让调试更难。Anthropic 建议先直接调用 LLM API，很多模式几行代码就能实现。</p>
+<h2>五、三个常见误解</h2>
 <ul>
-<li><strong>2022 ReAct</strong>：推理与行动交替进行</li>
-<li><strong>2023 Toolformer</strong>：模型自学调用工具</li>
-<li><strong>2023 Generative Agents</strong>：带记忆流、反思和规划的模拟智能体</li>
-<li><strong>2023 Lilian Weng 综述</strong>：规划 / 记忆 / 工具三组件框架</li>
-<li><strong>2023 CoALA</strong>：语言智能体的认知架构</li>
-<li><strong>2024 Anthropic《Building effective agents》</strong>：workflow 与 agent 的区分及模式库</li>
-</ul>
-<h2>工程实践与数字</h2>
-<ul>
-<li><strong>从最简单的方案开始</strong>：Anthropic 建议先找最简单的解法，必要时才增加复杂度；很多应用只需优化单次 LLM 调用、配上检索和示例就足够。Agentic 系统通常是用延迟和成本换取更好的任务表现。</li>
-<li><strong>框架要慎用</strong>：框架会增加抽象层，掩盖底层的提示和响应，增加调试难度。建议先直接调用 LLM API，很多模式几行代码就能实现。</li>
-<li><strong>三条原则</strong>：保持设计简单；明确展示 Agent 的规划步骤以保证透明度；通过完善的工具文档和测试精心设计 Agent-计算机接口（ACI）。SWE-agent 的研究也表明，专门为 Agent 设计的接口能显著提升其在软件工程任务上的表现。</li>
-</ul>
-<h2>常见误区</h2>
-<ul>
-<li><strong>「Agent 就是加了工具的聊天机器人。」</strong> 关键差别在于由谁决定控制流：工作流由代码决定，Agent 由模型决定。</li>
-<li><strong>「越自主越好。」</strong> 自主性意味着更高成本和错误累积的风险，Anthropic 建议在沙箱中充分测试并配备护栏。</li>
-<li><strong>「记忆就是把所有历史塞进上下文。」</strong> 上下文是短期记忆，长期记忆需要外部存储和检索。</li>
+<li><strong>「Agent 就是加了工具的聊天机器人。」</strong> 关键在于谁决定控制流：工作流由代码决定，Agent 由模型决定。</li>
+<li><strong>「越自主越好。」</strong> 自主性意味着更高成本和错误累积的风险。应设置停止条件（如最大迭代次数），在沙箱中充分测试并配备护栏。</li>
+<li><strong>「记忆就是把所有历史塞进上下文。」</strong> 上下文是短期记忆，也是稀缺资源；长期记忆需要外部存储和检索。</li>
 </ul>

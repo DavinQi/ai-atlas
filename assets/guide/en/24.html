@@ -1,40 +1,86 @@
-<h1>Spec-Driven: Clarify Before Building; Write Constraints and Assumptions Separately</h1>
+<h1>Spec-Driven Development: Clarify Before Building, and Separate Constraints from Assumptions</h1>
 <blockquote>
 <p>Companion to diagram #24 · Chapter 4 &quot;AI Coding Today&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>The faster an agent writes code, the more a misunderstood requirement costs: in the wrong direction, more code means more rework. The spec-driven approach is to <strong>clarify the requirement into a verifiable specification first, then let the agent build</strong>. Alibaba's handbook offers one key technique: <strong>write &quot;constraints&quot; and &quot;assumptions&quot; separately</strong> — the Spec draws the boundary of &quot;what counts as correct&quot;, not the implementation path.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. Don't assume the requirement is complete.</strong> The handbook notes that people writing requirements often omit default knowledge such as permission boundaries, concurrency handling and idempotency strategy, while AI lacks that organizational memory and can only guess or ignore it. A simple requirement like &quot;generate a public share link&quot; involves decisions on revocation, access control and data consistency. The team has AI actively ask about implicit business and technical decisions and records the answers as traceable Specs and Tasks, exposing risk at the cheapest stage of development.</p>
-<p><strong>2. Constraints vs assumptions.</strong></p>
+<p>The faster an agent writes code, the more a misunderstood requirement costs: in the wrong direction, the more it writes, the more must be redone. Spec-driven development means <strong>first clarifying the requirement into a verifiable specification, then letting the agent build.</strong> Alibaba's practice handbook gives one key technique: <strong>write constraints and assumptions separately.</strong> The spec defines the boundaries of &quot;correct&quot;; it does not prescribe the implementation path.</p>
+<h2>1. Start with a one-line requirement</h2>
+<p>A product manager asks: &quot;Let documents generate public share links.&quot;</p>
+<p>It sounds complete. Hand it straight to an agent and it will quickly build something that works: a random URL that anyone can open to read the document. But a string of unspoken questions hides behind it:</p>
 <ul>
-<li><strong>Constraints</strong>: data must not leave the domain, APIs must stay backward compatible, latency must not exceed a threshold. Keep them long-term and check them automatically where possible.</li>
-<li><strong>Assumptions</strong>: microservices or monolith, which caching strategy. These are hypotheses to be validated, and AI should be allowed to adjust them based on implementation and runtime feedback.</li>
+<li>Can a link be revoked? What happens to pages already open?</li>
+<li>Does it expire?</li>
+<li>If the document is deleted or the sharer leaves the company, does the link still work?</li>
+<li>Can viewers see version history and comments?</li>
+<li>May sensitive documents be shared publicly? Who controls that switch?</li>
+<li>If &quot;generate&quot; is clicked twice on the same document, do you return the same link or a new one?</li>
 </ul>
-<p><strong>3. What a sufficient Spec contains.</strong> Combining the handbook and practitioner experience:</p>
+<p>The handbook notes that people writing requirements tend to omit default knowledge such as permission boundaries, concurrency handling and idempotency, while AI lacks this organisational memory and can only guess or ignore it. &quot;Generate a public share link&quot; involves several decisions about revocation, access control and data consistency. <strong>Answered before coding, these questions cost minutes of discussion; discovered after launch, they may cost a data leak.</strong></p>
+<h2>2. Let the AI ask</h2>
+<p>The handbook team's practice is <strong>not to assume the requirement is complete.</strong> The AI first reads the requirement and the relevant code and actively asks about implicit business and technical decisions; a person confirms each one, and the results are captured as a traceable spec and task list, exposing risk at the stage where development is cheapest.</p>
+<p>This turns a model &quot;weakness&quot; into a strength: precisely because it has no organisational memory, it asks the questions veterans consider &quot;obvious&quot; and therefore never write down.</p>
+<h2>3. Constraints vs assumptions: the crucial cut</h2>
+<p>A spec contains two kinds of content, which must be written separately:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Constraint</th>
+<th>Assumption</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Meaning</td>
+<td>Must hold, or the result is wrong</td>
+<td>What currently seems reasonable</td>
+</tr>
+<tr>
+<td>Examples</td>
+<td>Data must not leave the region; the API stays backward compatible; revoked links stop working within 1 minute</td>
+<td>Cache links in Redis; use random tokens rather than signed URLs</td>
+</tr>
+<tr>
+<td>Lifetime</td>
+<td>Kept long-term</td>
+<td>May change with feedback</td>
+</tr>
+<tr>
+<td>How it is checked</td>
+<td>Turned into automated checks where possible</td>
+<td>Validated by implementation and runtime data</td>
+</tr>
+<tr>
+<td>May the agent change it?</td>
+<td>No</td>
+<td>Yes, with a stated reason</td>
+</tr>
+</tbody>
+</table>
+<p>Why separate them? If &quot;use Redis&quot; and &quot;revoked within 1 minute&quot; sit at the same level, the agent treats them as equally hard requirements. When Redis turns out to be a poor fit, it either forces it through or gets &quot;flexible&quot; with the constraint that actually matters. Written separately, the agent knows which lines are red and which can adapt to circumstances.</p>
+<h2>4. A spec that is good enough</h2>
+<p>Combining the handbook and practitioners' experience, a good-enough spec usually contains:</p>
+<ol>
+<li><strong>The problem to solve</strong> and the <strong>non-goals</strong> (&quot;no password protection in this release&quot;)</li>
+<li><strong>Scope and priorities</strong></li>
+<li><strong>Constraints</strong> (as automated checks where possible)</li>
+<li><strong>Key decisions and their rationale</strong></li>
+<li><strong>Acceptance criteria</strong> (ideally convertible straight into tests)</li>
+<li><strong>Open questions</strong></li>
+</ol>
+<p>Non-goals are often neglected but matter: agents tend to over-engineer, and saying what not to do prevents scope creep better than saying what to do. Acceptance criteria bridge spec and tests: &quot;accessing a revoked link returns 404&quot; becomes a test directly.</p>
+<h2>5. Know when to stop clarifying</h2>
+<p>Spec-driven work can also go too far. A developer on X shares this experience: use repeated questioning to pin down goals, constraints and trade-offs, captured in a Spec or CONTEXT.md; <strong>once the remaining questions would no longer significantly change the implementation direction or acceptance outcome, start building.</strong> There is no need to plan every implementation detail in advance, or requirement alignment itself becomes a heavyweight process. He also notes that heavyweight Skills built around specs and TDD, such as Superpowers, consume a lot of tokens; as models get stronger, some once-useful constraints and processes are turning into noise.</p>
+<p>A practical stopping rule: <strong>ask whether the answer to the next question would change the architecture or the acceptance criteria.</strong> If not, start writing code.</p>
+<h2>6. Where the spec sits in the process</h2>
 <ul>
-<li>The problem to solve and <strong>non-goals</strong></li>
-<li>Scope and priorities</li>
-<li>Constraints (written as checks where they can be automated)</li>
-<li>Key decisions and rationale</li>
-<li><strong>Acceptance criteria</strong> (ideally directly convertible to tests)</li>
-<li>Open questions</li>
+<li><strong>Plan, then execute.</strong> Plan-and-Solve (2023) showed that planning before executing reduces missing-step errors, the model-level counterpart of &quot;clarify first&quot;.</li>
+<li><strong>The spec is shared context for multiple agents.</strong> The implementing and reviewing agents read the same spec, without rereading the whole earlier conversation.</li>
+<li><strong>Acceptance criteria first.</strong> The Qwen user-growth team adopted TDD: fix the requirement's boundaries with failing tests, make them pass with a minimal implementation, then refactor under the protection of the tests.</li>
+<li><strong>Split complex requirements into independently verifiable issues</strong>, and parallelise only the parts that can progress independently (Chapter 5).</li>
 </ul>
-<p><strong>4. Know when to stop clarifying.</strong> One developer on X shared: use repeated questioning to pin down goals, constraints and trade-offs, and record them in a Spec or CONTEXT.md; once the remaining questions would no longer significantly change the implementation direction or acceptance result, start building — don't require planning every implementation detail upfront, or requirement alignment becomes a heavy process of its own. He also noted that heavy Spec- and TDD-centric Skills such as Superpowers consume a lot of tokens, and as models get stronger some once-useful constraints and processes are turning into noise.</p>
-<h2>Key Papers and Milestones</h2>
+<h2>7. Common misconceptions</h2>
 <ul>
-<li><strong>Plan-and-Solve (2023)</strong>: planning before executing reduces missing-step errors — the model-level counterpart of &quot;clarify before building&quot;</li>
-<li><strong>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em></strong>: Specs that separate constraints from assumptions</li>
-</ul>
-<h2>Engineering Practice and Numbers</h2>
-<ul>
-<li><strong>The Spec is also shared context for multiple agents</strong>: implementing and reviewing agents read the same Spec without rereading the whole previous conversation.</li>
-<li><strong>Acceptance criteria first</strong>: the Qwen user-growth team adopted TDD — fix requirement boundaries with failing tests, make them pass with a minimal implementation, then refactor under test protection.</li>
-<li><strong>Split complex requirements into independently acceptable issues</strong>; only parallelize parts that can proceed independently.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;The more detailed the Spec, the better.&quot;</strong> Hard-coding the implementation path removes the agent's room to adjust from feedback and makes the process heavy.</li>
-<li><strong>&quot;Clear requirements are the product manager's job.&quot;</strong> The handbook has AI ask proactively, moving clarification upfront as a team process.</li>
-<li><strong>&quot;With a Spec you don't need tests.&quot;</strong> The Spec defines what is correct; tests prove it was done correctly.</li>
+<li><strong>&quot;The more detailed the spec, the better.&quot;</strong> Hard-coding the implementation path removes the agent's room to adjust from feedback and makes the process heavy.</li>
+<li><strong>&quot;Clear requirements are the product manager's job.&quot;</strong> The handbook's approach is to have the AI ask, making clarification a team process.</li>
+<li><strong>&quot;With a spec, we don't need tests.&quot;</strong> The spec defines what is correct; tests prove it was done correctly.</li>
 </ul>

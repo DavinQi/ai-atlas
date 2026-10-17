@@ -1,43 +1,65 @@
-<h1>The Evolution of Programming: From Syntax, to Code, to Tasks</h1>
+<h1>The Evolution of Programming: Each Leap Hands One More Layer of Detail to the Machine</h1>
 <blockquote>
 <p>Companion to diagram #17 · Chapter 3 &quot;The Evolution of Programming&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>The history of programming can be read as a history of &quot;what humans hand over to machines&quot;. Each leap removes a layer of detail from human attention: high-level languages freed people from machine instructions, IDEs and code completion reduced API memorization, AI completion cut boilerplate typing, and coding agents begin to shift people from &quot;writing code&quot; to &quot;defining tasks and accepting results&quot;.</p>
-<h2>Core Mechanisms</h2>
-<p>The timeline falls into three stages, each with a different human focus:</p>
-<p><strong>1. Focus on syntax (high-level languages and IDEs).</strong></p>
+<p>Diagram #17 is a timeline from the 1950s to 2025: assembly → high-level languages (FORTRAN, C, Java) → IDE code intelligence (IntelliSense, Eclipse, IDEA) → Copilot completion → AI IDEs (Cursor) → coding agents (Claude Code, Codex). A widening wedge underneath shows AI autonomy growing, and the three cells at the bottom name what the human focuses on: syntax → code → tasks.</p>
+<p>The most useful way to read the timeline is to ask one question: <strong>at each leap, what did humans hand over to the machine?</strong> The answer is remarkably consistent. Every generation of tools removed one layer of detail from human attention, so people could think one level higher. Once you see this pattern, you can tell where coding agents sit, and where human attention should go next.</p>
+<h2>1. Phase one: humans focus on syntax</h2>
+<p><strong>In the assembly era, people had to think every step for the machine.</strong> To write a loop you allocated registers, computed jump addresses and remembered each instruction format. Most attention went into &quot;making the machine understand&quot;, not &quot;what problem am I solving&quot;.</p>
+<p><strong>High-level languages handed instructions to the compiler.</strong> In 1957 Backus et al. published <em>The FORTRAN Automatic Coding System</em>. FORTRAN let scientists write formulas directly and let a compiler translate them into machine instructions. This was the first large-scale abstraction leap: <strong>people stopped caring about machine instructions and cared only about algorithms.</strong> Many doubted that compiled code could match hand-written assembly; in practice the compiler was good enough, and the attention it freed was worth far more than the lost efficiency.</p>
+<p><strong>Platform differences were handed to a virtual machine.</strong> In May 1995 Java was released as the core of Sun's Java platform. &quot;Write once, run anywhere&quot; relied on the JVM to hide operating-system and hardware differences. One more layer gone: which machine the program runs on.</p>
+<p><strong>API details were handed to the IDE.</strong> In 1996 Microsoft's code completion, IntelliSense, first appeared in a mainstream product (Visual Basic 5.0 Control Creation Edition), using static analysis to suggest class members and function parameters. Eclipse and IntelliJ IDEA later perfected completion, navigation and refactoring. Nobody had to memorise every API's spelling and argument order any more.</p>
+<p>What this phase has in common: <strong>the tools are deterministic.</strong> Compilers, VMs and static analysis produce predictable, provable results. Human attention stays on &quot;writing the code correctly&quot;, that is, syntax and structure.</p>
+<h2>2. Phase two: humans focus on code</h2>
+<p><strong>Boilerplate was handed to models.</strong> In 2021 OpenAI published the Codex paper: a GPT model fine-tuned on public GitHub code solved 28.8% of problems on the newly released HumanEval benchmark, where the original GPT-3 solved 0%. The paper also stated that GitHub Copilot is powered by a production version of Codex. On 29 June 2021 GitHub launched the Copilot technical preview as an &quot;AI pair programmer&quot;.</p>
+<p>This leap is different in kind. Every earlier tool was deterministic; Copilot is <strong>probabilistic</strong>. It offers &quot;code you probably meant to write&quot;, not &quot;code that is guaranteed correct&quot;. The human role moves from &quot;write every line&quot; to &quot;decide whether to accept this line&quot;.</p>
+<p><strong>Project-level context was handed to AI IDEs.</strong> AI IDEs such as Cursor extended the model from completion at the cursor to understanding the whole project: chat, multi-file edits, on-demand retrieval from the codebase. Human attention rises from single lines to &quot;which files does this change touch, and is the diff right?&quot;</p>
+<h2>3. Phase three: humans focus on tasks</h2>
+<p><strong>Stitching the work together was handed to agents.</strong> On 24 February 2025 Anthropic released Claude Code, a command-line agentic coding tool, alongside Claude 3.7 Sonnet. In April 2025 OpenAI open-sourced Codex CLI, a lightweight coding agent that runs in the local terminal.</p>
+<p>The fundamental difference from the previous two generations: an agent no longer sits inside an editor waiting for instructions one by one. It drives the task forward in an act–verify–correct loop. It reads code, edits files, runs tests, reads errors and edits again. <strong>Humans hand over the job of chaining all the tools into one delivery</strong>, and their focus rises to &quot;what is the task, and what counts as done?&quot;</p>
+<h2>4. Benchmarks moved up a level too</h2>
+<p>A good piece of corroborating evidence: the benchmarks used to measure AI coding moved up alongside human focus.</p>
 <ul>
-<li><strong>1957, FORTRAN</strong>: Backus et al. published <em>The FORTRAN Automatic Coding System</em>; a high-level language translated formulas into machine instructions.</li>
-<li><strong>1995, Java</strong>: released in May 1995 as a core component of Sun's Java platform — &quot;write once, run anywhere&quot;, with the JVM hiding platform differences.</li>
-<li><strong>1996, IntelliSense</strong>: Microsoft's code completion first appeared in a mainstream Microsoft product in 1996 (Visual Basic 5.0 Control Creation Edition), using static analysis to suggest members and parameters.</li>
+<li><strong>HumanEval (2021)</strong> asks for a function written from its docstring, judged by unit tests. That is a &quot;code-level&quot; ability.</li>
+<li><strong>SWE-bench (2023)</strong> collects 2,294 real GitHub issues from 12 popular Python repositories and asks the model to fix them inside the real codebase, judged by the repository's own tests. That requires coordinating changes across functions and files, interacting with an execution environment and handling long contexts. At launch the best model, Claude 2, solved only 1.96%.</li>
+<li><strong>SWE-agent (2024)</strong> showed that designing a computer interface specifically for agents lifts pass@1 on SWE-bench to 12.5%.</li>
 </ul>
-<p><strong>2. Focus on code (AI completion and AI IDEs).</strong></p>
+<p>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em> (annotated edition) records that by mid-2026, mainstream models score around 80% on SWE-bench Verified, up from under 30% two years earlier. Industry consensus has shifted: <strong>the bottleneck is no longer generating code but requirements, environments, testing, release and operations, which make up 70–80% of the development lifecycle.</strong> That is the subject of Chapter 4.</p>
+<h2>5. The pattern: each abstraction step moves the centre of gravity up</h2>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Handed to the machine</th>
+<th>Human focus</th>
+<th>Nature of the tool</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Assembly → high-level languages → IDE</td>
+<td>Instructions, platforms, API details</td>
+<td>Syntax and structure</td>
+<td>Deterministic</td>
+</tr>
+<tr>
+<td>Copilot → AI IDE</td>
+<td>Boilerplate, cross-file edits</td>
+<td>Is the code correct?</td>
+<td>Probabilistic, human reviews each piece</td>
+</tr>
+<tr>
+<td>Coding agent</td>
+<td>Chaining read, edit, run, fix</td>
+<td>Tasks and acceptance</td>
+<td>Probabilistic, backed by verification</td>
+</tr>
+</tbody>
+</table>
+<p>Two things stand out. First, <strong>every leap came with the same doubts</strong>: compiled code is worse than hand-written code; AI-written code is unreliable. The doubts were not baseless, but historically the freed attention always went somewhere more valuable. Second, <strong>the move from deterministic to probabilistic is a real discontinuity.</strong> You can trust a compiler's output; you must verify a model's. That is why testing and verification matter more and more the further along we go (article 5 of this chapter).</p>
+<h2>6. Common misconceptions</h2>
 <ul>
-<li><strong>2021, Codex and Copilot</strong>: OpenAI's Codex paper reports that on the newly released HumanEval benchmark Codex solved 28.8% of problems versus 0% for GPT-3; the paper also says GitHub Copilot is powered by a production version of Codex. On June 29 of that year GitHub launched the Copilot technical preview as an &quot;AI pair programmer&quot;.</li>
-<li>AI IDEs such as Cursor followed, extending the model from &quot;completion at the cursor&quot; to deep integration with the whole editor, multiple files and chat.</li>
-</ul>
-<p><strong>3. Focus on tasks (coding agents).</strong></p>
-<ul>
-<li><strong>February 24, 2025</strong>: Anthropic released the command-line agentic coding tool Claude Code alongside Claude 3.7 Sonnet.</li>
-<li><strong>April 2025</strong>: OpenAI open-sourced Codex CLI, a lightweight coding agent that runs in the local terminal.</li>
-<li>Agents no longer sit in the editor waiting for line-by-line instructions; they advance tasks autonomously in an &quot;act — verify — correct&quot; loop.</li>
-</ul>
-<h2>Key Papers and Milestones</h2>
-<ul>
-<li><strong>2021 Codex / HumanEval</strong></li>
-<li><strong>2023 SWE-bench</strong>: 2,294 tasks from real GitHub issues across 12 popular Python repositories; the best model at release, Claude 2, solved only 1.96%</li>
-<li><strong>2024 SWE-agent</strong>: a computer interface designed for agents, reaching 12.5% pass@1 on SWE-bench</li>
-<li><strong>November 2024: MCP announced</strong></li>
-</ul>
-<h2>Engineering Practice and Numbers</h2>
-<ul>
-<li><strong>Benchmark evolution mirrors the shift in focus</strong>: HumanEval tests &quot;write a function from a docstring&quot;; SWE-bench tests &quot;fix an issue in a real codebase&quot;, requiring coordinated changes across functions and files, interaction with an execution environment, and very long contexts.</li>
-<li>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em> (annotated edition) records that by mid-2026 mainstream models' pass rate on SWE-bench Verified had risen from under 30% two years earlier to around 80%; industry consensus shifted accordingly — the bottleneck is no longer generating code but requirements understanding, environment setup, testing and verification, release and operations, which make up 70%–80% of the development lifecycle.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;AI makes programming skills unimportant.&quot;</strong> Each rise in abstraction moves the weight to higher-level abilities: problem definition, architectural judgment and verification design.</li>
-<li><strong>&quot;High benchmark scores mean it can deliver.&quot;</strong> The handbook states plainly that high benchmark scores do not equal real delivery capability in production.</li>
-<li><strong>&quot;An agent is just an enhanced Copilot.&quot;</strong> The interaction models differ: completion is human-led, accepted line by line; with an agent, the human gives a task and reviews the result.</li>
+<li><strong>&quot;AI will make programming skills irrelevant.&quot;</strong> Each abstraction step shifts weight towards higher-level abilities: defining problems, judging architecture and designing verification. Fewer people write compilers, but people who understand systems are worth more.</li>
+<li><strong>&quot;High benchmark scores mean it can deliver.&quot;</strong> The handbook states plainly that high benchmark scores do not equal real delivery in production, where requirements are vague, environments complex and tests incomplete.</li>
+<li><strong>&quot;An agent is just a stronger Copilot.&quot;</strong> The interaction model differs: with completion, the human leads and accepts line by line; with an agent, the human assigns a task and reviews the result.</li>
 </ul>

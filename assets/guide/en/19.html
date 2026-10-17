@@ -1,34 +1,67 @@
-<h1>From Completion to AI IDEs: The Model Entered the Cursor, Then the Editor</h1>
+<h1>From Completion to AI IDEs: Models Entered the Cursor, Then the Editor</h1>
 <blockquote>
 <p>Companion to diagram #19 · Chapter 3 &quot;The Evolution of Programming&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>AI's first step into developer tools was <strong>completion at the cursor</strong>: predicting the next line or block from the current file and cursor position. The second step was the <strong>AI IDE</strong>: the model no longer watches only the cursor but understands the whole project, edits across files, and explains and refactors code in chat. In both, the human still leads every change in the editor; AI is the &quot;copilot&quot;.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. Code completion models.</strong> OpenAI's Codex paper introduced a GPT model fine-tuned on public GitHub code and noted that a production version powers GitHub Copilot. It also found repeated sampling an effective strategy: with 100 samples per problem, 70.2% of HumanEval problems were solved versus 28.8% with one sample. This explains why completion tools often offer several candidates.</p>
-<p><strong>2. From completion to chat and multi-file edits.</strong> AI IDEs add, beyond completion:</p>
+<p>AI entered development tools in two steps. The first was <strong>completion at the cursor</strong>: predict the next line or block from the current file and cursor position. The second was the <strong>AI IDE</strong>: the model stops staring at the cursor and can understand the whole project, edit across files, and explain and refactor code in chat. Both share one thing: <strong>the human still leads every change inside the editor</strong>, and AI is the co-pilot.</p>
+<p>Rather than retelling the history, this article works through three questions. What is a completion model actually doing? What does an AI IDE add on top of completion? And does it really make people faster?</p>
+<h2>Question 1: what is a completion model doing?</h2>
+<p><strong>Completion is the next-token prediction from Chapter 1, with code as the corpus.</strong> OpenAI's 2021 Codex paper introduced GPT models fine-tuned on public GitHub code and stated that a production version powers GitHub Copilot. It also released HumanEval: 164 hand-written programming problems, each giving a function signature and docstring; the model writes the body, and unit tests decide whether it is correct.</p>
+<p>Here is what that looks like. The editor sends the text before the cursor to the model as the prompt:</p>
+<pre><code class="language-python">def is_palindrome(s: str) -&gt; bool:
+    &quot;&quot;&quot;Return whether s is a palindrome, ignoring case and non-alphanumeric characters.&quot;&quot;&quot;
+</code></pre>
+<p>The model continues with the function body. The signature, type hints, docstring and even variable names are all clues. <strong>Clear comments and names are themselves prompts.</strong> That is why the same completion tool does noticeably better in a well-kept codebase.</p>
+<p><strong>Why do completion tools often offer several candidates?</strong> The Codex paper found that with a single sample the model solved 28.8% of HumanEval problems; with 100 samples per problem, counting a problem as solved if any sample passed, the figure rose to 70.2%. In other words, <strong>the right answer is often &quot;in&quot; the model's distribution but not necessarily the first one sampled.</strong> Offering several candidates for a human to choose from exploits exactly this; later agents use tests to choose automatically, replacing &quot;the human picks&quot; with &quot;the machine picks&quot;.</p>
+<p>One easily overlooked detail: <strong>completion context goes far beyond the current file.</strong> Real completion systems put code before and after the cursor, other open tabs and relevant snippets from neighbouring files into the prompt. As Chapter 1 explained, the model only knows what is in its context, so choosing what goes in is the key engineering problem for completion quality.</p>
+<p>On 29 June 2021 GitHub launched the Copilot technical preview, saying it worked especially well for Python, JavaScript, TypeScript, Ruby and Go — languages with a great deal of public code, consistent with &quot;model ability comes from training data&quot;.</p>
+<h2>Question 2: what does an AI IDE add?</h2>
+<p>Completion answers &quot;what do I write next?&quot;; an AI IDE answers &quot;how should this be changed?&quot; It adds three things:</p>
+<ol>
+<li><strong>Chat</strong>: ask about, explain or generate code for a selection or the whole project — &quot;why does this function throw on an empty list?&quot; rather than only &quot;continue&quot;.</li>
+<li><strong>Multi-file edits</strong>: one change can span several files and is shown as a diff. Adding a field to an API means changing the data model, serialisation, API docs and tests together.</li>
+<li><strong>Project-level context</strong>: index the codebase and retrieve relevant files on demand, so the model can find every caller when it changes an interface.</li>
+</ol>
+<p>From completion to AI IDE, <strong>the unit of human review grows from a line to a diff.</strong> Whether one line is right you can tell at a glance; whether a five-file diff is right requires actually understanding it. Review cost rises, which foreshadows why the next generation had to bring in automated verification.</p>
+<p><strong>Rule files keep the model following team conventions.</strong> Every session starts from scratch; the model will not remember that you told it last week &quot;this project uses pnpm, not npm&quot;. The fix is to write conventions into repository files that load automatically. Cursor's docs explain that rules provide persistent, reusable context at the prompt level; project rules live in <code>.cursor/rules</code> under version control, and <code>AGENTS.md</code> is supported as a simpler alternative. AGENTS.md describes itself as &quot;a README for agents&quot;, and its website says more than 60,000 open-source projects use it. Claude Code reads <code>CLAUDE.md</code>.</p>
+<p>A good rule file covers the stack and versions, build and test commands, the parts of the style models tend to get wrong, and things never to do. <strong>More rules are not better</strong>: they take up context and dilute the important points. Add a rule when the model keeps making the same mistake.</p>
+<p><strong>The boundaries are blurring.</strong> GitHub Copilot's docs now cover agent mode in the IDE, a CLI, and a coding agent that works asynchronously in the cloud and can open or update PRs for review. &quot;Completion tools&quot; and &quot;agent tools&quot; are increasingly modes of one product.</p>
+<h2>Question 3: does it really make people faster?</h2>
+<p>This is where intuition misleads most. Two rigorous randomised controlled trials reached seemingly opposite conclusions.</p>
+<p><strong>Trial A: 55.8% faster.</strong> In a 2023 Copilot RCT, developers implemented an HTTP server in JavaScript; the Copilot group finished 55.8% faster than the control group.</p>
+<p><strong>Trial B: 19% slower.</strong> METR's 2025 RCT had 16 experienced open-source developers complete 246 real tasks in mature projects they had maintained for years. Each task was randomly assigned to &quot;AI allowed&quot; (mainly Cursor Pro with Claude 3.5/3.7 Sonnet) or &quot;AI not allowed&quot;. With AI allowed, completion time <strong>rose by 19%</strong>. Developers had expected a 24% reduction beforehand and still believed afterwards that they had been 20% faster.</p>
+<p>The studies do not contradict each other; the settings differ:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Trial A</th>
+<th>Trial B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Task</td>
+<td>Well-bounded greenfield task</td>
+<td>Maintenance tasks in real projects</td>
+</tr>
+<tr>
+<td>Codebase</td>
+<td>From scratch</td>
+<td>Large codebase the developer knows intimately</td>
+</tr>
+<tr>
+<td>Quality bar</td>
+<td>Passing the tests</td>
+<td>The project's long-standing implicit standards</td>
+</tr>
+</tbody>
+</table>
+<p>On a bounded task from scratch, the model's &quot;average code&quot; is good enough. In a large project full of implicit conventions that the developer knows by heart, the time spent understanding, prompting, waiting for, reviewing and fixing AI output can exceed the time to just write it. <strong>Gains depend heavily on task type, codebase familiarity and the quality bar.</strong></p>
+<p>The bigger lesson: <strong>subjective impressions are unreliable.</strong> Developers in Trial B felt faster while actually being slower. Judge AI tools by objective delivery metrics, not surveys (see &quot;Metrics&quot; in Chapter 4).</p>
+<h2>Practical points</h2>
 <ul>
-<li><strong>Chat</strong>: ask, explain and generate about selected code or the whole project.</li>
-<li><strong>Multi-file edits</strong>: one change spanning several files, presented as diffs for review.</li>
-<li><strong>Project-level context</strong>: index the codebase and retrieve relevant files on demand.</li>
-</ul>
-<p><strong>3. Persistent project rules.</strong> Keeping the model aligned with team conventions relies on rules files committed to the repo. Cursor's docs say rules provide persistent, reusable context at the prompt level; project rules live in <code>.cursor/rules</code> under version control; <code>AGENTS.md</code> is supported as a simpler alternative. AGENTS.md is positioned as &quot;a README for agents&quot;, and its site says it is used by over 60k open-source projects. Claude Code reads <code>CLAUDE.md</code>.</p>
-<p><strong>4. Moving toward agents.</strong> GitHub Copilot's docs now cover agent mode in the IDE, a CLI, and a coding agent that works asynchronously in the cloud and can open or update PRs for human review. The line between completion tools and agent tools is blurring.</p>
-<h2>Key Papers and Milestones</h2>
-<ul>
-<li><strong>2021 Codex / HumanEval</strong></li>
-<li><strong>June 29, 2021: Copilot technical preview</strong>, working especially well at first for Python, JavaScript, TypeScript, Ruby and Go</li>
-<li><strong>2023 Copilot randomized controlled experiment</strong>: developers using Copilot implemented a JavaScript HTTP server 55.8% faster than the control group</li>
-</ul>
-<h2>Engineering Practice and Numbers</h2>
-<ul>
-<li><strong>Productivity evidence depends on context</strong>: the 55.8% figure comes from a well-bounded experimental task. METR's 2025 randomized controlled trial found that 16 experienced open-source developers completing 246 tasks in mature projects they knew well took <strong>19% longer</strong> when AI was allowed (mainly Cursor Pro with Claude 3.5/3.7 Sonnet); developers had expected a 24% speedup beforehand and still believed afterwards they had been 20% faster. The two studies do not contradict each other: gains depend heavily on task type, codebase familiarity and quality bar.</li>
-<li><strong>Commit rules files to Git</strong> so the team shares and reviews them.</li>
-<li><strong>Review AI-generated diffs like a colleague's PR</strong>, rather than accepting them directly.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;Feeling faster means being faster.&quot;</strong> METR's study shows perception and measurement can point in opposite directions.</li>
-<li><strong>&quot;Completion acceptance rate equals productivity.&quot;</strong> Acceptance rate measures usage, not delivery outcomes (see Chapter 4, &quot;Metrics&quot;).</li>
-<li><strong>&quot;The more rules, the better.&quot;</strong> Rules consume context; add them one by one for recurring problems.</li>
+<li><strong>Review AI-generated diffs as you would a colleague's PR</strong>; do not accept them blindly.</li>
+<li><strong>Commit rule files to Git</strong> so the team shares, reviews and evolves them.</li>
+<li><strong>Give the model good clues</strong>: clear names, types and comments are the cheapest prompt engineering.</li>
+<li><strong>Measure in your own setting</strong> instead of borrowing someone else's speed-up percentage.</li>
 </ul>

@@ -1,42 +1,44 @@
-<h1>The Troubleshooting Evidence Chain: Collect Evidence First, Then Infer the Root Cause</h1>
+<h1>Troubleshooting Evidence Chains: Collect Evidence First, Then Infer the Root Cause</h1>
 <blockquote>
 <p>Companion to diagram #26 · Chapter 4 &quot;AI Coding Today&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>The most common mistake in production troubleshooting is <strong>guessing the root cause first, then looking for evidence to prove it</strong>. Humans do this, and agents do it even more: models are naturally good at producing &quot;plausible-sounding&quot; explanations. The evidence chain reverses the order: <strong>collect factual evidence in a fixed way first, then infer the root cause from the complete request chain; escalate when evidence is insufficient instead of guessing.</strong></p>
-<h2>Core Mechanisms</h2>
-<p><strong>The Qwen user-growth team's approach</strong> (per Alibaba's handbook):</p>
+<p>The most common mistake in production troubleshooting is <strong>guessing the root cause first and then looking for evidence to prove it.</strong> People do it; agents do it even more, because models are naturally good at producing explanations that &quot;sound right&quot;. An evidence chain reverses the order: <strong>collect factual evidence in a fixed way first, then infer the root cause from the full request chain; when the evidence is insufficient, escalate instead of guessing.</strong></p>
+<h2>1. A &quot;wrong guess&quot; example</h2>
+<p>Alert: at 14:05 the error rate of the order API suddenly rises to 5%.</p>
+<p><strong>Guessing first.</strong> The agent sees the alert and notices a deployment at 13:50, so it infers: &quot;The 13:50 release introduced a bug.&quot; It finds that release's diff, sees that it did touch order code, and recommends a rollback. Every step of this reasoning &quot;makes sense&quot;.</p>
+<p><strong>Evidence first.</strong> Take the TraceId of a failed request and follow each hop: gateway fine → order service fine → call to the inventory service times out. Then look at the inventory service: the cache cluster it depends on failed over from primary to replica at 14:04. The recent release has nothing to do with this path.</p>
+<p>Rolling back on the first approach would not lower the error rate, and the team would spend more time investigating while the incident continued. <strong>As Chapter 1 explained, a model generates the most probable next token, not the true cause.</strong> &quot;A release caused the incident&quot; is a statistically common pattern, so the model readily says it, but this time it is not the fact.</p>
+<h2>2. Why evidence first</h2>
+<p>ReAct (2022), introduced in Chapter 2, rests on a key observation: interacting with an external environment to gather information mitigates hallucination and error propagation in pure reasoning. The evidence chain applies that principle to operations: <strong>anchor every inference to a fact that can be checked</strong>, not to the previous inference.</p>
+<h2>3. How the Qwen user-growth team does it</h2>
+<p>Per Alibaba's handbook:</p>
 <ol>
-<li><strong>Unified TraceId</strong>: connect logs, upstream/downstream state and code call relationships.</li>
-<li><strong>Evidence first</strong>: troubleshooting does not start from guessing the root cause; it first collects facts such as the TraceId, structured logs, upstream/downstream state, code locations and call relationships.</li>
-<li><strong>Judge from the complete request chain.</strong></li>
-<li><strong>Tiered diagnosis</strong>: obvious errors are located directly from logs by a diagnostic agent; when evidence is insufficient or states conflict, the existing evidence goes to an agent with full code context for further analysis.</li>
-<li><strong>Standardization</strong>: fix the evidence-collection method, escalation conditions and conclusion format, so troubleshooting moves from personal experience to a reusable, verifiable engineering process.</li>
+<li><strong>A unified TraceId</strong> connects logs, upstream and downstream state and code call relationships.</li>
+<li><strong>Collect evidence first</strong>: troubleshooting does not start from guessing; it starts by gathering facts such as the TraceId, structured logs, upstream and downstream state, code locations and call relationships.</li>
+<li><strong>Judge from the complete request chain</strong>, not just the hop that reported the error.</li>
+<li><strong>Tiered diagnosis</strong>: obvious errors are located directly from logs by a diagnosis agent; when evidence is insufficient or contradictory, the gathered evidence goes to an agent with full code context.</li>
+<li><strong>Standardise</strong>: fix how evidence is collected, when to escalate and the format of conclusions, so troubleshooting moves from personal experience to a reusable, verifiable engineering process.</li>
 </ol>
-<p>A minimal evidence chain:</p>
-<pre><code>Symptom (error / alert / user report)
+<p>The tiering in step 4 is worth noticing: most incidents are simple (null pointers, bad config) and a lightweight diagnosis agent can handle them; only a few complex cases need heavier context. It is the same split as first-line on-call and second-line experts in human teams.</p>
+<h2>4. A minimal evidence chain</h2>
+<pre><code>symptom (error / alert / user report)
 → TraceId → logs and state at every hop
-→ matching code location and recent changes
+→ corresponding code locations and recent changes
 → hypothesis → confirm or refute with evidence
 → conclusion (root cause + evidence + fix + regression test)
 </code></pre>
-<h2>Key Papers and Milestones</h2>
+<p>Note that the hypothesis comes after the evidence and is followed by &quot;confirm or refute&quot;. In the example, &quot;the release caused it&quot; was a fine hypothesis, but the evidence (the chain pointing to the inventory service) refuted it directly.</p>
+<h2>5. Engineering points</h2>
 <ul>
-<li><strong>ReAct (2022)</strong>: gathering information by interacting with the environment mitigates hallucination and error propagation in pure reasoning — the evidence chain applies this principle to operations</li>
-<li><strong>Google SRE Book</strong>: systematic incident handling and postmortem culture</li>
-<li><strong>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em></strong>: TraceId evidence chains and tiered diagnosis</li>
+<li><strong>Observability is a prerequisite.</strong> Without unified TraceIds and structured logs, even the strongest agent has nothing to work with. The quality ceiling of the evidence chain is the quality of observability.</li>
+<li><strong>Give agents read-only access.</strong> During troubleshooting an agent should be able to read logs, tables and call chains but should not change production directly. The developer on X mentioned earlier uses a read-only database MCP and a logging Skill.</li>
+<li><strong>Fix the format of conclusions</strong>: root cause, evidence, impact, fix and regression test. Evidence must be checkable by a person, with TraceIds and log excerpts attached, not just &quot;analysis shows the cause is…&quot;.</li>
+<li><strong>Turn evidence into assets.</strong> The handbook notes that production evidence chains and diagnostic ability are continually read, validated and updated by later agents. Today's troubleshooting record is tomorrow's context.</li>
+<li><strong>Include cross-project dependencies in the evidence.</strong> Another team in the handbook uses a unified workspace to check contracts across projects, avoiding cases where &quot;a shared capability changed but its consumers weren't rebuilt&quot; leads to a false &quot;fixed&quot; on stale dependencies.</li>
 </ul>
-<h2>Engineering Practice and Numbers</h2>
+<h2>6. Common misconceptions</h2>
 <ul>
-<li><strong>Observability is a prerequisite</strong>: without a unified TraceId and structured logs, even the strongest agent has nothing to work with.</li>
-<li><strong>Give agents read-only access</strong>: during troubleshooting an agent should be able to read logs, tables and call chains, but not change production directly. The X developer mentioned earlier uses a read-only database MCP and a log Skill.</li>
-<li><strong>Fixed conclusion format</strong>: root cause, evidence, impact scope, fix, regression test. Evidence must be reviewable by a human.</li>
-<li><strong>Evidence becomes an asset</strong>: the handbook notes production evidence chains and diagnostic capabilities are continually read, verified and updated by later agents.</li>
-<li><strong>Include multi-end dependencies in the evidence</strong>: another team in the handbook uses a unified workspace to judge cross-project contracts, avoiding falsely concluding &quot;fixed&quot; on stale dependencies when a shared capability changed but consumers were not rebuilt.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;The model's root cause sounds reasonable, so it must be right.&quot;</strong> An explanation without evidence is only a hypothesis.</li>
-<li><strong>&quot;Tests pass after the fix, so we're done.&quot;</strong> Add a regression test that reproduces the original problem.</li>
-<li><strong>&quot;Collecting evidence is slow; just let the agent change things.&quot;</strong> A fixed collection process can be automated and is faster than repeated trial and error.</li>
+<li><strong>&quot;The model's root cause sounds very plausible, so it must be right.&quot;</strong> An explanation without supporting evidence is only a hypothesis. The more plausible it sounds, the more it needs checking.</li>
+<li><strong>&quot;Tests pass after the fix, so we're done.&quot;</strong> Add a regression test that reproduces the original problem, or it may come back.</li>
+<li><strong>&quot;Collecting evidence is too slow; just let the agent fix it.&quot;</strong> A fixed collection procedure can be automated and is faster than repeated trial and error. In the example, guessing looked fast and was in fact much slower.</li>
 </ul>

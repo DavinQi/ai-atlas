@@ -1,11 +1,13 @@
-<h1>Layered Verification: Agents Pass the Machine Gates Before Reaching Humans</h1>
+<h1>Layered Verification: Let the Agent Pass the Machines Before It Reaches a Human</h1>
 <blockquote>
 <p>Companion to diagram #25 · Chapter 4 &quot;AI Coding Today&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>When agents produce far faster than humans can review, humans become the bottleneck. The fix is not making people read faster but <strong>letting machines judge everything they can</strong>, leaving to humans only what machines cannot reliably decide. Alibaba's handbook calls this a &quot;layered verification system&quot; and holds that &quot;our main battlefield is verification and environments&quot;.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>Three feedback layers</strong> (per Alibaba's handbook):</p>
+<p>When agents produce far faster than people can review, people become the bottleneck. The answer is not to make people read faster but to <strong>let machines decide everything they can</strong>, leaving people only what machines cannot reliably judge. Alibaba's practice handbook calls this a layered verification system and says &quot;our main battlefield is verification and environments&quot;.</p>
+<h2>1. First, an attention budget</h2>
+<p>Suppose one engineer directs three agents, each producing 5 MRs a day averaging 300 changed lines. That is 4,500 lines a day. Seriously reviewing 4,500 lines is more than one person can do in a day, let alone with other work.</p>
+<p>That leaves two options: review becomes a formality (glance and approve), or the person becomes the bottleneck (agent output piles up in a queue). In the language of Amdahl's Law, <strong>review is the new part that cannot be sped up.</strong> Layered verification removes <strong>the part of review that machines can do</strong>, so people look only at what genuinely needs human judgement.</p>
+<h2>2. Three layers of feedback</h2>
+<p>Per Alibaba's handbook:</p>
 <table>
 <thead>
 <tr>
@@ -17,45 +19,48 @@
 <tbody>
 <tr>
 <td>Seconds</td>
-<td>Compile, type check, unit tests</td>
+<td>Compilation, type checks, unit tests</td>
 <td>High-frequency autonomous iteration</td>
 </tr>
 <tr>
 <td>Minutes</td>
-<td>Integration, contract tests, browser automation</td>
-<td>More realistic behavior</td>
+<td>Integration tests, contract tests, browser automation</td>
+<td>Cover more realistic behaviour</td>
 </tr>
 <tr>
 <td>Human</td>
-<td>Business value, UX, ethical boundaries</td>
-<td>What machines can't reliably judge</td>
+<td>Business value, user experience, ethical boundaries</td>
+<td>What machines cannot reliably judge</td>
 </tr>
 </tbody>
 </table>
-<p>Lower in the pyramid is faster, cheaper and more frequent; higher is slower, costlier and rarer. Agents should self-correct in the bottom loops and move up only after passing the lower layers.</p>
-<p><strong>Why it works.</strong> Anthropic notes agents need ground truth from the environment at every step to assess progress. DeepSeek-R1 likewise used only rule-based rewards in training (answer checking, compilation and tests) because neural reward models are prone to reward hacking. The same logic applies at usage time: executable checks are objective signals; a model's self-assessment is not.</p>
-<p><strong>What you test matters more than how much.</strong> The Qwen team in the handbook focuses tests on requirement boundaries, key branches and known failure modes rather than chasing coverage. They found reliability is rarely a single-point issue: with concurrent requests creating duplicate agent sandboxes, they needed not just API-level idempotency but &quot;chain-level idempotency&quot; spanning the request entry, database transactions, message publishing and consumption.</p>
-<h2>Key Papers and Milestones</h2>
-<ul>
-<li><strong>2021 HumanEval</strong>: measuring functional correctness with unit tests</li>
-<li><strong>2023 Reflexion</strong>: using test feedback to improve the next attempt</li>
-<li><strong>2024 SWE-agent</strong>: making it easy for the agent to run tests is a key design element</li>
-<li><strong>2025 DeepSeek-R1</strong>: verifiable rewards</li>
-</ul>
-<h2>Engineering Practice and Numbers</h2>
-<p><strong>Build an end-to-end test environment for agents.</strong> One developer on X shared four things:</p>
+<p>It is a pyramid: the lower, the faster, cheaper and more frequent; the higher, the slower, costlier and rarer. The agent corrects itself in the lower loops and moves up only after passing the layer below.</p>
+<p><strong>One change passing through all three layers.</strong> An agent changes a function signature:</p>
 <ol>
-<li>Familiarize the agent with the environment: one-command test environment startup and test data creation, explicit versions, test accounts and permissions, plus cleanup and reset.</li>
-<li>Let the agent operate business systems: run real business flows through the browser, APIs or CLI.</li>
-<li>Let the agent easily query tables and logs: a read-only database MCP to confirm persisted results, and a log Skill and traces to check chain state.</li>
-<li>Turn tedious but stable processes into scripts and Skills.</li>
+<li>Seconds: the type checker immediately flags three callers with mismatched arguments. The agent fixes them and reruns, all within seconds. No human ever knows it happened.</li>
+<li>Minutes: an integration test finds a downstream service's contract test failing because a returned field was renamed. The agent adds a compatibility field and reruns; green.</li>
+<li>Human: the person opening the MR sees a change that compiles, passes all tests and keeps the contract compatible. They only need to judge whether its business meaning is right and how long the compatibility field should stay.</li>
 </ol>
-<p>His conclusion: AI is good at writing test cases, but without an end-to-end environment you still hit unexpected errors after release.</p>
-<p><strong>Results.</strong> The Qwen user-growth team's longitudinal comparison from May to August 2026: average delivery cycle halved, defects per thousand lines down 70%, change failure rate down more than 90%. The handbook's commentary notes quality improved more than speed, suggesting the main gains came from verification mechanisms rather than generation speed.</p>
-<p><strong>What humans review.</strong> The developer above no longer reads all generated code line by line; he mainly checks test results and core business logic — on the condition that each MR is small and the full business path is verified step by step.</p>
-<h2>Common Misconceptions</h2>
+<p>Without the first two layers, every one of those problems would land on the third, to be found by a person one at a time.</p>
+<h2>3. Why executable checks matter so much</h2>
+<p>Anthropic notes that an agent needs &quot;ground truth&quot; from its environment at every step to assess progress. DeepSeek-R1's training explicitly used only rule-based rewards (answer checking, compilation and tests), because neural reward models are prone to being gamed. The same holds in use: <strong>executable checks are objective signals; a model's self-assessment is not.</strong> When the model says &quot;I checked and it's fine&quot;, that sentence was generated too.</p>
+<h2>4. What you test matters more than how much</h2>
+<p>Chasing coverage is a common trap. Ask AI to &quot;raise coverage to 90%&quot; and it will happily oblige with many tests that call functions and assert the result is not null. Coverage goes up; almost nothing is protected.</p>
+<p>The Qwen team in the handbook focuses tests on <strong>requirement boundaries, key branches and known failure modes</strong>, rather than coverage for its own sake. They also found reliability is rarely a single-point issue. Under concurrency, for example, agent sandboxes were created twice. Preventing that requires not just idempotency at the API layer but &quot;<strong>end-to-end idempotency</strong>&quot; across the request entry point, database transactions, message publishing and consumer execution. Unit tests that only exercise the API cannot catch such cross-stage problems.</p>
+<h2>5. Build an end-to-end test environment for the agent</h2>
+<p>A developer on X shared four things:</p>
+<ol>
+<li><strong>Make the environment familiar to the agent</strong>: start the test environment and create test data with one command, state versions, test accounts and permissions, and provide cleanup and reset.</li>
+<li><strong>Let the agent operate the business system</strong>: run real business flows through a browser, API or CLI.</li>
+<li><strong>Let the agent query tables and logs easily</strong>: a read-only database MCP to confirm what was written, a logging Skill and traces to check the state of the call chain.</li>
+<li><strong>Turn tedious but stable procedures into scripts and Skills.</strong></li>
+</ol>
+<p>His conclusion: AI is very good at writing test cases, but without an end-to-end environment you still hit unexpected errors after launch. He no longer reads every generated line; he mainly checks test results and core business logic, <strong>on condition that each MR stays small</strong>, verifying complete business paths step by step.</p>
+<h2>6. Results</h2>
+<p>The Qwen user-growth team's comparison from May to August 2026: average delivery cycle halved, defects per thousand lines down 70%, change failure rate down more than 90%. The handbook's interpretation: <strong>quality metrics improved more than speed metrics</strong>, showing the main gains came from verification rather than generation speed. That matches Amdahl's Law: delivery time halved rather than shrinking several-fold like code generation, while the quality gains came directly from the verification system.</p>
+<h2>7. Common misconceptions</h2>
 <ul>
-<li><strong>&quot;High coverage means safe.&quot;</strong> Chasing coverage makes AI generate lots of meaningless assertions; covering failure modes is what matters.</li>
-<li><strong>&quot;Another model's review counts as verification.&quot;</strong> Model review supplements but cannot replace executable checks.</li>
-<li><strong>&quot;More human review is safer.&quot;</strong> Human attention is limited and should focus on what machines cannot judge.</li>
+<li><strong>&quot;High coverage means safety.&quot;</strong> Chasing coverage makes AI generate meaningless assertions; covering failure modes is what counts.</li>
+<li><strong>&quot;Having another model review it counts as verification.&quot;</strong> Model review is a useful complement but cannot replace executable checks.</li>
+<li><strong>&quot;More human review is safer.&quot;</strong> Attention is limited and should go to what machines cannot judge. Review too much and nothing is read carefully.</li>
 </ul>

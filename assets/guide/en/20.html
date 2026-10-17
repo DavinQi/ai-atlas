@@ -1,36 +1,76 @@
-<h1>Coding Agents: Humans Give Tasks and Review PRs; the Agent Runs the Loop</h1>
+<h1>Coding Agents: The Human Assigns the Task and Reviews the PR; the Agent Runs the Loop</h1>
 <blockquote>
 <p>Companion to diagram #20 · Chapter 3 &quot;The Evolution of Programming&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>Coding agents free developers from line-by-line direction: the human describes a task, and the agent reads code, edits files, runs commands, checks results, fixes mistakes, and finally delivers a reviewable change. Claude Code's docs define it as an agentic coding tool that reads your codebase, edits files, runs commands and integrates with your development tools, available in the terminal, IDE, desktop app and browser. OpenAI's Codex CLI is a coding agent that runs locally in the terminal, with a cloud version as well.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. The loop.</strong> A typical task cycle:</p>
-<pre><code>Understand task → search and read code → plan
+<p>A coding agent frees the developer from directing every line. The human describes the task; the agent reads code, edits files, runs commands, checks results, fixes mistakes and delivers a reviewable change. Claude Code's docs define it as an agentic coding tool that reads your codebase, edits files, runs commands and integrates with your development tools, available in the terminal, IDE, desktop app and browser. OpenAI's Codex CLI is a coding agent that runs in your local terminal, with a cloud version as well.</p>
+<p>This article walks one concrete task from start to finish to show what happens at each step and why.</p>
+<h2>1. A real run</h2>
+<p>The task: &quot;Users report that Chinese file names become garbled when exporting CSV. Please fix it.&quot;</p>
+<p><strong>Step 1: understand and locate.</strong> The agent has no ready-made map of the project, so it searches for clues:</p>
+<pre><code>$ grep -rn &quot;Content-Disposition&quot; src/
+src/export/handler.py:48:    resp.headers[&quot;Content-Disposition&quot;] = f&quot;attachment; filename={name}&quot;
+</code></pre>
+<p>One command finds the suspicious line. This reflects the design Anthropic describes: Claude Code puts files such as CLAUDE.md straight into context and uses primitives like <code>glob</code> and <code>grep</code> to explore the environment and retrieve files <strong>just in time</strong>, instead of relying on a pre-built index. That sidesteps stale indexes and complex syntax trees: if the code just changed, the search results are already current.</p>
+<p><strong>Step 2: hypothesise and plan.</strong> After reading the surrounding code, the agent concludes that the file name is not encoded in the RFC 5987 <code>filename*=UTF-8''...</code> form. Plan: fix the header and add a test.</p>
+<p><strong>Step 3: write a failing test first.</strong> It exports a file named &quot;报表.csv&quot; and asserts that the header carries the correctly encoded name, runs it, and confirms it <strong>fails</strong>. A test that has never failed proves nothing.</p>
+<p><strong>Step 4: edit and rerun.</strong> It changes line 48 and reruns. The new test passes, but an old test fails because it asserted the old header format.</p>
+<p><strong>Step 5: read the output and correct.</strong> The agent decides the old assertion encoded the wrong old behaviour, updates it, and says explicitly in its summary: &quot;modified one existing test, because…&quot;.</p>
+<p><strong>Step 6: verify everything and deliver.</strong> Full test suite, type check and lint; once all pass it commits, opens a PR and describes the change.</p>
+<p><strong>Step 7: human review.</strong> Is the change sensible? Was that existing test modified correctly?</p>
+<p>Compared with the previous article, the human appears only at the start (define the task) and the end (review). Locating, editing, verifying and correcting all happen inside the agent's loop.</p>
+<h2>2. Why does the loop work?</h2>
+<p>In the abstract:</p>
+<pre><code>understand the task → search and read code → plan
 → edit files → run build / tests / lint
-→ read output → fix → … → all pass
+→ read output → fix → … → all green
 → commit / open PR → human review
 </code></pre>
-<p>This is exactly Anthropic's &quot;LLM using tools based on environmental feedback in a loop&quot;. Environmental feedback (compile errors, failing tests, logs) is the fundamental reason agents can self-correct.</p>
-<p><strong>2. Just-in-time context retrieval.</strong> Anthropic explains that Claude Code drops files such as CLAUDE.md directly into context while using primitives like <code>glob</code> and <code>grep</code> to navigate the environment and retrieve files just in time, sidestepping stale indexes and complex syntax trees.</p>
-<p><strong>3. Subagents and context isolation.</strong> Each Claude Code subagent runs in its own context window with a custom system prompt, specific tool access and independent permissions. For example, in plan mode it delegates codebase research to a read-only Plan subagent so exploration output stays in a separate context. Codex and Cursor also support subagents: spawn specialized agents in parallel, then collect the results.</p>
-<p><strong>4. Permissions and sandboxing.</strong> If an agent can run commands, you must control what it can do: which commands are auto-allowed, which need confirmation, whether it can reach the network, which directories it can write.</p>
-<h2>Key Papers and Milestones</h2>
+<p>This is what Anthropic calls &quot;LLMs using tools based on environmental feedback in a loop&quot;. <strong>Environmental feedback is the fundamental reason an agent can correct itself.</strong> A single generation may be wrong, but the compiler, tests and logs say where; the agent reads the concrete error, edits and verifies again. The failing old test in step 4 is the environment correcting the agent.</p>
+<p>Conversely, with no tests, steps 4 and 5 lose their footing and the agent can only &quot;feel&quot; done. <strong>An agent's ceiling is largely set by the quality of the feedback it can get.</strong></p>
+<h2>3. Managing context: subagents</h2>
+<p>On a large task an agent may read dozens of files and run many commands, and the output quickly fills the context. As Chapter 1 explained, the longer the context, the more easily information in the middle is overlooked.</p>
+<p>One remedy is <strong>subagents</strong>. Each Claude Code subagent runs in its own context window with a custom system prompt, specific tool access and independent permissions. In plan mode, for instance, it delegates codebase research to a read-only Plan subagent, so bulky exploration output stays in a separate context and only conclusions return to the main session. Codex and Cursor also support subagents: spawn specialised agents in parallel and gather their results.</p>
+<p>Think of a subagent as a function call: the main agent asks a clear question (&quot;find every caller of the export API&quot;) and gets a short answer back, without carrying the whole search.</p>
+<h2>4. Permissions and sandboxes</h2>
+<p>If an agent can run commands, you must control what it can do:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Examples</th>
+<th>Policy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read-only</td>
+<td>Read files, grep, run tests</td>
+<td>Allow automatically</td>
+</tr>
+<tr>
+<td>Local and reversible</td>
+<td>Edit workspace files</td>
+<td>Allow automatically; Git can roll back</td>
+</tr>
+<tr>
+<td>Side effects</td>
+<td>Install dependencies, network access</td>
+<td>Confirm or allow-list</td>
+</tr>
+<tr>
+<td>Irreversible / high risk</td>
+<td>DB migrations, production, push, secrets</td>
+<td>Always require human confirmation</td>
+</tr>
+</tbody>
+</table>
+<p>The sandbox limits writable directories and network access. The principle is <strong>to keep the cost of mistakes bounded</strong>, not to hope none are made.</p>
+<h2>5. What does the human do now?</h2>
+<p>A workflow shared by a developer on X is typical: hand PRDs and meeting notes to the agent and align on requirements through repeated questioning, capturing conclusions in a Spec or CONTEXT.md; split complex requirements into independently verifiable issues, giving only the independent parts to subagents working in parallel in separate worktrees; have the coding agent write tests first, then bring in other agents for cross-review; run end-to-end tests before human review, and keep every MR small.</p>
+<p>The human's work concentrates on three things: <strong>stating the task clearly, providing executable verification, and reviewing the result.</strong> The rule file should state the stack, what is forbidden, and which operations require stopping to ask (DB migrations, production, secrets).</p>
+<h2>6. Pitfalls</h2>
 <ul>
-<li><strong>2023 SWE-bench</strong>: evaluating &quot;fix the bug&quot; ability on real GitHub issues</li>
-<li><strong>2024 SWE-agent</strong>: showing that agent-computer interface design strongly affects results</li>
-<li><strong>2024 Agentless</strong>: a fixed &quot;localize — repair — validate&quot; process is also highly competitive</li>
-<li><strong>February 2025: Claude Code</strong>; <strong>April 2025: Codex CLI open-sourced</strong></li>
-</ul>
-<h2>Engineering Practice and Numbers</h2>
-<ul>
-<li><strong>The human role shifts to defining tasks and reviewing results.</strong> A workflow one developer shared on X is typical: hand the agent PRDs, meeting notes and similar material first, align on requirements through repeated questioning, and capture conclusions in a Spec or CONTEXT.md; split complex requirements into independently acceptable issues, and only give genuinely independent parts to subagents developing in parallel in separate worktrees; the coding agent writes tests first, then other agents cross-review; run end-to-end tests before human review, and keep every MR small.</li>
-<li><strong>Give the agent executable verification</strong>: tests, type checks, lint, build. Without them, the agent can only rely on &quot;it seems right&quot;.</li>
-<li><strong>Rules files</strong> should spell out the tech stack, prohibitions, and operations that require stopping to ask (e.g. database migrations, production, secrets).</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;What the agent delivers can be merged directly.&quot;</strong> Agents over-engineer and may declare completion when tests are insufficient; human review is still essential.</li>
-<li><strong>&quot;More context is better.&quot;</strong> One point of subagents is precisely to isolate context and keep the main session clean.</li>
-<li><strong>&quot;Agents can replace tests.&quot;</strong> Quite the opposite: the more autonomous the agent, the more it depends on automated tests.</li>
+<li><strong>&quot;What the agent delivers can be merged directly.&quot;</strong> Agents over-engineer and declare victory when tests are thin. A modified existing test, as in step 5, is exactly what a reviewer should watch: it may be right, or the agent may have weakened a correct assertion to get green.</li>
+<li><strong>&quot;More context is better.&quot;</strong> Part of the point of subagents is to keep the main session clean.</li>
+<li><strong>&quot;Agents can replace tests.&quot;</strong> The opposite: the more autonomous the agent, the more it depends on automated tests.</li>
 </ul>

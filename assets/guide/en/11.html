@@ -2,37 +2,77 @@
 <blockquote>
 <p>Companion to diagram #11 · Chapter 2 &quot;Agent Design: Principles &amp; Patterns&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>There is no single agreed definition of &quot;agent&quot;. In <em>Building effective agents</em>, Anthropic calls every LLM-based automation an agentic system and draws one key distinction: <strong>workflows</strong> orchestrate LLMs and tools through predefined code paths, while <strong>agents</strong> let the LLM dynamically direct its own process and tool use, keeping control over how it accomplishes the task.</p>
-<p>Lilian Weng's 2023 survey <em>LLM Powered Autonomous Agents</em> gives a widely cited framework: the LLM acts as the agent's &quot;brain&quot;, complemented by three key components — <strong>Planning</strong>, <strong>Memory</strong> and <strong>Tool Use</strong>.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. Planning.</strong> Break a large task into manageable subgoals, and use self-reflection to learn from past actions and correct mistakes.</p>
-<p><strong>2. Memory.</strong> Weng's split:</p>
+<p>The previous chapter ended with the point that a model only predicts the next token. So how does it &quot;check the weather&quot;, &quot;edit code&quot; or &quot;book a meeting room&quot;? The answer is surprisingly plain: <strong>the model only writes down &quot;what to do&quot;; an external program does it, and the result is turned back into text for the model.</strong> Run this loop automatically for many rounds and you have what we call an agent.</p>
+<p>Diagram #11 shows the parts of that loop: the LLM in the centre (the core of reasoning and decisions), surrounded by planning, tools, memory and environmental feedback, with a reminder at the bottom: the difference between a workflow and an agent is whether the path is predefined or decided by the model. This article starts from one concrete tool call, takes the components apart one by one, then returns to the most important design question: when do you actually need an agent?</p>
+<h2>1. Start from one tool call</h2>
+<p>A user asks: &quot;What's the weather in Beijing today?&quot; The model can't go online by itself. Training taught it to output text in a particular format when needed, roughly like this (illustrative):</p>
+<pre><code>&lt;|assistant|&gt;&lt;|tool_call|&gt;search(query=&quot;Beijing weather today&quot;)&lt;|end|&gt;
+</code></pre>
+<p>The model stops after writing this line. An external program recognises the format, actually runs the search, and appends the result to the context as new text:</p>
+<pre><code>&lt;|tool_result|&gt;Beijing today: sunny, high of 22°C…
+&lt;|assistant|&gt;It's sunny in Beijing today with a high of 22°C, a good day to go out.
+</code></pre>
+<p>The model reads the result, continues predicting, and writes the answer. Toolformer showed that a model can even learn in a self-supervised way when and how to call APIs. Arithmetic, running code, querying databases and reading files all follow the same pattern. <strong>An agent just runs this loop automatically for many rounds: decide the next step → call a tool → read the result → decide the next step, until the task is done or a stop condition triggers.</strong></p>
+<p>Anthropic's summary in <em>Building effective agents</em> is blunt: agents are usually simple to implement; they are essentially LLMs using tools based on environmental feedback in a loop. The complexity lies not in the loop itself but in each component inside it.</p>
+<h2>2. Four components, each with one job</h2>
+<p>Lilian Weng's 2023 survey gave the widely cited framework: the LLM acts as the agent's &quot;brain&quot;, working with three components: planning, memory and tool use. Anthropic especially stresses a fourth: real feedback from the environment.</p>
+<p><strong>Planning: break a big task into doable steps.</strong> &quot;Switch the login module from sessions to JWT&quot; isn't one step. Planning does two things. One is <strong>decomposition</strong> into sub-goals such as &quot;find every use of sessions → design the token structure → change each place → run the tests&quot;. The other is <strong>reflection</strong>: learning from steps already taken and correcting mistakes. ReAct, Plan-and-Execute and Reflexion, covered in the next article, are three typical ways of organising planning.</p>
+<p><strong>Tools: get what the weights don't have.</strong> The weights don't contain today's weather, your company's database or the latest code in your repository, and the model can't reliably do exact calculation. Tools fill these gaps: APIs, code execution, search, file I/O. The form of the tools matters too. CodeAct proposes executable Python code as a unified action space and reports up to 20% higher success than JSON or text actions on its benchmarks: code naturally supports loops, conditions and combining several tools, so one action can do more.</p>
+<p><strong>Memory: inside and outside the context.</strong> Weng's split: short-term memory is everything in the context, limited by the window size; long-term memory uses external storage and retrieval to keep and recall information over long spans. Generative Agents store a complete record of experiences in natural language, periodically synthesise higher-level reflections, and retrieve dynamically when planning. Article 4 covers memory and RAG in depth.</p>
+<p><strong>Environmental feedback: the agent's &quot;eyes&quot;.</strong> This is the most underrated component. The diagram draws it in orange and lists it separately: observations, errors, test output. Anthropic stresses that during execution an agent must get ground truth from the environment at every step (tool call results, code execution results) to assess progress, and pause for human feedback at checkpoints or when blocked. <strong>An agent without feedback is just generating with its eyes closed.</strong> However elegant the code, you only know it's right after running the tests; however confident the SQL, you only know the table exists after querying it.</p>
+<p>The CoALA framework gives a more formal description from cognitive science: modular memory components, a structured action space for interacting with internal memory and the external environment, and a general decision process for choosing actions. Different names, same skeleton.</p>
+<h2>3. Workflow or agent: who decides the next step?</h2>
+<p>&quot;Agent&quot; has no single definition. Anthropic calls every LLM-based automated system an agentic system and draws one key distinction:</p>
 <ul>
-<li><strong>Short-term memory</strong>: everything in context (in-context learning), bounded by the context window.</li>
-<li><strong>Long-term memory</strong>: an external vector store with fast retrieval to retain and recall information over long periods.</li>
+<li><strong>Workflow</strong>: LLMs and tools are orchestrated through predefined code paths. For example, &quot;first have the model classify the ticket, then call a different handling prompt per category&quot;.</li>
+<li><strong>Agent</strong>: the LLM dynamically directs its own process and tool usage, keeping control over how it accomplishes the task.</li>
 </ul>
-<p><strong>3. Tools.</strong> Call external APIs for information missing from the weights: live data, code execution, private databases. Toolformer showed a model can teach itself, in a self-supervised way, when and how to call APIs; CodeAct proposed executable Python code as a unified action space, reporting up to 20% higher success rate than JSON/text actions on its benchmark.</p>
-<p><strong>4. The environment feedback loop.</strong> Anthropic stresses that during execution an agent must get &quot;ground truth&quot; from the environment at each step (tool results, code execution) to assess progress, and may pause for human feedback at checkpoints or when blocked; stopping conditions such as a maximum number of iterations should be set. Their conclusion: agents are usually simple to implement — <strong>they are essentially LLMs using tools based on environmental feedback in a loop</strong> — so designing the toolset and its documentation is crucial.</p>
-<p>The CoALA framework gives a more formal, cognitive-science view: modular memory components, a structured action space for interacting with internal memory and the external environment, and a generalized decision process for choosing actions.</p>
-<h2>Key Papers and Milestones</h2>
+<p>The difference isn't whether there are tools but <strong>who holds the control flow</strong>. That determines almost every property of the system:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Workflow</th>
+<th>Agent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Predictability</td>
+<td>High; paths can be enumerated</td>
+<td>Low; paths are chosen by the model</td>
+</tr>
+<tr>
+<td>Suited to</td>
+<td>Fixed steps that can be broken down in advance</td>
+<td>Unpredictable steps, decided along the way</td>
+</tr>
+<tr>
+<td>Cost and latency</td>
+<td>Controllable</td>
+<td>Uncertain number of rounds, usually higher</td>
+</tr>
+<tr>
+<td>How it fails</td>
+<td>One step fails</td>
+<td>Errors accumulate over rounds</td>
+</tr>
+<tr>
+<td>Debugging</td>
+<td>Easy</td>
+<td>Hard; needs full trajectory logs</td>
+</tr>
+</tbody>
+</table>
+<p>Anthropic's advice is to <strong>start with the simplest solution</strong>: many applications only need a single, well-optimised LLM call with retrieval and examples. Agentic systems usually trade latency and cost for better task performance; add complexity only when that trade is worth it.</p>
+<h2>4. Three principles for building agents well</h2>
+<p><strong>Keep it simple.</strong> Don't use an agent where a workflow will do; don't use multiple agents where one will do (see the decision tree in article 6).</p>
+<p><strong>Make planning visible.</strong> Show the agent's planning steps explicitly, so people can spot it going off course in time and review afterwards.</p>
+<p><strong>Design the agent–computer interface (ACI) carefully.</strong> Tool names, parameters, documentation and error messages are the model's only window onto the world. Anthropic suggests investing as much effort as in a human interface: say clearly when to use a tool and when not to, give examples, and make common mistakes hard to make. SWE-agent's research shows that an interface designed for agents (such as file viewing with line numbers and edit commands with syntax checks) markedly improves performance on software engineering tasks.</p>
+<p>Also, <strong>be careful with frameworks</strong>. They add layers of abstraction that hide the underlying prompts and responses and make debugging harder. Anthropic suggests starting with the LLM API directly; many patterns take only a few lines of code.</p>
+<h2>5. Three common misconceptions</h2>
 <ul>
-<li><strong>2022 ReAct</strong>: interleaving reasoning and acting</li>
-<li><strong>2023 Toolformer</strong>: models teach themselves to use tools</li>
-<li><strong>2023 Generative Agents</strong>: simulated agents with memory streams, reflection and planning</li>
-<li><strong>2023 Lilian Weng's survey</strong>: the planning / memory / tools framework</li>
-<li><strong>2023 CoALA</strong>: cognitive architectures for language agents</li>
-<li><strong>2024 Anthropic, <em>Building effective agents</em></strong>: workflow vs agent, and a pattern catalogue</li>
-</ul>
-<h2>Engineering Practice and Numbers</h2>
-<ul>
-<li><strong>Start with the simplest solution</strong>: Anthropic advises finding the simplest solution and adding complexity only when needed; many applications only need a single optimized LLM call with retrieval and in-context examples. Agentic systems typically trade latency and cost for better task performance.</li>
-<li><strong>Use frameworks with care</strong>: they add abstraction layers that obscure the underlying prompts and responses and make debugging harder. Start by calling LLM APIs directly — many patterns take a few lines of code.</li>
-<li><strong>Three principles</strong>: keep the design simple; make the agent's planning steps explicit for transparency; carefully craft the agent-computer interface (ACI) through thorough tool documentation and testing. SWE-agent likewise showed that interfaces designed specifically for agents significantly improve performance on software-engineering tasks.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;An agent is a chatbot with tools.&quot;</strong> The real difference is who decides control flow: code in a workflow, the model in an agent.</li>
-<li><strong>&quot;More autonomy is always better.&quot;</strong> Autonomy means higher cost and compounding errors; Anthropic recommends extensive testing in sandboxes with guardrails.</li>
-<li><strong>&quot;Memory means stuffing all history into context.&quot;</strong> Context is short-term memory; long-term memory needs external storage and retrieval.</li>
+<li><strong>&quot;An agent is a chatbot with tools.&quot;</strong> The key is who decides the control flow: code in a workflow, the model in an agent.</li>
+<li><strong>&quot;More autonomy is better.&quot;</strong> Autonomy means higher cost and the risk of compounding errors. Set stop conditions (such as a maximum number of iterations), test thoroughly in a sandbox and add guardrails.</li>
+<li><strong>&quot;Memory means stuffing all history into the context.&quot;</strong> Context is short-term memory and a scarce resource; long-term memory needs external storage and retrieval.</li>
 </ul>

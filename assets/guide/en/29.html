@@ -1,38 +1,57 @@
-<h1>Why Multi-Agent: Trade Parallelism for Time, Paid in Tokens and Review</h1>
+<h1>Why Multiple Agents: Trade Parallelism for Time, Pay in Tokens and Review</h1>
 <blockquote>
 <p>Companion to diagram #29 · Chapter 5 &quot;Multi-Agent Programming&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>A single coding agent does one thing at a time. When a task splits into independent parts, running several agents at once <strong>trades parallelism for time</strong>. But parallelism isn't free: every agent consumes tokens and every output needs human review. The core question of multi-agent programming is when this trade pays off.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. Gains come from parallelism and context isolation.</strong> In Anthropic's multi-agent research system, subagents explore different aspects in parallel in their own context windows and condense the most important information for the lead agent. Their internal research eval showed the multi-agent system outperforming a single agent by 90.2%; for complex queries, parallelization cut research time by up to 90%.</p>
-<p><strong>2. The cost is tokens.</strong> The same article says agents use about 4× the tokens of chat and multi-agent systems about 15×; token usage by itself explained 80% of performance variance.</p>
-<p><strong>3. Coding tasks have limited parallelism.</strong> Anthropic states that most coding tasks involve fewer truly parallelizable tasks than research, and LLM agents are not yet great at coordinating and delegating in real time. Tasks requiring all agents to share the same context, or with many dependencies between agents, are not a good fit today.</p>
-<p><strong>4. Human review is the new bottleneck.</strong> The X developer sharing Orca usage summarized four things you hit after running many agents: new copies lack dependencies and secrets and won't run; you can't keep track of which agent is working and which is waiting for confirmation; you can't review it all — generation keeps getting faster and acceptance becomes the bottleneck; and you get locked into one vendor's quota.</p>
-<h2>Key Papers and Milestones</h2>
+<p>A single coding agent does one thing at a time. When a task splits into independent parts, running several agents at once <strong>trades parallelism for time.</strong> But parallelism is not free: every agent consumes tokens and every output needs human review. The core question of multi-agent programming is when that trade pays off.</p>
+<p>This article covers where the gains come from, then the costs, and finally a decision framework.</p>
+<h2>1. Where do the gains come from?</h2>
+<p><strong>Gain 1: parallelism.</strong> The obvious one. Three independent subtasks take three units of time in series and one in parallel (plus the overhead of splitting and merging).</p>
+<p><strong>Gain 2: context isolation.</strong> Less obvious but just as important. As Chapter 4 explained, the longer the context, the more scattered the model's attention. If one agent researches the payments module, then the user module, then writes code, by the time it writes code its context is full of intermediate research. If two subagents research separately and each returns only conclusions, the main agent's context stays clean.</p>
+<p>Anthropic's multi-agent research system works exactly this way: subagents explore different aspects of a problem in parallel in their own context windows, then compress the most important information for the lead agent. Their internal research evaluation found the multi-agent system outperformed a single agent by 90.2%, and on complex queries parallelisation cut research time by up to 90%.</p>
+<h2>2. What are the costs?</h2>
+<p><strong>Cost 1: tokens.</strong> The same article reports that agents use about 4× the tokens of chat, and multi-agent systems about 15×. They also found that <strong>token usage alone explains 80% of the variance in performance.</strong> In other words, multi-agent systems do well largely because they spend more tokens thinking and exploring. That is not bad, but it means multi-agent is a way to buy quality and time with money, not a free lunch.</p>
+<p><strong>Cost 2: coding tasks are inherently harder to parallelise.</strong> Anthropic states plainly that most coding tasks involve fewer truly parallelisable parts than research, and that LLM agents are not yet good at coordinating and delegating in real time. Research tasks (&quot;survey five competitors' pricing&quot;) split naturally into five independent jobs; parts of a coding task are often tightly coupled: change an interface and its callers must change too. <strong>Tasks where all agents need the same context, or where agents depend heavily on each other, are not currently a good fit for multiple agents.</strong></p>
+<p><strong>Cost 3: human review becomes the new bottleneck.</strong> The developer on X who shared how they use Orca summarised four walls you hit after opening several agents:</p>
+<ol>
+<li><strong>They won't run</strong>: new copies lack dependencies and secrets.</li>
+<li><strong>You can't keep track</strong>: which is working, which is waiting for confirmation?</li>
+<li><strong>You can't keep up</strong>: generation keeps getting faster, and acceptance becomes the bottleneck.</li>
+<li><strong>You're locked in</strong>: tied to one vendor's quota.</li>
+</ol>
+<p>The third is the most fundamental. Back to Amdahl's Law in Chapter 4: three agents in parallel may cut coding time to a third, but review time triples. If review was already the bottleneck, multiple agents only lengthen the queue.</p>
+<h2>3. Do the arithmetic</h2>
+<p>Suppose a feature has three independent modules. A single agent needs 1 hour per module, and a person needs 20 minutes to review each.</p>
 <ul>
-<li><strong>2023 MetaGPT, ChatDev, AutoGen</strong>: early multi-agent software development frameworks</li>
-<li><strong>2023 Multiagent debate</strong>: multiple model instances debating over rounds improves reasoning and factuality</li>
-<li><strong>2025 Anthropic's multi-agent research system</strong></li>
-<li><strong>Subagents in Claude Code / Codex / Cursor</strong>: each works in its own context window and returns results to the main agent</li>
+<li><strong>One agent in series</strong>: 3 hours coding + 1 hour review = 4 hours, token cost 1 unit (call it T).</li>
+<li><strong>Three agents in parallel</strong>: about 1 hour coding + still 1 hour review (three outputs to review) = 2 hours, about 3T.</li>
 </ul>
-<h2>Engineering Practice and Numbers</h2>
-<p><strong>When multi-agent is worth it:</strong></p>
+<p>Half the time saved, but review did not shrink and is now the largest share of the total. If the three modules are not truly independent and need repeated mid-course interface alignment, coordination eats into the parallel gain further.</p>
+<p>The lesson: <strong>the ceiling on multi-agent gains depends on how parallelisable the task is and on review capacity.</strong></p>
+<h2>4. A decision framework</h2>
+<p><strong>Worth using multiple agents:</strong></p>
 <ul>
-<li>Independent subtasks: different modules, different pages, separate frontend/backend reviews.</li>
-<li>Mistakes are costly, so comparing multiple solutions is worthwhile (see the &quot;race&quot; approach).</li>
-<li>Information exceeds one context: large-scale research, codebase exploration.</li>
+<li>Subtasks are independent: different modules, different pages, separate front-end and back-end review.</li>
+<li>Mistakes are costly enough to justify comparing several solutions (see &quot;racing&quot; in article 3).</li>
+<li>The information exceeds a single context: large-scale research, codebase exploration.</li>
 </ul>
-<p><strong>When not to:</strong></p>
+<p><strong>Don't:</strong></p>
 <ul>
 <li>Small changes, copy edits.</li>
-<li>Highly coupled changes that must be coordinated in one context.</li>
-<li>No automated verification yet, and review capacity can't keep up.</li>
+<li>Tightly coupled changes that must be coordinated in one context.</li>
+<li>No automated verification yet, so review can't keep up.</li>
 </ul>
-<p><strong>Do the math:</strong> three agents in parallel means three quotas. The developer above quotes a review: what you save is retry time, but you still pay three times; so only race where mistakes are painful, such as payments, permissions and data migrations.</p>
-<h2>Common Misconceptions</h2>
+<p>The last point deserves emphasis: <strong>Chapter 4's layered verification is a prerequisite for multiple agents.</strong> Without it, every extra agent is one more output a person must review from scratch.</p>
+<p>The developer above quotes a review: racing &quot;saves the time of back-and-forth retries, but you still pay for three quotas&quot;, so do it only where mistakes are painful, such as payments, permissions and data migrations.</p>
+<h2>5. How we got here</h2>
 <ul>
-<li><strong>&quot;Multi-agent is always faster.&quot;</strong> It depends on how parallelizable the task is; coordination and review both cost.</li>
-<li><strong>&quot;Tokens are cheap, no need to count.&quot;</strong> 15× consumption adds up at scale.</li>
+<li><strong>2023 MetaGPT, ChatDev, AutoGen</strong>: early multi-agent software-development frameworks exploring collaboration between agents with different roles.</li>
+<li><strong>2023 multi-agent debate</strong>: several model instances debating over multiple rounds improves reasoning and factuality.</li>
+<li><strong>2025 Anthropic's multi-agent research system</strong>: a lead agent plans and spawns parallel subagents.</li>
+<li><strong>Subagents in Claude Code / Codex / Cursor</strong>: each works in its own context window and returns results to the main agent. Multi-agent has gone from research framework to a built-in feature of everyday tools.</li>
+</ul>
+<h2>6. Common misconceptions</h2>
+<ul>
+<li><strong>&quot;Multiple agents are always faster.&quot;</strong> It depends on how parallelisable the task is; coordination and review both cost.</li>
+<li><strong>&quot;Tokens are cheap; don't bother counting.&quot;</strong> A 15× multiplier adds up fast at scale.</li>
 <li><strong>&quot;More agents means reading less code.&quot;</strong> More output needs more automated verification and better review tools.</li>
 </ul>

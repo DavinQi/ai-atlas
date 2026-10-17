@@ -1,60 +1,70 @@
-<h1>Many Humans + Many Agents: People Define and Review, Digital Employees Execute</h1>
+<h1>Many People, Many Agents: Humans Define and Review, Digital Employees Execute</h1>
 <blockquote>
 <p>Companion to diagram #33 · Chapter 5 &quot;Multi-Agent Programming&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>When not one person but a whole team works with many agents, the problem shifts from tools to organization: who defines tasks? Who reviews? How are agent identities and permissions managed? The AIDC digital ad-buyer team in Alibaba's handbook went through three periods — &quot;super individual → digital employees → cloud Scrum&quot; — and is a real-world sample of this problem.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. The super-individual bottleneck.</strong> According to the handbook, after the team standardized on one mainstream agent tool, one person directing 3–5 sessions became normal, some long-running tasks completed overnight, and one person felt able to do the work of two or three, helping the team ship its first MVP. But problems soon appeared:</p>
+<p>When not one person but a whole team works with many agents at once, the problem shifts from tools to organisation: who defines tasks? Who reviews? How are agents' identities and permissions managed? The AIDC digital ad-buyer team in Alibaba's practice handbook went through three periods, &quot;super-individual → digital employees → Scrum in the cloud&quot;, and offers a real sample answer. This article follows their experience.</p>
+<h2>1. Stage one: the super-individual</h2>
+<p>According to the handbook, after the team standardised on one mainstream agent tool, one person directing 3–5 sessions became normal, some long-running tasks completed overnight, and it felt like one person was doing the work of two or three. It helped the team ship its first MVP.</p>
+<p>It sounds great, but two kinds of problems soon appeared:</p>
 <ul>
-<li><strong>Digestion barrier</strong>: intermediate artifacts produced with heavy token spend were hard for humans to understand, review and apply; when discussing designs with colleagues, the colleague couldn't explain the design either and could only throw the question back to the agent.</li>
-<li><strong>Reuse barrier</strong>: after a task was delivered, the experience was hard for others to reuse.</li>
+<li><strong>Indigestion.</strong> Intermediate output produced at great token cost was hard for people to understand, review and apply. When discussing designs with colleagues, the colleagues could not explain them either and could only pass the question back to an agent.</li>
+<li><strong>No reuse.</strong> After a task was delivered, the experience was hard for others to reuse.</li>
 </ul>
-<p><strong>2. Digital employees.</strong> The handbook treats agents as independent actors in enterprise systems: platforms used to answer only &quot;does this person have permission&quot;; now they must answer &quot;which agent, in which runtime, on behalf of which user, based on which task, accessing which resource, doing what action, and whether human approval is needed&quot;. Human-agent collaboration goes through roughly three stages, essentially pushing the trust boundary outward:</p>
+<p>Both have the same root: <strong>output and understanding came apart.</strong> Code a person wrote, they understood; code a person &quot;directed&quot; into existence, they may not fully understand. Everyone became a super-individual, but knowledge didn't flow between them. The larger the team, the worse this gets.</p>
+<h2>2. Stage two: agents as &quot;digital employees&quot;</h2>
+<p><strong>From &quot;does this person have permission?&quot; to &quot;who is doing what on whose behalf?&quot;</strong> The handbook treats agents as independent actors in enterprise systems. Platforms used to answer only &quot;does this person have permission?&quot;; now they must answer: <strong>which agent, in which runtime, on behalf of which user, for which task, accessing which resource, doing what, and does it need human approval?</strong></p>
+<p>Why not just use a person's account? The handbook's analysis: reusing a person's account means audits can't tell whether the person or an agent acted; reusing a service account obscures who is responsible, who authorised it and who can switch it off. Imagine a production config changed at 3 a.m. If the log says only &quot;Zhang San&quot;, you can't tell whether Zhang San did it, or one of Zhang San's agents did it during some task, let alone which task.</p>
+<p><strong>The trust boundary moves outward.</strong> The handbook divides human–agent collaboration into roughly three stages, essentially an outward shift of the trust boundary:</p>
 <table>
 <thead>
 <tr>
 <th>Stage</th>
 <th>Trust boundary</th>
-<th>Human responsibility</th>
+<th>Human responsibilities</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Local assistance</td>
-<td>Human + local tools</td>
+<td>Person + local tools</td>
 <td>Provide context, approve commands, check results</td>
 </tr>
 <tr>
 <td>Cloud autonomy</td>
-<td>Human + cloud runtime + repo</td>
-<td>Set goals, review MRs, key approvals</td>
+<td>Person + cloud runtime + repository</td>
+<td>Set goals, review MRs, approve key steps</td>
 </tr>
 <tr>
 <td>Multi-agent team</td>
-<td>Lead + specialist agents + many systems</td>
+<td>Lead agent + specialist agents + many systems</td>
 <td>Design collaboration, govern boundaries, own final responsibility</td>
 </tr>
 </tbody>
 </table>
-<p>The handbook cautions that the &quot;intern&quot; analogy only half works: agents need mentors, responsibilities, permission boundaries and review, but they have no professional ethics or implicit common sense, so governance also needs machine-enforceable guardrails.</p>
-<p><strong>3. Redrawing responsibilities.</strong> The digital ad-buyer team concluded: systems handle high-certainty matters such as state, permissions and rules; AI handles analysis, generation and long-running multi-step execution; humans handle goal setting, key decisions, risk trade-offs and final responsibility. The unit of delivery shifts from &quot;people collaborating to complete tasks&quot; to &quot;people defining goals and acceptance criteria, digital employees executing their parts&quot;.</p>
-<h2>Key Papers and Milestones</h2>
+<p>Going down the table, the person's work involves fewer concrete operations and more <strong>rules and responsibility.</strong></p>
+<p><strong>The &quot;intern&quot; metaphor only goes halfway.</strong> The handbook cautions that thinking of an agent as an intern is only half right: agents do need mentors, duties, permission boundaries and review, but they lack professional ethics and tacit common sense. A human intern knows not to delete the production database even if nobody says so; an agent may not. Governance therefore also needs <strong>machine-enforceable guardrails</strong>, in line with the OWASP advice from Chapter 2 (human approval for high-risk operations, least privilege) and the MCP specification (explicit user consent before tool calls).</p>
+<h2>3. Redividing responsibilities</h2>
+<p>The digital ad-buyer team arrived at this split:</p>
 <ul>
-<li><strong>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em></strong>: digital-employee autonomy and trust boundaries</li>
-<li><strong>OWASP LLM01</strong>: human approval for high-risk actions, least privilege</li>
-<li><strong>MCP spec</strong>: explicit user consent before tool invocation</li>
+<li><strong>Systems</strong> handle <strong>high-certainty</strong> matters such as state, permissions and rules;</li>
+<li><strong>AI</strong> handles analysis, generation and long-running multi-step execution;</li>
+<li><strong>People</strong> handle goal setting, key decisions, risk trade-offs and final accountability.</li>
 </ul>
-<h2>Engineering Practice and Numbers</h2>
+<p>The unit of delivery changed with it: from &quot;people collaborating with people to finish a task&quot; to &quot;<strong>people define goals and acceptance criteria; digital employees divide up and execute.</strong>&quot;</p>
+<p>The three-way split is instructive: it doesn't simply say &quot;AI executes, humans decide&quot;; it singles out <strong>systems</strong>. Permission checks and state transitions are more reliable in deterministic code than in AI. That returns to Chapter 3's conclusion: probabilistic AI needs deterministic tools behind it.</p>
+<h2>4. Stage three: Scrum in the cloud</h2>
+<p>To fix stage one's reuse problem, the team built two &quot;cloud Scrum&quot; supply lines:</p>
 <ul>
-<li><strong>Give agents their own identity</strong>: the handbook argues that reusing a person's account makes audits unable to tell human from agent actions; reusing a service account obscures who is responsible, who authorized it and who can disable it.</li>
-<li><strong>Review is a team-level bottleneck</strong>: the X developer's practice is keeping every MR small, with human review focused on business logic and whether test results are sufficient to support delivery.</li>
-<li><strong>Turn output into reusable assets</strong>: the handbook's team built two &quot;cloud Scrum&quot; supply lines: in the experience loop, two digital employees handle strategy discovery and launch respectively, cutting the strategy delivery cycle from about 10 days to 2; the hands-and-feet loop turns production failure traces into capability-building needs, with about 80% of core capabilities turned into Skills.</li>
-<li><strong>Limits of digital employees</strong>: the handbook is explicit that discovering growth opportunities still depends heavily on human business understanding; goal setting, business thresholds, release gates and high-risk decisions remain human responsibilities.</li>
+<li><strong>Experience loop</strong>: two digital employees responsible respectively for discovering strategies and putting them live; strategy delivery time fell from about 10 days to 2.</li>
+<li><strong>Hands-and-feet loop</strong>: turns production failure traces into capability-building requirements; about 80% of core capabilities have become Skills.</li>
 </ul>
-<h2>Common Misconceptions</h2>
+<p>The hands-and-feet loop is especially worth borrowing: <strong>wherever an agent fails is the next capability to build.</strong> Failure traces are not discarded logs but a source of requirements. It is the same idea as Chapter 4's &quot;add a rule when the agent keeps making a mistake&quot; and &quot;turn it into a Skill after three repeats&quot;, upgraded from personal habit to team process.</p>
+<h2>5. The limits of digital employees</h2>
+<p>The handbook is clear-eyed about limits: discovering growth opportunities still depends heavily on people's business understanding, and goal setting, business thresholds, release gates and high-risk decisions still rest with people. Digital employees are best at executing, to a high standard, work that <strong>has already been thought through and has clear standards.</strong></p>
+<p>Review is still a team-level bottleneck. The developer on X advises keeping each MR small and focusing human review on business logic and on whether the test results are enough to support delivery.</p>
+<h2>6. Common misconceptions</h2>
 <ul>
-<li><strong>&quot;More agents means fewer people needed.&quot;</strong> The work of definition, review and governance grows with the number of agents.</li>
-<li><strong>&quot;Running agents on a personal account is easiest.&quot;</strong> Audit and accountability become blurred.</li>
-<li><strong>&quot;Digital employees can replace organizational consensus.&quot;</strong> The handbook notes they are better suited to executing, at high quality, work that has already been thought through and has clear standards.</li>
+<li><strong>&quot;More agents means fewer people needed.&quot;</strong> The work of defining, reviewing and governing grows with the number of agents.</li>
+<li><strong>&quot;Running agents under personal accounts is easiest.&quot;</strong> Audit and accountability become blurred.</li>
+<li><strong>&quot;Digital employees can replace organisational consensus.&quot;</strong> They execute what has been thought through; they cannot think it through for the team.</li>
 </ul>

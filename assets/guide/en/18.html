@@ -1,36 +1,49 @@
-<h1>The Traditional IDE: Every Tool Is There, but Humans Do the Wiring</h1>
+<h1>The Traditional IDE: Tools Are Integrated, but a Human Still Chains Them</h1>
 <blockquote>
 <p>Companion to diagram #18 · Chapter 3 &quot;The Evolution of Programming&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>The integrated development environment (IDE) was meant to put scattered tools — editor, compiler, debugger, build tools — into one interface with a consistent experience, to improve productivity. Mature IDEs today integrate code navigation, refactoring, static checks, test runners, version control and a terminal. But however complete the toolset, <strong>the one who chains them into a complete delivery is still a human</strong>: read the requirement, find the code, change it, run tests, read errors, check logs, commit, wait for CI, address review comments.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. What the IDE solves: tool integration.</strong> Before IDEs, developers used separate tools such as vi, GDB, GCC and make. IDEs put them in one interface and reduced switching costs.</p>
-<p><strong>2. Intelligence driven by static analysis.</strong> Completion, go-to-definition, find-references and safe refactoring are built on static analysis. They are accurate and deterministic, but only answer &quot;what is the code structure&quot;, not &quot;what does this requirement need changed&quot;.</p>
-<p><strong>3. The human is the workflow scheduler.</strong> In a typical bug fix, the developer must:</p>
+<p>Diagram #18 shows the structure of a traditional IDE: project structure, code editor, terminal and build, debugging and testing, and Git version control. These five modules surround an orange ellipse labelled &quot;developer (human)&quot;, with arrows marked &quot;manual switching&quot;. Below is the typical flow of one requirement: find the relevant files → edit code → build → run tests / debug → commit. The caption sums it up: <strong>the unit of work is the file, and the human chains everything together.</strong></p>
+<p>In this chapter the diagram is the baseline. To see what AI tools change, first see clearly where developers' time and attention went before AI.</p>
+<h2>1. What problem did the IDE solve?</h2>
+<p>Before IDEs, developers used separate tools: vi or Emacs to write code, GCC to compile, make to build, GDB to debug. Each tool was powerful, but none shared context with the others. The compiler reported an error on line 42; you switched to the editor and found it yourself. The debugger stopped at a breakpoint; you remembered the variables you had just looked at.</p>
+<p>The IDE put these scattered tools into one interface with one consistent experience. A mature IDE today integrates navigation, refactoring, static checks, test running, version control and a terminal. Click a compile error and jump to the line; set breakpoints in the editor; read the Git diff in the sidebar. <strong>The IDE eliminated the physical cost of switching between tools.</strong></p>
+<h2>2. Static analysis: precise, but it only understands structure</h2>
+<p>The &quot;intelligence&quot; of a traditional IDE comes from static analysis: parse the source, build a syntax tree and symbol table, and answer questions from them.</p>
+<ul>
+<li><strong>Completion</strong>: which methods can be called at the cursor?</li>
+<li><strong>Go to definition / find references</strong>: where is this function defined and who calls it?</li>
+<li><strong>Safe refactoring</strong>: rename this method and update every call site.</li>
+<li><strong>Static checks</strong>: this could be a null pointer; that variable is never used.</li>
+</ul>
+<p>These abilities share one trait: <strong>they are precise, deterministic and explainable.</strong> A rename refactoring never misses a call site, because it is based on a complete parse of the code. That is exactly why they are still needed in the AI era (section 5).</p>
+<p>But static analysis can only answer &quot;what is the structure of the code?&quot;, never &quot;what does this requirement need changed?&quot; It does not know which files &quot;users report avatar uploads failing&quot; maps to, or whether the fix belongs in the gateway, the application layer or storage. <strong>The jump from requirement to code is entirely human.</strong></p>
+<h2>3. The human is the workflow scheduler</h2>
+<p>Take a typical bug fix and mark who does each step:</p>
 <ol>
-<li>Understand the issue and form a hypothesis</li>
-<li>Locate relevant code with search and navigation</li>
-<li>Change the code</li>
-<li>Run tests and read the failures</li>
-<li>Start the debugger or read logs if needed</li>
-<li>Repeat 3–5 until it passes</li>
-<li>Commit, push, wait for CI and code review</li>
+<li><strong>Understand the problem report</strong> and form a hypothesis. (human)</li>
+<li><strong>Locate the relevant code</strong>: search keywords, jump to definitions, read call chains. (human with tools)</li>
+<li><strong>Edit the code</strong>. (human, helped by IDE completion)</li>
+<li><strong>Run the tests</strong> and read the failures. (human triggers, human reads)</li>
+<li>If needed, <strong>start the debugger and read logs</strong>, revise the hypothesis. (human)</li>
+<li><strong>Repeat 3–5</strong> until everything passes. (human decides when to stop)</li>
+<li><strong>Commit, push, wait for CI</strong>, address review comments. (human)</li>
 </ol>
-<p>The handoffs, judgments and context transfer between every step are done by a human.</p>
-<h2>Key Papers and Milestones</h2>
+<p>Each tool does only its own small segment. <strong>The hand-offs between steps, the judgement and the passing of context are all done by the human</strong>: seeing a test failure and deciding whether the code or the test is wrong; spotting an exception in the logs and remembering the config change from three days ago; deciding whether to debug now or ask a colleague.</p>
+<p>This chaining has two hidden costs. One is <strong>context switching</strong>: bouncing between editor, terminal, browser and logging system, reloading context every time. The other is <strong>waiting</strong>: for builds, tests, CI and review, during which deep work is hard. The more tools there are, the heavier the hand-offs. <strong>The bottleneck is the chaining, not any single tool.</strong></p>
+<h2>4. The order in which AI tools moved in</h2>
+<p>With this baseline, the order in which later generations of AI tools arrived makes sense:</p>
 <ul>
-<li><strong>1996 IntelliSense</strong>: code completion enters mainstream IDEs</li>
-<li>IDEs later commonly integrate refactoring, static checks, unit testing and version control</li>
-<li><strong>Language Server Protocol (LSP)</strong>: standardizes how language support plugs into development tools; the MCP spec explicitly cites it as a reference</li>
+<li><strong>First automate writing.</strong> Copilot and AI IDEs first replaced step 3: far less typing in the editor. Steps 1, 2 and 4–7 were still chained by a human.</li>
+<li><strong>Then automate chaining.</strong> Coding agents turn steps 2–6 into a model-driven loop: search, edit, run tests, read errors and decide what to do next. The human keeps only step 1 (define the task) and step 7 (review the result).</li>
 </ul>
-<h2>Engineering Practice and Numbers</h2>
+<p>This also explains a common gap in experience: AI completion makes people &quot;type faster&quot; but does not necessarily make requirements &quot;ship faster&quot;, because the cost of chaining is unchanged. Agents are the first tools that actually touch the chaining.</p>
+<h2>5. Where the traditional IDE fits in the AI era</h2>
+<p><strong>Deterministic tools are exactly what agents need most.</strong> An agent is probabilistic, so it needs reliable external tools to check itself: the compiler says whether the syntax is right, the type checker whether interfaces match, tests whether behaviour is correct, debuggers and logs what happened at run time. The SWE-agent study found that an interface designed for agents (commands to view, search and edit files and run tests) substantially improves their ability to resolve real issues. <strong>In the agent era, the IDE's capabilities turn from an interface for people into tools for agents.</strong></p>
+<p><strong>The protocols are related too.</strong> The Language Server Protocol (LSP) standardised how language support plugs into development tools, so one language server serves every editor. The MCP specification from the previous chapter explicitly takes LSP as its reference and applies the same idea to connecting AI applications with tools.</p>
+<p><strong>Many AI IDEs are built on traditional editors.</strong> They inherit mature editing, debugging and plugin ecosystems and add AI on top.</p>
+<h2>6. Common misconceptions</h2>
 <ul>
-<li>Traditional IDE value persists in the AI era: deterministic static analysis, debuggers and refactoring tools are exactly the &quot;reliable tools&quot; agents need most. SWE-agent found that interfaces designed specifically for agents (commands to view, search and edit files and run tests) significantly improve their ability to resolve real issues.</li>
-<li>Because the wiring depends on humans, attention switching is the main cost. That is where AI tools entered first: automate &quot;writing&quot; first, then automate &quot;wiring&quot;.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;IDEs are obsolete.&quot;</strong> Many AI IDEs are built on traditional editors, and agents call the same compile, test and debug tools.</li>
-<li><strong>&quot;More tools means more productivity.&quot;</strong> More tools mean heavier handoff and context-switching burden; the bottleneck is the wiring, not any single tool.</li>
+<li><strong>&quot;The IDE is obsolete.&quot;</strong> Agents call the same compile, test and debug tools; only the caller changed from a person to a model.</li>
+<li><strong>&quot;More tools mean more efficiency.&quot;</strong> More tools also mean more hand-offs and context switching. The bottleneck is chaining, not any one tool.</li>
+<li><strong>&quot;AI completion solved productivity.&quot;</strong> Completion speeds up only the writing step; the costs of chaining and waiting remain.</li>
 </ul>

@@ -1,16 +1,16 @@
-<h1>Four Generations of Tools: More Autonomy Demands More Automated Verification</h1>
+<h1>Four Generations of Tools: The More Autonomy, the More Automated Verification</h1>
 <blockquote>
 <p>Companion to diagram #21 · Chapter 3 &quot;The Evolution of Programming&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>Putting the previous articles together gives four generations of developer tools: <strong>traditional IDE → AI completion → AI IDE → coding agent</strong>. From left to right, AI takes on more work and humans intervene less; but every increment of autonomy needs an increment of <strong>automated verification</strong> as a safety net. This is the chapter's most important conclusion.</p>
-<h2>Core Mechanisms</h2>
+<p>Put the previous articles together and you get four generations of development tools: <strong>traditional IDE → AI completion → AI IDE → coding agent.</strong> From left to right, AI takes on more of the work and humans step in less. But the real message here is not &quot;newer is better&quot;. It is a constraint: <strong>every extra degree of autonomy needs an extra degree of automated verification behind it.</strong> That is the most important conclusion of this chapter.</p>
+<h2>1. The four generations at a glance</h2>
 <table>
 <thead>
 <tr>
 <th>Generation</th>
 <th>What AI does</th>
-<th>What humans do</th>
+<th>What the human does</th>
+<th>Unit of human review</th>
 </tr>
 </thead>
 <tbody>
@@ -18,47 +18,87 @@
 <td>Traditional IDE</td>
 <td>Nothing (static analysis)</td>
 <td>Everything</td>
+<td>Every line they wrote</td>
 </tr>
 <tr>
 <td>AI completion</td>
-<td>Predicts next code</td>
-<td>Accept/reject each</td>
+<td>Predicts the next snippet</td>
+<td>Accepts or rejects each one</td>
+<td>A line / a block</td>
 </tr>
 <tr>
 <td>AI IDE</td>
 <td>Chat, multi-file edits</td>
-<td>Review each diff</td>
+<td>Reviews each diff</td>
+<td>A diff</td>
 </tr>
 <tr>
 <td>Coding agent</td>
-<td>Read-edit-run-fix loop</td>
-<td>Set task, review PR</td>
+<td>The read–edit–run–fix loop</td>
+<td>Defines the task, reviews the PR</td>
+<td>A PR</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Why does more autonomy demand more verification?</strong></p>
+<p>The last column is the key. <strong>As the unit of review grows, the thoroughness of review inevitably drops.</strong> Looking at one completed line, a human almost never misses an error; looking at a PR touching twenty files, they will probably read only the core logic and test results. So who guarantees the parts nobody read?</p>
+<h2>2. Why does more autonomy need more verification?</h2>
+<p><strong>Reason 1: human review gets coarser</strong>, as shown above.</p>
+<p><strong>Reason 2: errors compound.</strong> Anthropic notes that agents are stateful and errors compound; autonomy means higher cost and the risk of compounding errors. A rough calculation: if each step is independently right 95% of the time, 10 correct steps in a row happen with probability 0.95¹⁰ ≈ 60%, and 20 steps with 0.95²⁰ ≈ 36%. Real steps are not independent, so this is only illustrative, but the trend is clear: <strong>the longer a chain runs without checkpoints, the more likely it goes wrong.</strong> Verification along the way adds checkpoints, so a wrong step is caught and fixed instead of being passed on.</p>
+<p><strong>Reason 3: verification is the only reliable signal for self-correction.</strong> Anthropic stresses that an agent needs &quot;ground truth&quot; from the environment at every step. The model saying &quot;fixed&quot; does not count; passing tests do.</p>
+<p>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em> (annotated edition) states a broader pattern: AI always solves first the problems whose feedback is public and whose verification can scale, which is why coding was solved first. Code compiles and runs tests, so there is an objective standard; whether a product requirement is sensible is far harder to verify automatically.</p>
+<h2>3. A thread through everything: automatic verifiability</h2>
+<p>Line up milestones from across this book and &quot;automatically verifiable&quot; runs through evaluation, use and training:</p>
 <ul>
-<li><strong>Human review becomes coarser</strong>: with completion, humans see every line; with agents, they see a whole PR, or only test results and core logic.</li>
-<li><strong>Errors compound</strong>: Anthropic notes agents are stateful and errors compound; autonomy means higher cost and the risk of compounding errors.</li>
-<li><strong>Verification is the only reliable signal for self-correction</strong>: Anthropic stresses agents need ground truth from the environment at every step.</li>
+<li><strong>Evaluation</strong>: HumanEval (2021) measured functional correctness with unit tests; SWE-bench (2023) used repositories' own tests to judge whether an issue was fixed.</li>
+<li><strong>Use</strong>: Reflexion (2023) had agents read test feedback and improve on the next attempt.</li>
+<li><strong>Training</strong>: DeepSeek-R1 (2025) ran reinforcement learning on verifiable rewards, scoring coding problems with compilers and tests (see &quot;Post-training&quot; in Chapter 1).</li>
 </ul>
-<p>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em> (annotated edition) proposes a pattern: AI always solves first the problems whose feedback is public and whose verification can scale — which is why coding was solved first.</p>
-<h2>Key Papers and Milestones</h2>
+<p>The Codex jump from 28.8% to 70.2% in the previous article says the same thing: with 100 samples the right answer is probably there, and <strong>the hard part is picking it out.</strong> With tests, the machine can pick it out itself. Verification is the converter that turns a model's latent ability into deliverable results.</p>
+<h2>4. Choose by risk, not by age</h2>
+<p>If autonomy and verification must match, choosing a tool becomes a question: <strong>what are this task's verification conditions and cost of error?</strong></p>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Verification</th>
+<th>Cost of error</th>
+<th>Suitable approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Exploratory prototypes, internal scripts</td>
+<td>Run it and see</td>
+<td>Low</td>
+<td>Highly autonomous agent</td>
+</tr>
+<tr>
+<td>Business module with good tests</td>
+<td>Good coverage</td>
+<td>Medium</td>
+<td>Agent loop + human PR review</td>
+</tr>
+<tr>
+<td>Legacy code with few tests</td>
+<td>Weak</td>
+<td>Medium to high</td>
+<td>Agent adds tests first, then changes features</td>
+</tr>
+<tr>
+<td>Payments, permissions, data migration</td>
+<td>Hard to fully automate</td>
+<td>High</td>
+<td>Lower autonomy; review diff by diff in an AI IDE; human gates</td>
+</tr>
+</tbody>
+</table>
+<p>The third row deserves a sentence of its own: <strong>add verification first, then raise autonomy.</strong> For an untested module the best first task is often not &quot;change the feature&quot; but &quot;write tests for current behaviour&quot;. That builds a safety net and lets a human check whether the agent understood the code.</p>
+<p><strong>Verification must also cover real paths.</strong> The developer on X mentioned earlier found that however many unit tests you write, production can still break; the key is an end-to-end test environment where the agent can run from a real entry point to the result the user needs and check database tables and logs. Unit tests verify the parts; end-to-end tests verify the whole machine.</p>
+<h2>5. Common misconceptions</h2>
 <ul>
-<li><strong>2021 HumanEval</strong>: measuring functional correctness with unit tests</li>
-<li><strong>2023 SWE-bench</strong>: judging whether an issue is fixed with the repo's own tests</li>
-<li><strong>2023 Reflexion</strong>: using test feedback to improve on the next attempt</li>
-<li><strong>2025 DeepSeek-R1</strong>: reinforcement learning on verifiable rewards, with code problems graded by compilers and tests</li>
+<li><strong>&quot;The newest generation is always best.&quot;</strong> The right generation depends on the task and its verification conditions. The same team on the same day may use an agent for a prototype and review diff by diff on the payments module.</li>
+<li><strong>&quot;Code review is enough.&quot;</strong> Human review cannot keep pace with agent output; machines should check first, and humans look at what machines cannot (see &quot;Layered Verification&quot; in Chapter 4).</li>
+<li><strong>&quot;Green tests mean done.&quot;</strong> Tests prove only what they cover. Agents may even edit tests to make them pass, so watch test changes closely in review.</li>
 </ul>
-<p>From evaluation to training to usage, &quot;automatically verifiable&quot; runs throughout.</p>
-<h2>Engineering Practice and Numbers</h2>
-<ul>
-<li><strong>Choose the generation by task risk</strong>: exploratory prototypes can let the agent be highly autonomous; payments, permissions and data migrations, where mistakes are costly, call for lower autonomy or stronger human gates.</li>
-<li><strong>Add verification before adding autonomy</strong>: for untested modules, have the agent write tests first, then change functionality.</li>
-<li><strong>Verification must cover real paths</strong>: the X developer cited earlier found that no matter how many unit tests you write, production can still break; the key is giving the agent an end-to-end test environment so it can run from a real entry point to the result the user needs, and inspect tables and logs.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;The newest generation is always best.&quot;</strong> The right generation depends on the task and verification conditions.</li>
-<li><strong>&quot;Code review is enough.&quot;</strong> Human review cannot keep up with agent output speed; machines must check first (see Chapter 4, &quot;Layered Verification&quot;).</li>
-</ul>
+<h2>Summary</h2>
+<p>The timeline, the baseline diagram, completion, agents and this table all say the same thing: <strong>the more the machine takes over, the more humans must focus on defining what &quot;correct&quot; means.</strong> The next chapter widens the view from one developer to a whole team: when coding is no longer the bottleneck, how should the development process be reorganised?</p>

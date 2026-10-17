@@ -1,33 +1,43 @@
-<h1>A 7-Day Roadmap: What Individuals and Small Teams Can Start This Week</h1>
+<h1>A 7-Day Roadmap: What an Individual or Small Team Can Start This Week</h1>
 <blockquote>
 <p>Companion to diagram #28 · Chapter 4 &quot;AI Coding Today&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>The previous articles covered principles; this one compresses them into a checklist an individual or small team can execute in a week. The roadmap is the presenter's own suggestion, distilled from Alibaba's handbook, not any company's official process. The handbook's core advice for starting teams: <strong>you don't need to build a complete system at once — first build a project map, standardize complex requirements, provide verifiable feedback, and connect the production fact chain to form a basic loop.</strong></p>
-<h2>Core Mechanisms</h2>
-<p><strong>Day 1: Pick a real small task and run it end to end.</strong> Choose a well-bounded bug or small feature that has tests, let a coding agent complete it, and record the time and problems encountered.</p>
-<p><strong>Day 2: Write a project rules file.</strong> In the repo root write AGENTS.md or CLAUDE.md: tech stack, directory layout, build and test commands, prohibitions, operations that require stopping to ask (database migrations, secrets, production). Commit it to Git.</p>
-<p><strong>Day 3: Add a project map.</strong> Responsibilities, entry points and dependencies of key modules. Let the agent draft it and a human proofread.</p>
-<p><strong>Day 4: Make verification one command.</strong> Compile, type check, lint and unit tests in a single command, recorded in the rules file so the agent runs it after every change.</p>
-<p><strong>Day 5: Do a medium requirement with a Spec.</strong> Let the agent ask clarifying questions first, write constraints, acceptance criteria and non-goals into the Spec, then implement.</p>
-<p><strong>Day 6: Build review habits.</strong> Small MRs; check test results and core logic first; send all feedback to the agent in one batch for rework.</p>
-<p><strong>Day 7: Retrospect and capture.</strong> Where did the agent repeatedly go wrong? Add a rule. Which process repeated three or more times? Turn it into a Skill. Record delivery cycle and rework count as a baseline.</p>
-<h2>Key Papers and Milestones</h2>
+<p>The previous articles covered principles; this one compresses them into a checklist an individual or small team can execute within a week. The roadmap itself is the speaker's suggestion based on Alibaba's practice handbook, not any company's official process. The handbook's core advice for teams starting out: <strong>you don't need a complete system at once. First build a project map, standardise complex requirements, provide verifiable feedback and connect the chain of production facts, forming a basic closed loop.</strong></p>
+<p>Unlike the previous articles, this one goes day by day, stating for each what to do, why, and what &quot;done&quot; looks like.</p>
+<h2>Day 1: run one real small task end to end</h2>
+<p><strong>What.</strong> Pick a well-bounded bug or small feature that has tests, and let a coding agent do it from start to finish. Record everything: how long did it take, where did it get stuck, how many times did you step in?</p>
+<p><strong>Why.</strong> Experience first, design the process second. Many teams start by writing conventions aimed at imagined problems instead of real ones. Every &quot;stuck&quot; you record today is raw material for the coming days.</p>
+<p><strong>Done when.</strong> One merged MR plus a list of problems.</p>
+<h2>Day 2: write the project rule file</h2>
+<p><strong>What.</strong> Write AGENTS.md or CLAUDE.md in the repository root: stack, directory layout, build and test commands, prohibitions, and operations that require stopping to ask (DB migrations, secrets, production). Commit it to Git.</p>
+<p><strong>Why.</strong> Day 1's list probably includes things like &quot;it used the wrong package manager&quot; or &quot;it didn't know the test command&quot;. Those are exactly what a rule file is for.</p>
+<p><strong>Note.</strong> Don't write dozens of rules at once. The developer on X who shared how they use Orca suggests adding one when the agent keeps making the same mistake. His example rules include &quot;existing tests may only be added to, never changed or deleted&quot; and &quot;stop and ask me before touching DB migrations, payment keys or production&quot;. The first targets the risk from Chapter 3: an agent editing tests to make them pass.</p>
+<h2>Day 3: fill in the project map</h2>
+<p><strong>What.</strong> Describe the responsibilities, entry points and dependencies of key modules. Let the agent read the code and draft it; a person proofreads.</p>
+<p><strong>Why.</strong> This is the &quot;project map&quot; from context engineering (article 2). Proofreading is valuable in itself: wherever the agent misunderstood in its draft, the code is probably unclear.</p>
+<h2>Day 4: one command for verification</h2>
+<p><strong>What.</strong> Make compilation, type checks, lint and unit tests run with a single command, write that command into the rule file, and require the agent to run it after every change.</p>
+<p><strong>Why.</strong> This is the seconds layer of layered verification (article 4). Without it, every change the agent makes has to be checked by you. <strong>Today's investment may have the highest return of the week.</strong></p>
+<h2>Day 5: do a medium-sized feature with a spec</h2>
+<p><strong>What.</strong> Pick something more complex than Day 1. Let the agent read the requirement and code and ask questions first; write constraints, acceptance criteria and non-goals into a spec; then implement.</p>
+<p><strong>Why.</strong> Practise article 3's &quot;clarify before building&quot; and feel the effect of separating constraints from assumptions. Compare with Day 1: was there less rework?</p>
+<h2>Day 6: build review habits</h2>
+<p><strong>What.</strong> Keep MRs small; in review, look at test results and core logic first, watching closely for changes to tests; send all comments back to the agent at once for rework rather than fixing things yourself.</p>
+<p><strong>Why.</strong> If you fix it yourself the agent learns nothing and repeats the mistake; if you send it back, and add it to the rule file when needed, problems actually converge.</p>
+<h2>Day 7: retrospect and capture</h2>
+<p><strong>What.</strong> Answer three questions:</p>
+<ol>
+<li>Where does the agent keep making mistakes? → Add a rule.</li>
+<li>Which workflow has been repeated more than three times? → Turn it into a Skill (another developer's &quot;rule of three&quot;).</li>
+<li>What were this week's lead time and rework counts? → Record them as the baseline.</li>
+</ol>
+<p><strong>Why.</strong> Without Day 1 and Day 7 data to compare, you cannot tell whether anything improved. The METR study in article 6 shows that feelings are unreliable.</p>
+<h2>After the week</h2>
+<p>The seven days map onto four basic loops: the project map (Days 2–3), standardised requirements (Day 5), verifiable feedback (Days 4 and 6), and measurement and capture (Day 7). The chain of production facts (article 5) usually needs infrastructure support and can be the next stage's goal.</p>
+<p>Anthropic's advice in <em>Building effective agents</em> applies here too: <strong>start with the simplest solution and add complexity only when it demonstrably helps.</strong> The handbook also notes that while methods are still immature, letting team members explore separately and share regularly finds effective paths better than standardising too early; converge on a unified workflow once practices stabilise.</p>
+<h2>Common misconceptions</h2>
 <ul>
-<li><strong>Anthropic, <em>Building effective agents</em></strong>: start with the simplest solution and add complexity only when it demonstrably helps</li>
-<li><strong>Alibaba's <em>AI Native R&amp;D Paradigm Practice Handbook</em></strong>: four basic loops for starting teams</li>
-<li><strong>AGENTS.md</strong>: an open format for agent instruction files</li>
-</ul>
-<h2>Engineering Practice and Numbers</h2>
-<ul>
-<li><strong>Add rules gradually</strong>: the X developer sharing Orca usage advises not writing dozens of rules at once — add one when the agent repeatedly makes the same mistake; his example rules include &quot;existing tests may only be added to, never modified or deleted&quot; and &quot;stop and ask me before touching database migrations, payment keys or production&quot;.</li>
-<li><strong>The rule of three</strong>: another developer suggests that once a process repeats more than three times, have the agent turn it into a Skill.</li>
-<li><strong>Measure the baseline first</strong>: without Day 1 vs Day 7 data you cannot tell whether productivity really improved (see the METR study in the previous article).</li>
-<li><strong>Allow parallel exploration</strong>: the handbook notes that while methods are immature, letting members explore separately and share regularly finds effective paths better than standardizing too early; converge on a unified workflow once practice stabilizes.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;Buy the most expensive tools and go multi-agent first.&quot;</strong> Until a single agent + rules + verification loop works, multi-agent only amplifies chaos.</li>
-<li><strong>&quot;You'll see 10× gains in a week.&quot;</strong> The week's goal is a working loop and a baseline, not results.</li>
-<li><strong>&quot;Once the rules file is written, leave it alone.&quot;</strong> It should evolve with the project and team experience.</li>
+<li><strong>&quot;Buy the most expensive tool and go multi-agent first.&quot;</strong> Until a single agent + rules + verification loop works, multiple agents only amplify chaos.</li>
+<li><strong>&quot;You'll see 10× productivity in a week.&quot;</strong> The week's goal is to build the loop and a baseline, not to post results.</li>
+<li><strong>&quot;Once the rule file is written, leave it alone.&quot;</strong> It should evolve with the project and the team's experience.</li>
 </ul>

@@ -2,63 +2,77 @@
 <blockquote>
 <p>Companion to diagram #12 · Chapter 2 &quot;Agent Design: Principles &amp; Patterns&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>How an agent organizes &quot;thinking&quot; and &quot;acting&quot; determines its reliability, cost and interpretability. The diagram summarizes the three most common paradigms:</p>
-<ul>
-<li><strong>ReAct</strong>: think a step, act a step, observe, then think about the next step.</li>
-<li><strong>Plan-and-Solve / Plan-and-Execute</strong>: make a full plan first, then execute it step by step.</li>
-<li><strong>Reflection</strong>: evaluate the result afterwards and use verbal feedback to guide the next attempt.</li>
-</ul>
-<p>They are not mutually exclusive; real systems often combine them.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. ReAct (Yao et al., 2022).</strong> The LLM generates reasoning traces and task-specific actions in an interleaved manner: reasoning helps the model induce, track and update action plans and handle exceptions; actions let it interact with knowledge bases or environments to gather more information. On HotpotQA question answering and Fever fact verification, ReAct — using a simple Wikipedia API — mitigated the hallucination and error propagation common in pure chain-of-thought reasoning, and produced trajectories that are more interpretable to humans than baselines.</p>
-<p>Typical loop:</p>
+<p>Same model, same tools, organised differently, and an agent's reliability, cost and explainability can be completely different. Diagram #12 shows the three most common paradigms side by side: ReAct, a small loop of thought, action and observation; Plan-and-Execute, where a planner breaks out the steps and an executor completes them one by one; and Reflection, which evaluates the result afterwards and carries the feedback into the next attempt. They don't replace one another; they answer three different questions: <strong>what should I do next? How should the whole job be split? How do I improve after a mistake?</strong></p>
+<p>To see the differences, one task runs through the whole article: <strong>&quot;Fix issue #123: the service returns 500 when users upload avatars larger than 10 MB.&quot;</strong></p>
+<h2>1. ReAct: one step at a time</h2>
+<p><strong>Mechanism.</strong> Yao et al. proposed ReAct in 2022, having the LLM generate reasoning traces and concrete actions in an interleaved way. Reasoning helps the model induce, track and update plans and handle exceptions; actions let it interact with a knowledge base or environment to get new information. The loop looks like this:</p>
 <pre><code>Thought → Action(tool, args) → Observation → Thought → … → Final Answer
 </code></pre>
-<p><strong>2. Plan-and-Solve (Wang et al., 2023).</strong> Targeting the &quot;missing-step&quot; errors of zero-shot chain-of-thought, it first devises a plan that splits the task into subtasks, then carries them out; the extended PS+ adds more detailed instructions to reduce calculation errors. Across ten datasets with GPT-3, it consistently outperformed Zero-shot-CoT. The engineering Plan-and-Execute pattern follows the same idea: a planner emits a step list, an executor completes it step by step, re-planning when needed.</p>
-<p><strong>3. Reflexion (Shinn et al., 2023).</strong> Instead of updating weights, it reinforces agents through linguistic feedback: the agent verbally reflects on task feedback signals, stores the reflection text in an episodic memory buffer, and uses it to make better decisions in later trials. The paper reports 91% pass@1 on the HumanEval coding benchmark, above the 80% of GPT-4 at the time.</p>
-<p>The related <strong>Self-Refine</strong> method has the same LLM act as generator, feedback provider and refiner, iteratively improving output; across 7 tasks it reports roughly 20% absolute improvement on average.</p>
-<h2>Key Papers and Milestones</h2>
+<p>Applied to our task:</p>
 <ul>
-<li><strong>2022 ReAct</strong></li>
-<li><strong>2023 Plan-and-Solve Prompting</strong></li>
-<li><strong>2023 Reflexion</strong></li>
-<li><strong>2023 Self-Refine</strong></li>
+<li><strong>Thought</strong>: a 500 means the server threw an exception; look at the upload endpoint first.</li>
+<li><strong>Action</strong>: <code>grep -r &quot;avatar&quot; src/api/</code></li>
+<li><strong>Observation</strong>: found <code>upload_avatar()</code>, which calls <code>resize_image()</code>.</li>
+<li><strong>Thought</strong>: maybe large images run out of memory when resized; check the logs to confirm.</li>
+<li><strong>Action</strong>: read the recent error logs.</li>
+<li><strong>Observation</strong>: <code>PayloadTooLarge</code> is not caught…</li>
 </ul>
-<h2>Engineering Practice and Numbers</h2>
+<p>Every thought builds on the previous real observation; that's its value.</p>
+<p><strong>Why does it work?</strong> Pure chain of thought reasons only &quot;in the model's head&quot;, so if one intermediate fact is wrong, everything after it goes wrong. On HotpotQA question answering and Fever fact verification, ReAct, calling only a simple Wikipedia API, mitigated the hallucination and error propagation common in pure chain-of-thought reasoning, and produced solution trajectories that people find easier to interpret. <strong>Observations from the environment keep pulling the model back to reality.</strong></p>
+<p><strong>Costs.</strong> Many rounds, and each round re-feeds an ever-longer history; without a global plan it easily circles locally, for example grepping the same keyword again and again. Today's mainstream coding agents are still essentially this loop, just with stronger models, more tools, context compaction and a cap on rounds.</p>
+<h2>2. Plan-and-Execute: think it through, then act</h2>
+<p><strong>Mechanism.</strong> Wang et al.'s 2023 Plan-and-Solve targets the &quot;missing steps&quot; problem of zero-shot chain of thought: have the model draw up a plan, split the task into subtasks, then carry out the plan step by step; the extended PS+ adds more detailed instructions to reduce calculation errors. In experiments on ten datasets with GPT-3 it consistently beat Zero-shot-CoT. Engineering-style Plan-and-Execute follows the same idea: a planner produces a list of steps, an executor completes them one by one, and returns to the planner to replan when needed.</p>
+<p>For the same task, the planner might produce:</p>
+<ol>
+<li>Reproduce: call the upload endpoint with an 11 MB image.</li>
+<li>Locate the source of the exception and add a test.</li>
+<li>Unify the size limit at the gateway and application layers, returning 413 instead of 500.</li>
+<li>Run all tests and commit.</li>
+</ol>
+<p>The executor gets small, well-bounded tasks; each step can use a cheaper model, or even run in parallel (the seed of the orchestrator–workers pattern in article 5).</p>
+<p><strong>Advantages.</strong> A clear global structure; people can review the plan before execution; more controllable cost; dependencies between steps are obvious.</p>
+<p><strong>Costs.</strong> The plan is based on information available before execution. If step 2 reveals the problem is actually in the CDN configuration, step 3 of the original plan is out of date. So Plan-and-Execute must support <strong>replanning</strong>, or you get &quot;faithfully executing a wrong plan&quot;. Nor is a more detailed plan always better: the more uncertain the environment, the more easily a detailed plan breaks.</p>
+<h2>3. Reflection: look back afterwards, with language as the gradient</h2>
+<p><strong>Mechanism.</strong> Shinn et al.'s 2023 Reflexion doesn't update model weights; it reinforces the agent through &quot;verbal feedback&quot;. After each attempt the agent writes a reflection based on the task's feedback signal and stores it in episodic memory; in the next attempt those reflections go into the context to improve decisions. The paper reports 91% pass@1 on the HumanEval coding benchmark, above GPT-4's 80% at the time.</p>
+<p>Applied to our task: after the first fix, the tests still fail, and the reflection reads: &quot;I only added a check at the application layer, but nginx's <code>client_max_body_size</code> rejected the request first and returned the gateway's error page. Next time, check the limits at every layer along the request path first.&quot; The second attempt carries that lesson and starts straight from the gateway configuration.</p>
+<p>The related Self-Refine has the same LLM act in turn as generator, critic and reviser to refine output iteratively, with an average absolute improvement of about 20% across 7 kinds of task.</p>
+<p><strong>Key precondition: the feedback signal must be reliable.</strong> Reflexion works well on coding tasks largely because test results give objective feedback: a pass is a pass, and a failure comes with an error message. Without an external signal, just asking the model to &quot;check itself&quot; can be unreliable and may even reinforce the original wrong judgement. That is what the diagram means by &quot;suited to: tasks with clear checking criteria&quot;.</p>
+<h2>4. How to choose, and how to combine</h2>
 <table>
 <thead>
 <tr>
 <th>Paradigm</th>
-<th>Fits</th>
+<th>Suited to</th>
 <th>Main cost</th>
+<th>Typical failure</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>ReAct</td>
-<td>Unpredictable steps, explore as you go</td>
-<td>Many turns, may loop</td>
+<td>Unpredictable steps, explore and decide along the way</td>
+<td>Many rounds, prone to circling</td>
+<td>Repeated local probing</td>
 </tr>
 <tr>
 <td>Plan-and-Execute</td>
-<td>Clear structure, decomposable upfront</td>
-<td>Plan may go stale</td>
+<td>Long tasks with clear structure that can be split in advance</td>
+<td>Plans can go stale</td>
+<td>Sticking to a wrong plan</td>
 </tr>
 <tr>
 <td>Reflection</td>
-<td>Clear criteria, multiple attempts allowed</td>
-<td>Extra call per round</td>
+<td>Clear checking criteria, multiple attempts allowed</td>
+<td>Extra calls each round</td>
+<td>Reinforcing errors without a signal</td>
 </tr>
 </tbody>
 </table>
+<p>Real systems almost always combine them. A typical coding agent first splits an issue into steps with planning (Plan-and-Execute); within each step it uses a ReAct loop to read code, edit code and run commands; when tests fail it carries the error and a reflection into the next round (Reflection); and the whole process has caps on rounds and budget.</p>
+<p>These paradigms also map onto Anthropic's pattern catalogue: Plan-and-Execute resembles &quot;orchestrator–workers&quot;; Reflection resembles &quot;evaluator–optimiser&quot;, which works best when there are clear evaluation criteria and iteration brings measurable improvement.</p>
+<h2>5. Three common misconceptions</h2>
 <ul>
-<li><strong>Reflection needs a reliable signal</strong>: Reflexion works well on coding partly because test results give objective feedback. Without an external signal, a model's self-assessment can be unreliable.</li>
-<li><strong>Mapping to Anthropic's patterns</strong>: Plan-and-Execute resembles &quot;orchestrator-workers&quot;; Reflection resembles &quot;evaluator-optimizer&quot;, which works best when there are clear evaluation criteria and iteration provides measurable value.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;ReAct is obsolete.&quot;</strong> Today's mainstream coding agents are still essentially &quot;think — call tool — observe&quot; loops, just with stronger models and more tools.</li>
-<li><strong>&quot;The more detailed the plan, the better.&quot;</strong> Detailed plans break when the environment changes; re-planning must be supported.</li>
-<li><strong>&quot;Self-reflection always improves results.&quot;</strong> Without external verification, reflection can reinforce wrong judgments.</li>
+<li><strong>&quot;ReAct is outdated.&quot;</strong> The core of mainstream coding agents is still the &quot;think — call a tool — observe&quot; loop.</li>
+<li><strong>&quot;The more detailed the plan, the better.&quot;</strong> Detailed plans break easily when the environment changes; the key is being able to replan.</li>
+<li><strong>&quot;Self-reflection always improves things.&quot;</strong> Without external verification, reflection may just restate the error in other words. Connect reflection to tests, type checks or real execution results and it actually works.</li>
 </ul>

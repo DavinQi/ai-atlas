@@ -2,35 +2,77 @@
 <blockquote>
 <p>Companion to diagram #15 · Chapter 2 &quot;Agent Design: Principles &amp; Patterns&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>When one agent runs out of context or time, several agents can split the work; but multi-agent value only pays off reliably inside a <strong>controlled loop (harness)</strong>: tasks are split, executed and verified; failures go back with feedback until verification passes or the work is escalated to a human. &quot;Harness&quot; here means the engineering layer wrapped around the model: tools, permissions, context management, verification and stopping conditions.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. Orchestrator-workers.</strong> In Anthropic's pattern catalogue, a central LLM dynamically breaks down tasks, delegates them to worker LLMs and synthesizes their results. Unlike parallelization, subtasks are not predefined but decided by the orchestrator from the input — a good fit for coding tasks where you cannot predict which files need changes.</p>
-<p><strong>2. Anthropic's multi-agent research system.</strong> A lead agent plans the research process, then spawns parallel subagents to search simultaneously; each subagent explores a different aspect in its own context window and condenses the most important information for the lead. Published figures:</p>
+<p>When one agent's context can't hold everything and time is short, the natural idea is to bring in more agents and divide the work. The top half of diagram #15 shows three common divisions of labour: orchestrator–workers, pipeline, and generator–reviewer. The bottom half shows something more important: a <strong>harness loop</strong>. A task goes into planning, the plan goes to tool execution, the results must pass verification (tests, lint, type checks); if they fail, the errors and test output go back into context for a retry, and only when they pass is a PR submitted. The whole execution and verification process is framed inside a sandbox.</p>
+<p>The core message of the diagram: <strong>the value of multiple agents can only be realised reliably inside a controlled loop.</strong> &quot;Harness&quot; here means the layer of engineering wrapped around the model: tools, permissions, context management, verification rules and stop conditions. We first look at the three divisions of labour, then at why the harness matters more than the division itself.</p>
+<h2>1. Three divisions of labour</h2>
+<p><strong>Orchestrator–workers.</strong> In Anthropic's pattern catalogue, a central LLM dynamically breaks down the task, delegates to worker LLMs and synthesises the results. It differs from simple parallelisation in that the subtasks aren't hard-coded in advance; the orchestrator decides after seeing the input. That suits coding tasks where &quot;you don't know in advance which files need changing&quot;: after reading the issue and the code structure, the orchestrator decides to send one worker to the API layer, one to the data layer and one to write tests.</p>
+<p><strong>Pipeline.</strong> The task flows in a fixed order through several specialised agents, such as requirements analysis → coding → testing. MetaGPT encodes a software company's standard operating procedures (SOPs) into multi-agent collaboration, with roles such as product manager, architect and engineer handing off artefacts according to the process; ChatDev advances each phase through conversation. A pipeline's advantage is that each stage has a single responsibility and checkable output; the risk is that upstream errors propagate all the way downstream.</p>
+<p><strong>Generator–reviewer (debate / review).</strong> One agent generates, another reviews and gives feedback, iterating to improve, corresponding to Anthropic's &quot;evaluator–optimiser&quot; pattern. Research on multi-agent debate also found that having several model instances debate the same question over multiple rounds improves reasoning and factual accuracy. Frameworks such as AutoGen turn this kind of conversational collaboration into a general programming interface.</p>
+<h2>2. A real, public case</h2>
+<p>Anthropic published the design and data of its multi-agent research system, one of the few first-hand sources available:</p>
 <ul>
-<li>A system with Claude Opus 4 as lead and Claude Sonnet 4 subagents outperformed single-agent Claude Opus 4 by 90.2% on Anthropic's internal research eval.</li>
-<li>In their analysis, token usage by itself explained 80% of performance variance, with the number of tool calls and model choice as the other two factors.</li>
-<li>Agents use about 4× more tokens than chat interactions, and multi-agent systems about 15×.</li>
+<li><strong>Structure</strong>: a lead agent plans the research process, then creates several parallel subagents to search simultaneously; each subagent explores one aspect of the problem in its own context window and returns the most important information, compressed, to the lead agent.</li>
+<li><strong>Results</strong>: a system with Claude Opus 4 as lead and Claude Sonnet 4 as subagents outperformed single-agent Claude Opus 4 by 90.2% on its internal research evaluation.</li>
+<li><strong>Why</strong>: in their analysis, <strong>token usage alone explained 80% of the variance in performance</strong>, with the number of tool calls and model choice as the other two factors. In other words, multiple agents mainly let the system &quot;spend more tokens&quot;: each subagent has a clean context and can read more material in parallel.</li>
+<li><strong>Cost</strong>: agents use about 4× the tokens of ordinary chat, and multi-agent systems about 15×.</li>
 </ul>
-<p><strong>3. Closed-loop verification.</strong> Anthropic stresses getting ground truth from the environment at each step. The evaluator-optimizer pattern has one LLM generate and another evaluate and give feedback in a loop, suited to tasks with clear evaluation criteria. In coding, the most reliable &quot;evaluator&quot; is tests, type checks and builds, not another model's subjective opinion.</p>
-<p><strong>4. State and compounding errors.</strong> The same article notes agents are stateful and errors compound; Anthropic uses &quot;rainbow deployments&quot; to shift traffic gradually so updates do not disrupt running agents, and its evaluation focuses on end states rather than turn-by-turn analysis.</p>
-<h2>Key Papers and Milestones</h2>
+<p>These numbers give a clear criterion: <strong>multiple agents suit tasks that are highly parallelisable, involve more information than one context can hold, and need many tool calls</strong>, and the task must be valuable enough to cover roughly 15× the cost.</p>
+<h2>3. Why be especially careful with coding tasks?</h2>
+<p>The same article names two limitations: domains where all agents need to share the same context, or where agents have many dependencies on each other, are not currently a good fit for multiple agents; and <strong>most coding tasks involve fewer truly parallelisable parts than research tasks</strong>, while LLM agents are not yet good at real-time coordination and delegation.</p>
+<p>The reason is easy to see. In research, &quot;look up company A's financials&quot; and &quot;look up company B's&quot; don't affect each other; in coding, change an interface signature and every caller must change too, and if two agents each change half, merging produces conflicts. Chapter 5 explains how engineering practice often gives each agent an isolated working copy with git worktrees, precisely to make such dependencies explicit.</p>
+<h2>4. The harness: turning &quot;probably right&quot; into &quot;verified right&quot;</h2>
+<p>Whether one agent or many, the model's output is essentially &quot;probably right&quot;. The harness turns it into &quot;verified right&quot;. Each step of the loop in the diagram matters:</p>
+<p><strong>Task / spec.</strong> The entry point needs a clear goal and acceptance criteria. &quot;Fix the login bug&quot; isn't a good task; &quot;return 401 when a user logs in with an expired token, add the corresponding unit tests, and keep all existing tests passing&quot; is. The acceptance criteria are the basis for verification later.</p>
+<p><strong>Sandbox / controlled environment.</strong> Tool execution and verification happen in an isolated environment: a separate container or working directory, with network and file-system access opened only as needed. The cost of an agent's mistakes is confined to the sandbox.</p>
+<p><strong>Verification: objective signals, not subjective judgement.</strong> Anthropic stresses that agents need ground truth from the environment at every step. In coding, the most reliable &quot;evaluators&quot; are tests, type checks, lint and build results, not another model's opinion. Model review can supplement (for readability, say) but can't replace executable checks.</p>
+<p><strong>Failures go back in.</strong> When verification fails, put the error messages and test output back into the context verbatim and let the model correct accordingly. This is the engineered version of the previous article's Reflection paradigm: the more specific the external signal, the more accurate the next round's correction.</p>
+<p><strong>Stop conditions.</strong> Set a maximum number of iterations and a budget cap. After several consecutive failures, escalate to a person instead of looping forever.</p>
+<p><strong>State and compounding errors.</strong> Anthropic also warns that agents are stateful and errors compound: one early bad decision affects every later step. When updating their system they use &quot;rainbow deployments&quot; to shift traffic gradually so long-running tasks aren't interrupted, and in evaluation they focus on whether the end state is correct rather than analysing every turn.</p>
+<h2>5. A minimal harness checklist</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Purpose</th>
+<th>Coding example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Task description and acceptance criteria</td>
+<td>Define &quot;done&quot;</td>
+<td>Issue + tests that must pass</td>
+</tr>
+<tr>
+<td>Isolated execution environment</td>
+<td>Limit the blast radius of mistakes</td>
+<td>Containers, separate worktrees</td>
+</tr>
+<tr>
+<td>Automated verification</td>
+<td>Provide objective feedback</td>
+<td>Unit tests, type checks, lint, build</td>
+</tr>
+<tr>
+<td>Feedback loop</td>
+<td>Turn failures into information</td>
+<td>Put the raw error text back into context</td>
+</tr>
+<tr>
+<td>Stop and escalation rules</td>
+<td>Prevent runaway behaviour</td>
+<td>At most N rounds, then hand to a person</td>
+</tr>
+<tr>
+<td>Complete logs</td>
+<td>Enable audit and review</td>
+<td>Inputs and outputs of every tool call</td>
+</tr>
+</tbody>
+</table>
+<h2>6. Three common misconceptions</h2>
 <ul>
-<li><strong>2023 MetaGPT</strong>: encoding standardized operating procedures (SOPs) into multi-agent collaboration</li>
-<li><strong>2023 ChatDev</strong>, <strong>AutoGen</strong>: conversational multi-agent frameworks</li>
-<li><strong>2023 Multiagent debate</strong>: multiple model instances debate over rounds to improve reasoning and factuality</li>
-<li><strong>2024 Anthropic, <em>Building effective agents</em></strong></li>
-<li><strong>2025 Anthropic, <em>How we built our multi-agent research system</em></strong></li>
-</ul>
-<h2>Engineering Practice and Numbers</h2>
-<ul>
-<li><strong>Tasks that suit multi-agent</strong>: heavy parallelization, information exceeding a single context, many tools. Anthropic states that domains requiring all agents to share the same context or involving many dependencies between agents are not a good fit today; <strong>most coding tasks involve fewer truly parallelizable tasks than research</strong>, and LLM agents are not yet great at coordinating and delegating to other agents in real time.</li>
-<li><strong>Cost accounting</strong>: roughly 15× the tokens of chat means only high-value tasks are worth it.</li>
-<li><strong>Minimal harness</strong>: task description with acceptance criteria, isolated execution environment, automated verification, maximum iterations, and rules for escalating to a human on failure.</li>
-</ul>
-<h2>Common Misconceptions</h2>
-<ul>
-<li><strong>&quot;More agents means faster.&quot;</strong> Parallel gains depend on whether the task splits into independent parts; coordination has its own cost.</li>
-<li><strong>&quot;Having another model review is enough.&quot;</strong> Model review helps, but executable tests and checks give objective signals.</li>
-<li><strong>&quot;Multi-agent is the default architecture.&quot;</strong> It is an upgrade for when one agent is not enough — see the decision tree in the next article.</li>
+<li><strong>&quot;More agents are faster.&quot;</strong> Parallel gains depend on whether the task splits into independent parts; coordination has its own cost, and token usage multiplies.</li>
+<li><strong>&quot;Having another model review it is enough.&quot;</strong> Model review can supplement, but executable tests and checks provide objective signals.</li>
+<li><strong>&quot;Multi-agent is the default architecture.&quot;</strong> It's an upgrade for when a single agent isn't enough. Getting a single agent's harness solid first usually pays off more; see the decision tree in the next article.</li>
 </ul>

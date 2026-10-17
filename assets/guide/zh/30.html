@@ -2,37 +2,88 @@
 <blockquote>
 <p>对应图 #30 · 第五章「多 Agent 编程」</p>
 </blockquote>
-<h2>概述</h2>
-<p>多个 Agent 同时改同一份代码，最先遇到的问题是<strong>互相踩踏</strong>：一个 Agent 改的文件被另一个覆盖，切分支会打断正在运行的任务。Git worktree 是解决这个问题的基础设施，Orca 则是围绕它构建的多 Agent 开发工作台。Orca 官方文档的定位是：一个让多个 AI 编程 Agent 并排运行的桌面 IDE，每个任务有自己的 git worktree、自己的 Agent 终端和自己的浏览器标签页。</p>
-<h2>核心机制</h2>
-<p><strong>1. Git worktree。</strong> Git 官方文档说明，一个仓库可以支持多个工作树，从而同时检出多个分支；新建的工作树称为「linked worktree」，与 <code>git init</code> 或 <code>git clone</code> 创建的主工作树相对。所有工作树共享同一个仓库的对象和历史，但各自有独立的工作目录和检出分支。</p>
+<p>多个 Agent 同时改同一份代码，最先遇到的问题是<strong>互相踩踏</strong>。Git worktree 是解决这个问题的基础设施，Orca 则是围绕它构建的多 Agent 开发工作台。Orca 官方文档的定位是：一个让多个 AI 编程 Agent 并排运行的桌面 IDE，每个任务有自己的 git worktree、自己的 Agent 终端和自己的浏览器标签页。</p>
+<h2>一、问题：同一个目录里的三个 Agent</h2>
+<p>假设你在同一个项目目录里开了三个终端，分别让三个 Agent 做三件事：A 修支付 bug，B 加用户头像功能，C 重构日志模块。很快就会出问题：</p>
+<ul>
+<li><strong>文件互相覆盖</strong>：A 和 C 都改了 <code>utils/logger.py</code>，后保存的覆盖了先保存的。</li>
+<li><strong>测试结果互相污染</strong>：A 跑测试时，B 改了一半的代码还没写完，A 看到的失败其实是 B 造成的，于是 A 去「修」一个不存在的问题。</li>
+<li><strong>分支冲突</strong>：A 想切到 <code>fix-payment</code> 分支，但 B 正在 <code>feature-avatar</code> 分支上工作。工作目录只有一个，切分支会打断 B。</li>
+</ul>
+<p>根本原因是：<strong>一个工作目录在同一时刻只能检出一个分支、只能有一份文件状态。</strong></p>
+<h2>二、解法：git worktree</h2>
+<p>Git 官方文档说明，一个仓库可以支持多个工作树，从而同时检出多个分支；新建的工作树称为「linked worktree」，与 <code>git init</code> 或 <code>git clone</code> 创建的主工作树相对。</p>
 <pre><code>git worktree add ../fix-payment -b fix-payment
+git worktree add ../feature-avatar -b feature-avatar
 git worktree list
 git worktree remove ../fix-payment
 </code></pre>
-<p><strong>2. Orca 的模型。</strong> 官方文档把工作流压缩成：添加仓库 → 开工作区（worktree）→ 选 Agent → 分屏 → 看改动 → 提交。要点：</p>
+<p>执行前两条之后，磁盘上就有了三个目录：原来的项目目录、<code>../fix-payment</code>、<code>../feature-avatar</code>。每个目录检出不同的分支，文件互不干扰。</p>
+<p>关键在于：<strong>所有工作树共享同一个仓库的对象和历史</strong>，只是各自有独立的工作目录和检出分支。这和「clone 三份」不同：clone 会复制三份完整的历史，而 worktree 只多出工作目录本身；在一个 worktree 里提交，另一个 worktree 立刻就能看到这个提交（比如 <code>git log fix-payment</code>）。</p>
+<h2>三、Orca 在 worktree 之上加了什么？</h2>
+<p>worktree 解决了文件隔离，但多 Agent 的其他问题还在。Orca 官方文档把工作流压缩成：<strong>添加仓库 → 开工作区（worktree）→ 选 Agent → 分屏 → 看改动 → 提交</strong>。几个设计要点：</p>
 <ul>
-<li><strong>不自带模型</strong>：运行你已有的 Claude Code、Codex、Cursor CLI、OpenCode 等，用你自己的订阅。</li>
-<li><strong>每个 worktree 都是真实的 git worktree</strong>，可以随时进入目录用原生 git。</li>
+<li><strong>不自带模型</strong>：运行你已有的 Claude Code、Codex、Cursor CLI、OpenCode 等，用你自己的订阅。这也回应了上一篇「被一家厂商的额度绑住」的问题：可以在不同 worktree 里用不同厂商的 Agent。</li>
+<li><strong>每个 worktree 都是真实的 git worktree</strong>，可以随时进入目录用原生 git，不会被锁在工具里。</li>
 <li><strong>默认在本地桌面运行</strong>，远程计算使用你自己控制的机器（SSH、自托管服务器或云 VM）。</li>
 </ul>
-<p><strong>3. 让新 worktree 一进门就能干活。</strong> 新的 worktree 是从 Git 检出的干净代码，未被 Git 管理的 <code>.env</code>、依赖目录都不在里面。前述 X 上的开发者介绍，Orca 可以配置哪些文件为每个副本复制一份（如 <code>.env</code>）、哪些目录共享一份（如依赖包）。</p>
-<p><strong>4. 共享规则。</strong> 项目规则靠 Agent 自己会读的文件：Claude Code 读 CLAUDE.md，Codex 读 AGENTS.md。必须提交到 Git，否则新 worktree 中的 Agent 看不到。</p>
-<h2>关键论文与里程碑</h2>
+<p><strong>让新 worktree 一进门就能干活。</strong> 这是上一篇「跑不起来」问题的解法。新 worktree 是从 Git 检出的干净代码，未被 Git 管理的 <code>.env</code>、依赖目录都不在里面，Agent 一启动就会报错。前述 X 上的开发者介绍，Orca 可以配置哪些文件为每个副本复制一份（如 <code>.env</code>）、哪些目录共享一份（如依赖包）。</p>
+<p><strong>通知与审阅。</strong> 这是「盯不过来、看不过来」的解法。据该开发者介绍，Agent 从干活变为空闲时，Orca 会弹通知；改动视图支持逐行批注，并一次性发回给 Agent，还能标出哪些行是 AI 写的。</p>
+<p><strong>共享规则。</strong> 项目规则靠 Agent 自己会读的文件：Claude Code 读 CLAUDE.md，Codex 读 AGENTS.md。<strong>必须提交到 Git</strong>，否则新 worktree 中的 Agent 看不到。这是一个非常容易踩的坑：规则在主目录里写好了却没提交，新 worktree 里的 Agent 就像一个没读过规范的新人。</p>
+<h2>四、worktree 隔离不了什么？</h2>
+<p>worktree 隔离的是<strong>文件</strong>，而不是<strong>运行时</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>资源</th>
+<th>是否隔离</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>工作目录文件</td>
+<td>是</td>
+<td>—</td>
+</tr>
+<tr>
+<td>检出分支</td>
+<td>是</td>
+<td>—</td>
+</tr>
+<tr>
+<td>仓库历史、对象库</td>
+<td>否（共享）</td>
+<td>一般无害</td>
+</tr>
+<tr>
+<td>端口</td>
+<td>否</td>
+<td>两个 Agent 同时启动开发服务器，都想占 3000 端口</td>
+</tr>
+<tr>
+<td>本地数据库</td>
+<td>否</td>
+<td>A 的测试清空了 B 正在用的测试数据</td>
+</tr>
+<tr>
+<td>外部服务</td>
+<td>否</td>
+<td>都在调同一个测试环境的接口</td>
+</tr>
+</tbody>
+</table>
+<p>所以，并行跑测试时还要为每个 worktree 配置不同的端口、独立的数据库或者容器。</p>
+<h2>五、工程要点</h2>
 <ul>
-<li><strong>git worktree</strong>：Git 原生的多工作树能力</li>
-<li><strong>Orca</strong>（Stably 出品，MIT 协议开源）：GitHub 仓库创建于 2026 年 3 月 17 日，截至本文核实时约 9.4 万 star</li>
-</ul>
-<h2>工程实践与数字</h2>
-<ul>
-<li><strong>通知与审阅</strong>：据前述开发者介绍，Agent 从干活变为空闲时 Orca 会弹通知；改动视图支持逐行批注并一次发回给 Agent，还能标出哪些行是 AI 写的。</li>
 <li><strong>任务命名</strong>：一个 worktree 对应一个明确的任务和分支，便于事后清理。</li>
-<li><strong>用完即删</strong>：落选或完成的 worktree 及其分支要及时清理。</li>
-<li><strong>适用边界</strong>：该开发者坦言，如果只用一家的 Agent、一次只做一件事，Orca 帮不上太多忙，官方客户端就够了；它的价值与同时运行的 Agent 数量和需要验收的改动量成正比。</li>
+<li><strong>用完即删</strong>：落选或完成的 worktree 及其分支要及时清理，否则磁盘和分支列表会越来越乱。</li>
+<li><strong>适用边界</strong>：该开发者坦言，如果只用一家的 Agent、一次只做一件事，Orca 帮不上太多忙，官方客户端就够了；<strong>它的价值与同时运行的 Agent 数量和需要验收的改动量成正比。</strong></li>
 </ul>
-<h2>常见误区</h2>
+<p>Orca 由 Stably 出品，MIT 协议开源；GitHub 仓库创建于 2026 年 3 月 17 日，截至本文核实时约 9.4 万 star。</p>
+<h2>六、常见误区</h2>
 <ul>
 <li><strong>「多开几个终端也一样。」</strong> 可以，但缺依赖、盯不过来、审不过来这些问题需要自己解决。</li>
 <li><strong>「worktree 之间完全隔离。」</strong> 它们共享仓库历史和对象库；端口、数据库、外部服务等运行时资源仍可能冲突。</li>
-<li><strong>「Orca 是一个模型或托管服务。」</strong> 官方文档明确说明它不是模型，也不是托管的 VPS 产品。</li>
+<li><strong>「Orca 是一个模型或托管服务。」</strong> 官方文档明确说明，它不是模型，也不是托管的 VPS 产品。</li>
 </ul>

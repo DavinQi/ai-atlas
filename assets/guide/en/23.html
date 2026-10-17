@@ -2,44 +2,89 @@
 <blockquote>
 <p>Companion to diagram #23 · Chapter 4 &quot;AI Coding Today&quot;</p>
 </blockquote>
-<h2>Overview</h2>
-<p>In a new project, AI's code generation speed is stunning; in an existing codebase, the question shifts from &quot;can it write&quot; to &quot;can it understand&quot;. Alibaba's handbook sums it up: <strong>0→1 runs on generation ability, 1→N runs on context engineering.</strong> Anthropic defines context engineering as the set of strategies for curating and maintaining the optimal set of tokens during LLM inference; because the attention budget is finite, good context engineering means finding the smallest set of high-signal tokens that maximizes the likelihood of the desired outcome.</p>
-<h2>Core Mechanisms</h2>
-<p><strong>1. Why context is finite.</strong> Anthropic notes that needle-in-a-haystack style evaluations reveal &quot;context rot&quot;: as the number of tokens grows, the model's ability to accurately recall information decreases, so context is a finite resource with diminishing returns. The &quot;Lost in the Middle&quot; study likewise found that models use information in the middle of long contexts significantly worse.</p>
-<p><strong>2. What context consists of.</strong> For a coding agent, context typically includes:</p>
+<p>In a new project, AI generates code at astonishing speed. In an existing codebase, the problem shifts from &quot;can it write this?&quot; to &quot;does it understand this?&quot; Alibaba's practice handbook sums it up: <strong>0→1 runs on generation ability; 1→N runs on context engineering.</strong></p>
+<h2>1. A puzzling contrast</h2>
+<p>Give the same model two tasks:</p>
 <ul>
-<li><strong>Project map</strong>: architecture, module responsibilities, code entry points</li>
-<li><strong>Rules</strong>: stack constraints, coding conventions, prohibitions (CLAUDE.md, AGENTS.md, <code>.cursor/rules</code>)</li>
-<li><strong>Requirements</strong>: Spec, acceptance criteria</li>
-<li><strong>Tools</strong>: Skills, MCP, CLI</li>
-<li><strong>Runtime facts</strong>: logs, test results, database state</li>
+<li>Task A: &quot;Write a to-do list CRUD service in FastAPI.&quot;</li>
+<li>Task B: &quot;In our order system, add 'partial refund' to the refund API.&quot;</li>
 </ul>
-<p><strong>3. &quot;Just-in-time&quot; loading.</strong> Rather than stuffing context upfront, keep lightweight identifiers (file paths, queries, links) and load on demand with tools at runtime. Claude Code navigating a codebase with <code>glob</code> and <code>grep</code> is an example.</p>
-<p><strong>4. Managing long tasks.</strong> Compaction (summarize a conversation nearing the limit and start a new window), structured notes (write progress outside the context), and subagents (each explores and returns only the essentials).</p>
-<h2>Key Papers and Milestones</h2>
+<p>The model gets Task A right almost first time, because thousands of similar examples exist online and everything it needs is in its training data. Task B often goes badly. It does not know what your order state machine looks like, which internal service refunds go through, whether amounts are stored in cents or yuan, or that someone changing this code last time caused a financial loss.</p>
+<p><strong>This knowledge is not in the model's weights. It lives only in your codebase, your documents and people's heads.</strong> The only way the model can use it is for it to be put into context. That is the problem context engineering solves.</p>
+<h2>2. Definition: put the most useful things into limited attention</h2>
+<p>Anthropic defines context engineering as the set of strategies for curating and maintaining the optimal set of tokens during LLM inference. Because the attention budget is finite, good context engineering means <strong>finding the smallest set of high-signal tokens</strong> that maximises the likelihood of the desired outcome.</p>
+<p>Note the word &quot;smallest&quot;. If the model lacks information, why not just stuff in the whole codebase? Two reasons this fails:</p>
 <ul>
-<li><strong>2023 Lost in the Middle</strong></li>
-<li><strong>2025 Anthropic, <em>Effective context engineering for AI agents</em></strong></li>
-<li><strong>AGENTS.md</strong>: an open format its site says is used by over 60k open-source projects</li>
+<li><strong>Context rot.</strong> Anthropic notes that needle-in-a-haystack evaluations reveal that as the number of tokens in context grows, the model's ability to recall information accurately declines. Context is a finite resource with diminishing returns.</li>
+<li><strong>Lost in the Middle.</strong> A 2023 study found that when key information sits in the middle of a long context, models use it markedly worse than when it is at the beginning or end.</li>
 </ul>
-<h2>Engineering Practice and Numbers</h2>
-<p><strong>The Qwen user-growth agent team's three stages</strong> (Alibaba handbook):</p>
+<p>So the question is not how much to give but what to give and when.</p>
+<h2>3. What makes up context?</h2>
+<p>For a coding agent, context usually falls into five kinds:</p>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Content</th>
+<th>Typical carrier</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Project map</td>
+<td>Architecture, module responsibilities, entry points</td>
+<td>Architecture docs, README</td>
+</tr>
+<tr>
+<td>Rules</td>
+<td>Stack constraints, conventions, prohibitions</td>
+<td>CLAUDE.md, AGENTS.md, <code>.cursor/rules</code></td>
+</tr>
+<tr>
+<td>Requirements</td>
+<td>Goals, scope, acceptance criteria</td>
+<td>Spec (next article)</td>
+</tr>
+<tr>
+<td>Tools</td>
+<td>What can be done and how to call it</td>
+<td>Skills, MCP, CLI</td>
+</tr>
+<tr>
+<td>Runtime facts</td>
+<td>Logs, test results, database state</td>
+<td>Test output, traces, read-only queries</td>
+</tr>
+</tbody>
+</table>
+<p>Back to Task B: the state machine and refund service are the project map; &quot;amounts in cents&quot; is a rule; the edge cases of partial refunds are requirements; querying order data is a tool; the logs of the last incident are runtime facts. Missing any one, the model has to guess.</p>
+<h2>4. Three key techniques</h2>
+<p><strong>1. Load just in time instead of pre-filling.</strong> Rather than loading every file up front, keep lightweight identifiers (file paths, queries, links) and load content with tools at run time. Claude Code browsing a codebase with <code>glob</code> and <code>grep</code> is an example: it searches for and opens the refund logic only when it needs it. That is how people work too: you do not memorise the codebase, you know where to look.</p>
+<p><strong>2. Three ways to sustain long tasks.</strong></p>
 <ul>
-<li><strong>Stage 1</strong>: about 15 server-side engineers explored AI coding individually; in some scenarios code generation reached several times — even about 10× — the traditional speed.</li>
-<li><strong>Stage 2</strong>: once the 0-to-1 build was done, the marginal return of relying on code generation alone fell; the real challenge became getting AI to accurately understand project structure, business requirements and engineering constraints in an existing codebase.</li>
-<li><strong>Stage 3</strong>: engineering focus shifted to organizing context, defining boundaries and building verification mechanisms.</li>
+<li><strong>Compaction</strong>: summarise the conversation when it nears the limit and start a fresh window with the summary.</li>
+<li><strong>Structured notes</strong>: write progress, decisions and to-dos to files outside the context and read them back when needed.</li>
+<li><strong>Subagents</strong>: each explores separately and returns only the essentials to the main session (Chapter 3, article 4).</li>
 </ul>
-<p><strong>The team used three kinds of assets to solve &quot;how AI understands the project&quot;</strong>: code documentation explains &quot;why it is designed this way&quot;, a code graph precisely queries definitions, call relationships and impact scope, and Rules turn team experience into executable constraints.</p>
-<p><strong>The handbook treats context as an organizational asset</strong>: Skills, MCP, Specs, README / runbooks, templates and checklists. Without accumulating these, a team stays at the &quot;everyone asks AI ad hoc&quot; stage.</p>
-<p><strong>Practical tips:</strong></p>
+<p><strong>3. Turn tacit knowledge into explicit assets.</strong> Teams in the handbook use three kinds of asset to help AI understand a project: <strong>code documentation</strong> explains why things are designed as they are; a <strong>code graph</strong> precisely answers questions about definitions, call relationships and blast radius; <strong>rules</strong> turn team experience into enforceable constraints. The handbook also treats context as an organisational asset: Skills, MCP, specs, READMEs / runbooks, templates and checklists. Without building these up, a team stays stuck at &quot;everyone asks the AI ad hoc&quot;, explaining from scratch every time.</p>
+<h2>5. A case from the field: the three stages of Qwen's user-growth agent team</h2>
+<p>Alibaba's handbook records one team's experience, which is typical:</p>
 <ul>
-<li>Commit rules files to Git so new worktrees can read them (the X developer sharing Orca usage stressed this).</li>
-<li>Don't write dozens of rules at once; add one when the agent repeatedly makes the same mistake.</li>
-<li>Once a process has been repeated more than three times, turn it into a reusable Skill.</li>
+<li><strong>Stage one</strong>: about 15 back-end engineers explored AI coding individually; in some scenarios code generation was several times, even about 10 times, faster than before.</li>
+<li><strong>Stage two</strong>: once the 0-to-1 build-out was done, the marginal gain from code generation alone fell. The real problem became getting AI to understand project structure, business requirements and engineering constraints accurately inside an existing codebase.</li>
+<li><strong>Stage three</strong>: engineering effort shifted to organising context, defining boundaries and building verification.</li>
 </ul>
-<h2>Common Misconceptions</h2>
+<p>Almost every team hits this turning point on the way from Task A to Task B.</p>
+<h2>6. Practical advice</h2>
 <ul>
-<li><strong>&quot;More context is better.&quot;</strong> Context rot shows extra tokens dilute attention.</li>
-<li><strong>&quot;A stronger model will fix not understanding legacy code.&quot;</strong> The handbook's experience is that continually building high-quality context, explicit constraints and verifiable feedback often improves output stability more than simply chasing a stronger model.</li>
-<li><strong>&quot;Write the rules once and you're done.&quot;</strong> Context assets need continual updating and verification.</li>
+<li><strong>Commit rule files to Git.</strong> Rules that exist only locally are invisible to a new worktree (the developer on X who shared how they use Orca stressed this).</li>
+<li><strong>Add rules one at a time; do not write dozens at once.</strong> Add one when the agent keeps making the same mistake. Too many rules dilute attention themselves.</li>
+<li><strong>The rule of three.</strong> Once a workflow has been repeated more than three times, turn it into a reusable Skill.</li>
+<li><strong>Write &quot;why&quot;, not just &quot;what&quot;.</strong> &quot;Amounts are in cents&quot; is weaker than &quot;amounts are in cents, because floating-point errors once broke reconciliation&quot;. Knowing the reason lets the model make the right call in cases the rule does not cover.</li>
+</ul>
+<h2>7. Common misconceptions</h2>
+<ul>
+<li><strong>&quot;More context is better.&quot;</strong> Context rot shows that extra tokens dilute attention.</li>
+<li><strong>&quot;A stronger model will understand old code.&quot;</strong> The handbook's experience is that steadily building high-quality context, clear constraints and verifiable feedback usually improves output stability more than chasing a stronger model. Even a stronger model does not know your company's state machine.</li>
+<li><strong>&quot;Write the rules once and you're done.&quot;</strong> Context assets need updating and validating alongside the code; outdated docs are more dangerous than none.</li>
 </ul>

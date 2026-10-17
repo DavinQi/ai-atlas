@@ -1,36 +1,78 @@
-<h1>多 Agent 与 Harness：在受控闭环里迭代到验证通过</h1>
+<h1>多 Agent 与 Harness 闭环：分工之外，更重要的是验证与回炉</h1>
 <blockquote>
 <p>对应图 #15 · 第二章「Agent 设计原理与范式」</p>
 </blockquote>
-<h2>概述</h2>
-<p>当单个 Agent 的上下文或时间不够用时，可以让多个 Agent 分工；但多 Agent 的价值必须在一个<strong>受控的闭环（harness）</strong>里才能稳定兑现：任务被拆分、执行、验证，不通过就带着反馈回炉，直到验证通过或升级给人。这里的 Harness 指包住模型的那层工程：工具、权限、上下文管理、验证与停止条件。</p>
-<h2>核心机制</h2>
-<p><strong>1. 编排者—工作者模式。</strong> Anthropic 的模式库中，中心 LLM 动态拆解任务、分派给工作者 LLM，再综合结果。它与并行化的区别在于子任务不是预先定义的，而是由编排者根据输入决定，适合「无法预知需要改哪些文件」的编码任务。</p>
-<p><strong>2. Anthropic 多 Agent 研究系统。</strong> 主 Agent 规划研究过程，再创建并行的子 Agent 同时搜索；子 Agent 在各自的上下文窗口中探索问题的不同方面，把最重要的信息压缩后交给主 Agent。公开数据：</p>
+<p>当一个 Agent 的上下文装不下、时间不够用时，很自然的想法是：多找几个 Agent 分工。图 #15 上半部分画了三种常见的分工形态：编排者—工作者、流水线、生成者—评审者。下半部分画的是更重要的东西：一个 <strong>Harness 闭环</strong>。任务进入规划，规划交给工具执行，执行结果必须经过验证（测试、lint、类型检查），不通过就把报错和测试输出带回上下文重试，通过了才提交 PR。整个执行和验证过程被框在沙箱里。</p>
+<p>这张图想传达的核心观点是：<strong>多 Agent 的价值，必须在一个受控的闭环里才能稳定兑现。</strong> 这里的 Harness，指的是包住模型的那层工程：工具、权限、上下文管理、验证规则与停止条件。下面先看三种分工形态，再看 Harness 为什么比分工本身更关键。</p>
+<h2>一、三种分工形态</h2>
+<p><strong>编排者—工作者（orchestrator-workers）。</strong> 在 Anthropic 的模式库里，中心 LLM 动态拆解任务、分派给工作者 LLM，再综合结果。它和简单的并行化不同：子任务不是预先写死的，而是编排者看了输入后才决定。这特别适合「事先不知道要改哪些文件」的编码任务：编排者读完 issue 和代码结构后，才决定派一个工作者改 API 层、一个改数据层、一个补测试。</p>
+<p><strong>流水线（pipeline）。</strong> 任务按固定顺序流经几个专门的 Agent：比如需求分析 → 编码 → 测试。MetaGPT 把软件公司的标准作业流程（SOP）编码进多 Agent 协作，让产品经理、架构师、工程师等角色按流程交接产物；ChatDev 则用对话推进各阶段。流水线的好处是每个环节职责单一、产物可检查；风险是上游的错误会一路传到下游。</p>
+<p><strong>生成者—评审者（debate / review）。</strong> 一个 Agent 生成，另一个评审并给出反馈，循环改进，对应 Anthropic 的「评估者—优化者」模式。多 Agent 辩论的研究也发现，让多个模型实例就同一问题多轮辩论，可以提升推理和事实准确性。AutoGen 等框架把这类对话式协作做成了通用的编程接口。</p>
+<h2>二、一个公开的真实案例</h2>
+<p>Anthropic 公开了他们多 Agent 研究系统的做法和数据，是目前少有的一手资料：</p>
 <ul>
-<li>以 Claude Opus 4 为主 Agent、Claude Sonnet 4 为子 Agent 的系统，在其内部研究评测上比单 Agent 的 Claude Opus 4 高出 90.2%。</li>
-<li>在其分析中，token 用量本身就解释了 80% 的性能差异，工具调用次数和模型选择是另外两个因素。</li>
-<li>Agent 的 token 用量约为普通聊天的 4 倍，多 Agent 系统约为 15 倍。</li>
+<li><strong>结构</strong>：主 Agent 规划研究过程，再创建多个并行的子 Agent 同时搜索；每个子 Agent 在自己的上下文窗口里探索问题的一个方面，把最重要的信息压缩后交回主 Agent。</li>
+<li><strong>效果</strong>：以 Claude Opus 4 为主 Agent、Claude Sonnet 4 为子 Agent 的系统，在其内部研究评测上比单 Agent 的 Claude Opus 4 高出 90.2%。</li>
+<li><strong>原因</strong>：在他们的分析中，<strong>token 用量本身就解释了 80% 的性能差异</strong>，工具调用次数和模型选择是另外两个因素。换句话说，多 Agent 的主要作用是让系统能「花更多 token」：每个子 Agent 都有一个干净的上下文，可以并行地读更多资料。</li>
+<li><strong>代价</strong>：Agent 的 token 用量约为普通聊天的 4 倍，多 Agent 系统约为 15 倍。</li>
 </ul>
-<p><strong>3. 闭环验证。</strong> Anthropic 强调 Agent 每一步都要从环境获得真实反馈。评估者—优化者模式让一个 LLM 生成、另一个给出评估和反馈，循环改进，适用于有明确评价标准的任务。在编码场景中，最可靠的「评估者」是测试、类型检查和构建结果，而不是另一个模型的主观判断。</p>
-<p><strong>4. 状态与错误累积。</strong> 同一篇文章指出 Agent 是有状态的，错误会累积；他们用「彩虹部署」逐步切流，避免更新打断正在运行的 Agent；评估上更关注最终状态，而不是逐轮分析。</p>
-<h2>关键论文与里程碑</h2>
+<p>这组数据给了一个很清晰的判断标准：<strong>多 Agent 适合「可高度并行、信息量超出单个上下文、需要大量工具调用」的任务</strong>，而且任务价值要高到能覆盖约 15 倍的成本。</p>
+<h2>三、为什么编码任务要格外谨慎？</h2>
+<p>同一篇文章明确指出两点限制：需要所有 Agent 共享同一上下文、或 Agent 之间依赖很多的领域，目前不适合多 Agent；而且<strong>大多数编码任务里真正可以并行的部分比研究任务少</strong>，LLM Agent 也还不擅长实时协调和委派。</p>
+<p>道理不难理解。研究任务中，「查 A 公司的财报」和「查 B 公司的财报」互不影响；编码任务中，改了接口签名，所有调用方都要跟着改，两个 Agent 各自改一半，合并时就会冲突。第五章会讲到，工程上常用 git worktree 给每个 Agent 一份隔离的工作副本，正是为了把这种依赖显式化。</p>
+<h2>四、Harness：把「可能对」变成「验证过的对」</h2>
+<p>无论是一个 Agent 还是一群 Agent，模型的输出本质上都是「可能对」。Harness 的作用，是把它变成「验证过的对」。图中闭环的每一步都有讲究：</p>
+<p><strong>任务 / Spec。</strong> 入口必须有清晰的目标和验收标准。「修好登录 bug」不是好任务；「用户用过期 token 登录时返回 401，补充对应的单测，现有测试全部通过」才是。验收标准就是后面验证环节的依据。</p>
+<p><strong>沙箱 / 受控环境。</strong> 工具执行和验证都在隔离环境里进行：独立的容器或工作目录，按需开放网络和文件系统。Agent 犯错的代价被限制在沙箱之内。</p>
+<p><strong>验证：用客观信号，而不是主观判断。</strong> Anthropic 强调 Agent 每一步都要从环境获得真实反馈。在编码场景中，最可靠的「评估者」是测试、类型检查、lint 和构建结果，而不是另一个模型的意见。模型评审可以补充（比如检查可读性），但不能替代可执行的检查。</p>
+<p><strong>失败回炉。</strong> 验证失败时，把报错信息和测试输出原样带回上下文，让模型据此修正。这就是上一篇 Reflection 范式的工程化版本：外部信号越具体，下一轮修正越准。</p>
+<p><strong>停止条件。</strong> 必须设最大迭代次数和预算上限。连续失败若干次后，升级给人，而不是无限循环下去。</p>
+<p><strong>状态与错误累积。</strong> Anthropic 还提醒，Agent 是有状态的，错误会累积：一个早期的错误决定会影响之后所有步骤。他们在更新系统时采用「彩虹部署」逐步切流，避免打断正在运行的长任务；评估时更关注最终状态是否正确，而不是逐轮分析每一步。</p>
+<h2>五、一份最小 Harness 清单</h2>
+<table>
+<thead>
+<tr>
+<th>组成</th>
+<th>作用</th>
+<th>编码场景的例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>任务说明与验收标准</td>
+<td>定义「做完」</td>
+<td>issue + 需要通过的测试</td>
+</tr>
+<tr>
+<td>隔离的执行环境</td>
+<td>限制出错范围</td>
+<td>容器、独立 worktree</td>
+</tr>
+<tr>
+<td>自动化验证</td>
+<td>提供客观反馈</td>
+<td>单测、类型检查、lint、构建</td>
+</tr>
+<tr>
+<td>反馈回路</td>
+<td>让失败变成信息</td>
+<td>把报错原文放回上下文</td>
+</tr>
+<tr>
+<td>停止与升级规则</td>
+<td>防止失控</td>
+<td>最多 N 轮，超限转人工</td>
+</tr>
+<tr>
+<td>完整日志</td>
+<td>便于审计和复盘</td>
+<td>每次工具调用的输入输出</td>
+</tr>
+</tbody>
+</table>
+<h2>六、三个常见误解</h2>
 <ul>
-<li><strong>2023 MetaGPT</strong>：把标准作业流程（SOP）编码进多 Agent 协作</li>
-<li><strong>2023 ChatDev</strong>、<strong>AutoGen</strong>：对话式多 Agent 框架</li>
-<li><strong>2023 多 Agent 辩论</strong>：多个模型实例多轮辩论以提升推理与事实性</li>
-<li><strong>2024 Anthropic《Building effective agents》</strong></li>
-<li><strong>2025 Anthropic《How we built our multi-agent research system》</strong></li>
-</ul>
-<h2>工程实践与数字</h2>
-<ul>
-<li><strong>适合多 Agent 的任务</strong>：可高度并行、信息量超出单个上下文、需要调用大量工具。Anthropic 明确指出，需要所有 Agent 共享同一上下文或 Agent 之间依赖很多的领域，目前不适合多 Agent；<strong>大多数编码任务可真正并行的部分比研究任务少</strong>，而且 LLM Agent 还不擅长实时协调和委派。</li>
-<li><strong>成本核算</strong>：约 15 倍于聊天的 token 消耗意味着只有高价值任务才划算。</li>
-<li><strong>Harness 的最小组成</strong>：任务说明与验收标准、隔离的执行环境、自动化验证、最大迭代次数、失败时升级给人的规则。</li>
-</ul>
-<h2>常见误区</h2>
-<ul>
-<li><strong>「Agent 越多越快。」</strong> 并行收益取决于任务能否拆成独立部分，协调本身有成本。</li>
+<li><strong>「Agent 越多越快。」</strong> 并行收益取决于任务能否拆成独立部分，协调本身有成本，token 消耗也成倍增加。</li>
 <li><strong>「让另一个模型审查就够了。」</strong> 模型审查可以补充，但可执行的测试和检查提供的是客观信号。</li>
-<li><strong>「多 Agent 是默认架构。」</strong> 它是在单 Agent 不够时的升级手段，见下一篇的决策树。</li>
+<li><strong>「多 Agent 是默认架构。」</strong> 它是单 Agent 不够用时的升级手段。先把单 Agent 的 Harness 做扎实，收益往往更大，见下一篇的决策树。</li>
 </ul>
