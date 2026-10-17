@@ -196,3 +196,91 @@ disable-model-invocation: true
 </tbody>
 </table>
 <p>最后一句给资深工程师的提醒：Agent 放大的是你已有的工程能力。你有契约、有测试、有审查，它就是不知疲倦的执行层；你没有，它就会以同样的不知疲倦，把混乱放大。把精力从“写”挪到“定标准与验收”上，是这套工具真正的用法。</p>
+<h2>10. 长任务的“接力棒”：Initializer + Coding Agent</h2>
+<p>跨几个小时甚至几天的任务，真正的难点不是模型不够聪明，而是<strong>每一次新会话都是失忆的</strong>。Anthropic 工程团队在 <em>Effective harnesses for long-running agents</em> 里把这个问题拆成两种失败：一种是一次想做太多，上下文耗尽时留下半成品；另一种是后续会话扫一眼觉得“差不多了”，提前宣布完工。他们给出的解法值得直接搬进日常维护：</p>
+<p><strong>第一次会话当 Initializer（只搭架子，不写业务）：</strong></p>
+<ul>
+<li>写 <code>init.sh</code>（或等价脚本）：一键起本地服务、跑基础健康检查。</li>
+<li>写一份结构化的功能清单（他们用 JSON，每条带 <code>passes: false</code> 与可执行的验证步骤）。明确禁止后续会话删除测试条目——“为了绿而删测试”是长任务最危险的作弊。</li>
+<li>建 <code>claude-progress.txt</code>（或 <code>PROGRESS.md</code>）：记录做到哪一步。</li>
+<li>做一次初始 git commit，让后续会话能用 <code>git log</code> 还原历史。</li>
+</ul>
+<p><strong>之后每次会话都是 Coding Agent（只推进一小步）：</strong></p>
+<ol>
+<li><code>pwd</code> → 读 progress 文件 → 读功能清单 → 看 <code>git log</code>。</li>
+<li>跑 <code>init.sh</code> 并做一次端到端冒烟（打开页面、发一条请求、确认核心路径还活着）。<strong>先确认没被上一次弄坏，再开始新功能。</strong></li>
+<li>只选一条 <code>passes: false</code> 的最高优先级项来做。</li>
+<li>做完后：跑验证 → 改 <code>passes</code> → 写 progress → 带描述性信息的 commit。</li>
+</ol>
+<p>这套东西和第五章的多 Agent、第六章的 AIOps 是同一思路：<strong>状态放在仓库里，不放在对话里。</strong> 全栈场景里功能清单尤其有用——“用户点筛选 → URL 变了 → 列表变成对应状态”这种跨层行为，写成带步骤的条目，比一句“做完筛选”更能挡住半成品。</p>
+<h2>11. 规则文件的实战：一份合约，多端适配</h2>
+<p>现场最常见的摩擦是：Codex / Cursor / Copilot 读 <code>AGENTS.md</code>，Claude Code 传统上读 <code>CLAUDE.md</code>，两份文件慢慢漂移，两个 Agent 对“真相”的理解开始打架。2026 年 9 月 Claude Code 已支持：目录下没有 <code>CLAUDE.md</code> 时回退读 <code>AGENTS.md</code>（可在 <code>/config</code> 开关）。资深团队的稳妥做法：</p>
+<ul>
+<li><strong>一份权威合约</strong>：仓库根的 <code>AGENTS.md</code> 写不变量（构建、测试、禁区、分层）。</li>
+<li><strong>薄适配层</strong>：需要 Claude 专属说明时，用很短的 <code>CLAUDE.md</code> 只写差异，或 <code>@</code> 引用 <code>AGENTS.md</code>；不要维护两份完整副本。</li>
+<li><strong>子目录规则承接局部</strong>：支付模块的幂等、前端的组件规范放在对应目录，不要塞进根文件。</li>
+<li><strong>保持极瘦。</strong> Anthropic 工程师公开提到：为新模型砍掉了约 80% 的 Claude Code 系统提示。对你的规则文件同样适用——模型越强，越要把硬编码的流程换成启发式与验收标准。根文件超过一两屏，就该拆。</li>
+</ul>
+<p>Cat Wu（Claude Code 产品）还区分过：<code>CLAUDE.md</code> 是你给 Claude 的指令，<code>Memory.md</code>（自动记忆）是它自己的草稿本。团队约定写进前者；个人临时偏好写进后者或 <code>CLAUDE.local.md</code>，不要污染共享合约。</p>
+<p><strong>一条可操作的习惯：</strong> 每次纠正它之后，用一句话让它把规则写回去（Claude Code 里用 <code>#</code> 开头的行也能直接追加进 CLAUDE.md）。然后每周花十分钟修剪——删掉从未触发的、把反复口头提醒的升成 hook 或测试。</p>
+<h2>12. 上下文与额度：资深日常的省钱动作</h2>
+<p>高互动帖与一线分享里反复出现、且官方文档能对上的几条：</p>
+<ul>
+<li><strong>一个任务一个会话。</strong> 不要在同一条长线程里串三个无关需求；换任务就 <code>/clear</code>。这是最便宜的省钱手段。</li>
+<li><strong>到 60% 左右就 <code>/compact</code>，并写焦点。</strong> 等窗口爆了再压，摘要质量会差很多。焦点示例：“保留架构决策、未解决的失败、已改文件；丢掉工具原始输出。”</li>
+<li><strong>探索用便宜模型，决策用强模型。</strong> <code>/model</code> 切换；样板活、格式化、找调用点不值得一直挂最强档。</li>
+<li><strong>计划模式先跑。</strong> <code>Shift+Tab</code> 进 Plan，把方案谈定再实现。Boris 团队经验：方案谈透，实现往往一次过；跑偏立刻切回 Plan，别硬推。</li>
+<li><strong>脏活丢给子 Agent。</strong> “用子 Agent 调查 X / 做安全评审”会在独立上下文里跑，主会话只收摘要——这是 Anthropic 最佳实践里明确推荐的。</li>
+<li><strong>工具返回要短。</strong> 给 Agent 接的 MCP / 内部工具，优先 <code>search_*</code> 而不是 <code>list_*</code>；大结果做分页与 <code>concise|detailed</code> 格式切换。Anthropic《Writing effective tools for agents》里的结论：工具太多、功能重叠、返回 UUID 堆，都会让 Agent 选错工具、浪费 token。</li>
+</ul>
+<h2>13. 给 Agent 的工具怎么设计（你在写 MCP / 内部 CLI 时）</h2>
+<p>如果你的团队在给 Agent 接数据库、工单、日志、浏览器，工具本身就是产品。几条已被实践验证的原则：</p>
+<ul>
+<li><strong>少而清，不要把 REST 一一包成工具。</strong> <code>schedule_event</code> 胜过 <code>list_users</code> + <code>list_events</code> + <code>create_event</code>；<code>search_logs</code> 胜过整文件 <code>read_logs</code>。</li>
+<li><strong>命名空间。</strong> <code>jira_search</code> / <code>asana_search</code> 这种前缀，能减少“十个都叫 search”时的误选。</li>
+<li><strong>返回自然语言标识，少返回 cryptic UUID；</strong> 需要下游调用时再提供 <code>response_format: concise|detailed</code>。</li>
+<li><strong>截断时告诉它下一步怎么做。</strong> “结果已截断，请加 filter 或翻页”比抛一行堆栈有用。</li>
+<li><strong>用评估驱动迭代。</strong> 先写二三十个真实任务，跑 agent loop，看它调错哪些工具、卡在哪；再让 Agent 帮你改工具描述——Anthropic 内部就是这么优化 Slack / Asana 工具的。</li>
+</ul>
+<h2>14. 团队级 eval：从“感觉变差了”变成可行动的指标</h2>
+<p>《Demystifying evals for AI agents》里的关键数字：从 20–50 个真实失败任务起步就够，不必等完美套件。对全栈维护团队，实用落地是：</p>
+<ol>
+<li><strong>从线上/评审里抓失败。</strong> 每次“Agent 把测试改绿”“编了不存在的 API”“漏了迁移”都落成一条 eval 任务，带可执行验收。</li>
+<li><strong>能力评测与回归评测分开。</strong> 前者通过率可以低（爬山用）；后者应接近 100%（防回退）。能力评测过关后“毕业”成回归套件。</li>
+<li><strong>评分器组合。</strong> 代码类用确定性检查（测试、类型、静态分析）；行为类用带 rubric 的模型评分；关键节点才上人工。不要死卡工具调用顺序——Agent 常有合法规避路径，应以<strong>结果状态</strong>为准。</li>
+<li><strong>读 transcript。</strong> 分数不动时，先怀疑任务/评分器坏了，再怀疑模型变笨。Anthropic 多个案例里，修评分器比换模型更能拉高分数。</li>
+<li><strong>新模型到了先跑 eval。</strong> 有套件的团队几天能定调；没有的要靠几周手工点点点。</li>
+</ol>
+<p>把 eval 跑进 CI：每次改规则文件、hooks、自定义命令，或 bump 模型版本，就跑一遍。这比“大家觉得这次更聪明”靠谱。</p>
+<h2>15. 再补两个全栈实操：契约漂移与 CI 矩阵升级</h2>
+<h3>例子 D：前后端契约漂移（OpenAPI / 类型生成）</h3>
+<p>症状：前端的 TypeScript 类型与后端实际响应对不上，线上偶发 <code>undefined</code>。</p>
+<pre><code class="language-text">不要改业务逻辑。先对比：
+1) 仓库里的 OpenAPI（或 proto）定义；
+2) 后端 handler 的实际响应构造；
+3) 前端生成的类型与调用点。
+输出一份差异表：字段、哪边错、影响的页面。
+然后只提一个最小 PR：要么修生成管线，要么补契约测试（对每个公开端点做响应 schema 校验）。
+禁止手改生成出来的类型文件。
+</code></pre>
+<p>验证：契约测试进 CI；本地改一个字段故意弄坏，确认 CI 红。审查：有没有“为了绿”而放宽 schema；生成命令是否写进 <code>AGENTS.md</code>。</p>
+<h3>例子 E：运行时 / 框架大版本升级（Node、Django、Next…）</h3>
+<pre><code class="language-text">目标：把 &lt;运行时或框架&gt; 从 X 升到 Y。约束：
+- 先读官方迁移指南，列出 breaking changes 与我们仓库的命中点；
+- 一次只升主版本；配套依赖另开 PR；
+- 先让 CI 矩阵同时跑旧版与新版（或临时双矩阵），全绿再切默认；
+- 数据库迁移若有，走扩展—收缩，不与框架升级绑死在一个 PR。
+每发现一处兼容问题就单独 commit，方便二分。
+</code></pre>
+<p>验证：双矩阵全绿；冒烟脚本打核心路径；回滚说明写在 PR 里。审查：有没有用“暂时 any / 关闭校验”混过去；锁定文件是否只包含必要变更。</p>
+<h2>16. 资深全栈的一日节奏（可直接套）</h2>
+<p>一个可复制的工作日形态，把上面的机制串起来：</p>
+<ol>
+<li><strong>开工（10 分钟）：</strong> 看过夜 CI / Agent 自动化 PR；只合并证据齐全的；打回“测试被改松”的。</li>
+<li><strong>选型：</strong> 独立小单 → 丢给云端/无头 Agent 开 PR；跨层需求 → 本地 Plan 模式开 SPEC；紧急线上问题 → 先证据链，不先改代码。</li>
+<li><strong>实现块（25–45 分钟一轮）：</strong> 一个 worktree 一件事；子 Agent 做调查；主会话实现；hooks 自动 lint；停手前强制测试。</li>
+<li><strong>审查块：</strong> 自己的 diff 按 §5 清单过一遍；再开一个干净会话或子 Agent 做对抗式评审（“找出这条 PR 里最可能的三个漏洞”）。</li>
+<li><strong>收尾：</strong> 纠正过的教训写回 <code>AGENTS.md</code>；progress / SPEC 更新；长任务勾掉功能清单一项并 commit；额度紧就 <code>/compact</code> 或收工 <code>/clear</code>。</li>
+<li><strong>周度（30 分钟）：</strong> 剪规则文件；看 eval 趋势；清掉没用的 MCP；对 METR 那类“体感变快”保持怀疑——只看交付周期与变更失败率。</li>
+</ol>
+<p>把 Agent 当成不知疲倦的执行层，你自己守住三样东西：<strong>合约（SPEC/规则）、证据（测试/日志）、合并权（人）。</strong> 这三样在，全栈维护可以被放大；缺一样，它会以同样的速度放大混乱。</p>

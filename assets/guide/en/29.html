@@ -206,3 +206,95 @@ Do not change any code until there is evidence.
 </tbody>
 </table>
 <p>A closing note for senior engineers: an agent amplifies the engineering capability you already have. With contracts, tests and review in place, it is a tireless execution layer; without them, it will amplify the chaos with the same tirelessness. The real skill shift is moving your effort from <em>writing</em> to <em>setting standards and accepting work</em> — that is what these tools are actually for.</p>
+<h2>10. The relay baton for long tasks: Initializer + Coding Agent</h2>
+<p>The hard part of work that spans hours or days is not model intelligence; it is that <strong>every new session starts amnesiac</strong>. Anthropic's engineering post <em>Effective harnesses for long-running agents</em> names two failure modes: trying to do too much and leaving a half-finished mess when context runs out, and a later session glancing around and declaring victory too early. Their harness maps cleanly onto day-to-day maintenance:</p>
+<p><strong>Session one is the Initializer (scaffold only, no product code):</strong></p>
+<ul>
+<li>Write <code>init.sh</code> (or equivalent): one command to start local services and run a basic health check.</li>
+<li>Write a structured feature list (they used JSON, every item with <code>passes: false</code> and executable verification steps). Explicitly forbid later sessions from deleting test entries — editing tests to go green is the most dangerous cheat on long tasks.</li>
+<li>Create <code>claude-progress.txt</code> (or <code>PROGRESS.md</code>) as a running log.</li>
+<li>Make an initial git commit so later sessions can recover history from <code>git log</code>.</li>
+</ul>
+<p><strong>Every later session is a Coding Agent (one small step):</strong></p>
+<ol>
+<li><code>pwd</code> → read the progress file → read the feature list → check <code>git log</code>.</li>
+<li>Run <code>init.sh</code> and do one end-to-end smoke test (open the page, send a request, confirm the core path still works). <strong>Confirm the last session did not break it before starting anything new.</strong></li>
+<li>Pick exactly one highest-priority item with <code>passes: false</code>.</li>
+<li>When done: verify → flip <code>passes</code> → write progress → commit with a descriptive message.</li>
+</ol>
+<p>This is the same idea as multi-agent work in Chapter 5 and AIOps in Chapter 6: <strong>state lives in the repo, not in the chat</strong>. On full-stack work the feature list is especially valuable — &quot;user clicks a filter → URL updates → list matches that status&quot; written as steps blocks half-finished cross-layer work far better than &quot;finish the filter&quot;.</p>
+<h2>11. Rule files in practice: one contract, thin adapters</h2>
+<p>The most common friction on the ground: Codex / Cursor / Copilot read <code>AGENTS.md</code>, Claude Code historically read <code>CLAUDE.md</code>, and the two files drift until two agents disagree about ground truth. As of September 2026 Claude Code falls back to <code>AGENTS.md</code> when there is no <code>CLAUDE.md</code> in a folder (toggleable in <code>/config</code>). The stable senior pattern:</p>
+<ul>
+<li><strong>One canonical contract:</strong> root <code>AGENTS.md</code> holds invariants (build, test, forbidden zones, layering).</li>
+<li><strong>Thin adapters:</strong> if Claude needs extras, keep a short <code>CLAUDE.md</code> with only the deltas, or <code>@</code>-import <code>AGENTS.md</code>; do not maintain two full copies.</li>
+<li><strong>Directory-local rules for local concerns:</strong> payment idempotency, frontend component rules live next to that code.</li>
+<li><strong>Stay extremely lean.</strong> An Anthropic engineer publicly noted they removed ~80% of the Claude Code system prompt for newer models. Treat your rule files the same way: stronger models want heuristics and acceptance criteria, not hardcoded procedures. If the root file is longer than a screen or two, split it.</li>
+</ul>
+<p>Cat Wu (Claude Code product) also draws a useful line: <code>CLAUDE.md</code> is your instructions to Claude; auto-memory (<code>Memory.md</code>) is its own scratchpad. Team conventions go in the former; personal temporary preferences go in the latter or <code>CLAUDE.local.md</code>.</p>
+<p><strong>One operable habit:</strong> after every correction, make it write the rule back (in Claude Code a line starting with <code>#</code> can append straight into CLAUDE.md). Then spend ten minutes a week pruning — delete rules that never fire, promote anything you keep saying out loud into a hook or a test.</p>
+<h2>12. Context and spend: the daily economising moves</h2>
+<p>Moves that show up again and again in high-engagement practitioner posts and line up with official docs:</p>
+<ul>
+<li><strong>One task, one session.</strong> Do not chain three unrelated requests in one long thread; <code>/clear</code> when you switch. This is the cheapest cost cut.</li>
+<li><strong><code>/compact</code> around 60%, with a focus.</strong> Waiting until the window is full produces worse summaries. Example focus: &quot;keep architectural decisions, unresolved failures, files changed; drop raw tool output.&quot;</li>
+<li><strong>Cheap models for exploration, strong models for decisions.</strong> Switch with <code>/model</code>; formatting and call-site hunting do not need the top tier the whole time.</li>
+<li><strong>Plan first.</strong> <code>Shift+Tab</code> into Plan, lock the approach, then implement. The Claude Code team's experience: a thorough plan often one-shots the implementation; if it drifts, switch back to Plan instead of pushing.</li>
+<li><strong>Dirty work goes to subagents.</strong> &quot;Use a subagent to investigate X / do a security review&quot; runs in a separate context and returns a summary — this is an explicit recommendation in Anthropic's best-practices guide.</li>
+<li><strong>Keep tool returns short.</strong> Prefer <code>search_*</code> over <code>list_*</code> for MCP and internal tools; paginate large results and offer <code>concise|detailed</code>. Anthropic's <em>Writing effective tools for agents</em> finds that too many overlapping tools and UUID-heavy payloads make agents pick the wrong tool and burn tokens.</li>
+</ul>
+<h2>13. Designing tools the agent will actually use</h2>
+<p>If your team is wiring databases, tickets, logs or browsers into the agent, the tools themselves are product surface. Principles that held up under Anthropic's own evals:</p>
+<ul>
+<li><strong>Few and sharp; do not wrap every REST endpoint.</strong> <code>schedule_event</code> beats <code>list_users</code> + <code>list_events</code> + <code>create_event</code>; <code>search_logs</code> beats dumping whole files through <code>read_logs</code>.</li>
+<li><strong>Namespace.</strong> Prefixes like <code>jira_search</code> / <code>asana_search</code> reduce collisions when ten tools are all named &quot;search&quot;.</li>
+<li><strong>Return natural-language identifiers; minimise cryptic UUIDs.</strong> When downstream calls need IDs, expose <code>response_format: concise|detailed</code>.</li>
+<li><strong>When truncating, say what to do next.</strong> &quot;Results truncated — add a filter or page&quot; beats a stack trace.</li>
+<li><strong>Iterate with evals.</strong> Write a few dozen real tasks, run the agent loop, see which tools it mis-picks, then have the agent help rewrite descriptions — that is how Anthropic tuned their internal Slack and Asana tools.</li>
+</ul>
+<h2>14. Team-level evals: from &quot;it feels worse&quot; to actionable signal</h2>
+<p><em>Demystifying evals for AI agents</em> makes a point worth tattooing on the sprint board: <strong>20–50 real failure tasks are enough to start</strong>. You do not need a perfect suite. For a full-stack maintenance team:</p>
+<ol>
+<li><strong>Mine failures from production and review.</strong> Every &quot;agent loosened the tests&quot;, &quot;invented an API&quot;, &quot;skipped a migration&quot; becomes an eval task with executable acceptance.</li>
+<li><strong>Separate capability and regression suites.</strong> Capability suites may start with a low pass rate (a hill to climb); regression suites should sit near 100% (a tripwire). Graduate capability tasks into regression once they pass reliably.</li>
+<li><strong>Combine graders.</strong> Deterministic checks for code (tests, types, static analysis); rubric-based model graders for behaviour; humans only at critical points. Do not overfit to exact tool-call sequences — agents often find valid alternate paths; grade <strong>outcome state</strong>.</li>
+<li><strong>Read the transcripts.</strong> When scores stall, suspect the task or grader before you suspect the model. Several Anthropic case studies show grader fixes moving scores more than model swaps.</li>
+<li><strong>Run evals when models arrive.</strong> Teams with a suite retune in days; teams without spend weeks clicking around.</li>
+</ol>
+<p>Wire evals into CI: every change to rule files, hooks, custom commands, or model bumps runs the suite. That beats &quot;we all feel this version is smarter&quot;.</p>
+<h2>15. Two more full-stack walkthroughs: contract drift and CI matrix upgrades</h2>
+<h3>Example D: frontend/backend contract drift (OpenAPI / generated types)</h3>
+<p>Symptom: frontend TypeScript types disagree with actual backend responses; intermittent <code>undefined</code> in production.</p>
+<pre><code class="language-text">Do not change business logic. First compare:
+1) the OpenAPI (or proto) definition in the repo;
+2) what the backend handlers actually construct;
+3) the generated frontend types and their call sites.
+Produce a diff table: field, which side is wrong, which pages break.
+Then open one minimal PR: either fix the generation pipeline or add
+contract tests (schema-validate every public endpoint's response).
+Do not hand-edit generated type files.
+</code></pre>
+<p>Verify: contract tests in CI; deliberately break one field locally and confirm CI goes red. Review: was the schema loosened &quot;to go green&quot;; is the generate command documented in <code>AGENTS.md</code>.</p>
+<h3>Example E: runtime / framework major upgrade (Node, Django, Next…)</h3>
+<pre><code class="language-text">Goal: upgrade &lt;runtime or framework&gt; from X to Y. Constraints:
+- Read the official migration guide first; list breaking changes and
+  every hit in our repo;
+- One major version per PR; companion dependency bumps in separate PRs;
+- Run the CI matrix on both old and new (or a temporary dual matrix)
+  and only switch the default when both are green;
+- If database migrations are needed, use expand–contract; do not bind
+  them into the same PR as the framework bump.
+One commit per compatibility fix so we can bisect.
+</code></pre>
+<p>Verify: dual matrix green; smoke script on the core paths; rollback notes in the PR. Review: any <code>any</code> / disabled checks used as a shortcut; lockfile contains only necessary changes.</p>
+<h2>16. A senior full-stack day you can copy</h2>
+<p>A concrete daily shape that wires the mechanisms above together:</p>
+<ol>
+<li><strong>Start (10 minutes):</strong> triage overnight CI and agent automation PRs; merge only what has evidence; send back anything that loosened tests.</li>
+<li><strong>Triage:</strong> independent small tickets → headless/cloud agent opens a PR; cross-layer work → local Plan mode and a SPEC; production incidents → evidence chain first, code second.</li>
+<li><strong>Implementation block (25–45 minutes a round):</strong> one worktree, one thing; subagents investigate; main session implements; hooks auto-lint; tests gate every stop.</li>
+<li><strong>Review block:</strong> run your own diff through the §5 checklist; then open a clean session or subagent for adversarial review (&quot;name the three most likely holes in this PR&quot;).</li>
+<li><strong>Close-out:</strong> write corrections back into <code>AGENTS.md</code>; update progress/SPEC; for long tasks tick one feature-list item and commit; <code>/compact</code> if the budget is tight, or <code>/clear</code> when you are done.</li>
+<li><strong>Weekly (30 minutes):</strong> prune rule files; glance at eval trends; drop unused MCP servers; stay sceptical of &quot;feels faster&quot; stories like the METR result — watch lead time and change-failure rate instead.</li>
+</ol>
+<p>Treat the agent as a tireless execution layer and keep three things for yourself: <strong>the contract (SPEC/rules), the evidence (tests/logs), and the merge button.</strong> With those three, full-stack maintenance scales; missing one, it scales the mess at the same speed.</p>

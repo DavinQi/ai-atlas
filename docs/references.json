@@ -3089,6 +3089,67 @@
           "diagram": 29
         }
       ]
+    },
+    {
+      "id": "R133",
+      "title": "Effective harnesses for long-running agents",
+      "authors": "Anthropic",
+      "year": 2025,
+      "url": "https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R134",
+      "title": "Demystifying evals for AI agents",
+      "authors": "Anthropic",
+      "year": 2026,
+      "url": "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R135",
+      "title": "Writing effective tools for agents — with agents",
+      "authors": "Anthropic",
+      "year": 2025,
+      "url": "https://www.anthropic.com/engineering/writing-tools-for-agents",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
+    },
+    {
+      "id": "R136",
+      "title": "Claude Code now falls back to AGENTS.md",
+      "authors": "Cat Wu",
+      "year": 2026,
+      "url": "https://x.com/trq212/status/2101009392611278961",
+      "type": "X post",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ],
+      "date": "2026-09-18"
     }
   ]
 }

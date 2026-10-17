@@ -181,18 +181,22 @@ html[lang=en] #title{letter-spacing:0}
 /* ---- guide button + reading view ---- */
 #main{position:relative}
 #src{position:relative}
-#gbtn{position:absolute;right:0;top:50%;transform:translateY(-50%);visibility:visible;z-index:3;font:600 13px/1 var(--fs,system-ui);color:var(--blue);background:#fffdf7;border:1.5px solid var(--blue);border-radius:14px 10px 13px 9px;padding:5px 12px;cursor:pointer;box-shadow:2px 2px 0 rgba(31,95,200,.25)}
-#gbtn:hover{background:var(--blue);color:#fff}
+/* desktop: gbtn sits in the ctrl row with the other .btn controls */
+#gbtn.btn{font-family:var(--fh);font-size:16px;padding:5px 14px;color:var(--blue);border-color:var(--blue);box-shadow:2px 2px 0 rgba(31,95,200,.35)}
+#gbtn.btn:hover{background:var(--blue);color:#fff;box-shadow:3px 3px 0 var(--orange);border-color:var(--blue)}
 #gbtn[hidden],#guide[hidden]{display:none}
 #guide{position:fixed;inset:0;z-index:120}
 #gshade{position:absolute;inset:0;background:rgba(40,36,28,.32);animation:gfade .2s}
-#gpanel{position:absolute;top:0;right:0;bottom:0;width:min(880px,64vw);background:#fbf8f1;box-shadow:-8px 0 30px rgba(0,0,0,.18);display:flex;flex-direction:column;animation:gin .22s ease-out}
+#gpanel{position:absolute;top:0;right:0;bottom:0;width:min(880px,64vw);background:#fbf8f1;box-shadow:-8px 0 30px rgba(0,0,0,.18);display:flex;flex-direction:column;animation:gin .22s ease-out;transition:width .22s ease,left .22s ease,right .22s ease,border-radius .22s ease}
 @keyframes gin{from{transform:translateX(40px);opacity:0}}@keyframes gfade{from{opacity:0}}
 #ghead{display:flex;align-items:center;gap:14px;padding:12px 22px;border-bottom:1.5px dashed rgba(43,43,43,.2);flex:none}
-#gx{font:600 14px/1 system-ui,sans-serif;background:#fffdf7;border:1.5px solid var(--ink);border-radius:10px 8px 11px 7px;padding:8px 14px;cursor:pointer;color:var(--ink)}
+#ghead .sp{flex:1}
+#gx,#gexp{font:600 14px/1 system-ui,sans-serif;background:#fffdf7;border:1.5px solid var(--ink);border-radius:10px 8px 11px 7px;padding:8px 14px;cursor:pointer;color:var(--ink)}
+#gexp{border-color:var(--blue);color:var(--blue)}
+#gexp:hover,#gx:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
 #gk{color:var(--muted);font:14px system-ui,sans-serif}
 #gscroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-.gcol{max-width:760px;margin:0 auto;padding:26px 36px 80px;font-family:"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Noto Sans SC","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:17px;line-height:1.85;color:#2b2b2b;overflow-wrap:break-word}
+.gcol{max-width:760px;margin:0 auto;padding:26px 36px 80px;font-family:"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Noto Sans SC","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:17px;line-height:1.85;color:#2b2b2b;overflow-wrap:break-word;transition:max-width .22s ease}
 html[lang=en] .gcol{line-height:1.7;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif}
 .gcol h1{font-size:28px;line-height:1.35;margin:4px 0 14px;color:#1f1f1f}
 .gcol h2{font-size:21px;margin:34px 0 10px;padding-left:12px;border-left:4px solid var(--blue);line-height:1.4}
@@ -217,6 +221,12 @@ html[lang=en] .gcol{line-height:1.7;font-family:system-ui,-apple-system,"Segoe U
 .rb-paper{background:#e3ecfb;color:#1f5fc8}.rb-doc{background:#fbe9da;color:#b85a12}.rb-x{background:#e8e8e8;color:#222}
 .rmeta{color:var(--muted);font-size:.92em}
 body.gopen{overflow:hidden}
+/* fullscreen / fold-out reading mode (desktop) */
+body.gfull #gshade{background:rgba(40,36,28,.55)}
+body.gfull #gpanel{left:0;right:0;width:100%;box-shadow:none;border-radius:0}
+body.gfull .gcol{max-width:820px;padding:34px 48px 100px;font-size:18px}
+body.gfull .gcol h1{font-size:32px}body.gfull .gcol h2{font-size:23px}
+body.gfull #ghead{padding:14px 28px;background:#f7f3ea}
 /* references page */
 .refs{width:100%;height:100%;overflow-y:auto;cursor:auto;text-align:left;padding:4px 8px 30px;font-family:var(--fs,system-ui);scrollbar-width:thin}
 .refs .rintro{color:var(--muted);font-size:14.5px;margin:0 0 6px}
@@ -228,8 +238,12 @@ body.gopen{overflow:hidden}
 .refs li a{color:var(--ink)}.refs li a:hover{color:var(--blue)}
 body.onref #stage{cursor:auto;align-items:stretch}
 @media (max-width:1023px){
-  #gbtn{position:static;transform:none;display:block;margin:10px auto 2px;font-size:15px;padding:10px 20px}
-  #gpanel{width:100%;animation:none}#gshade{display:none}
+  /* mobile: keep guide button under the diagram (not in the icon ctrl bar) */
+  #gbtn.btn{position:static;transform:none;display:block;margin:10px auto 2px;font-size:15px;padding:10px 20px;width:fit-content;box-shadow:2px 2px 0 rgba(31,95,200,.25)}
+  #gexp{display:none}
+  #gpanel{width:100%;animation:none;transition:none}#gshade{display:none}
+  body.gfull #gpanel{left:auto;right:0;width:100%}
+  body.gfull .gcol{max-width:none;padding:18px 18px calc(60px + env(safe-area-inset-bottom));font-size:17.5px}
   #ghead{padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:#fbf8f1}
   #gx{font-size:16px;padding:10px 14px}
   .gcol{padding:18px 18px calc(60px + env(safe-area-inset-bottom));font-size:17.5px}
