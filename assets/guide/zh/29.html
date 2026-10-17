@@ -632,3 +632,133 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 </tbody>
 </table>
 <p>把案例读成动作，而不是故事：每个案例只先抄<strong>一条</strong>，跑顺了再加下一条。这正是这些团队共同的节奏——先把环境与验证做好，模型的能力自然会被放大。</p>
+<h2>30. 手把手操作流程：每个案例照着做一遍</h2>
+<p>前面各节讲的是“为什么”和“注意什么”。这一节只讲“怎么做”：每个案例都拆成编号步骤，带可粘贴的提示、要跑的命令、绿/红信号、这一步失败了怎么办，以及最后什么叫做完。占位符 <code>&lt;...&gt;</code> 换成你仓库的实际命令。<strong>做时只开一个案例，不要并行囤。</strong></p>
+<h3>30.1 案例 A 手把手：订单筛选（前端 + API + 数据库）</h3>
+<ol>
+<li><strong>建分支与任务文件。</strong> <code>git switch -c feat/order-status-filter</code>，新建 <code>SPEC.md</code> 把 §7 例子 A 第 1 步的提示粘进去运行，得到契约草案；逐条看，拿不准的让它列问题清单，你拍板后把 <code>SPEC.md</code> 定稿并 commit。</li>
+<li><strong>后端红灯。</strong> 粘第 2 步提示，要求它先写测试。检查它是否真的跑了：输出里应先出现失败，再动手写实现。失败处理：若它一上来就写实现，把这一步打回，原文回复“只写测试，跑给我看红”。</li>
+<li><strong>后端绿灯。</strong> 跑 <code>&lt;test&gt; &lt;typecheck&gt; &lt;lint&gt;</code>（全套，不要只跑它提的那几个）。再用 curl 打一次本地接口，核对状态码与响应字段和 <code>SPEC.md</code> 一字不差。</li>
+<li><strong>前端接入。</strong> 粘第 3 步提示。完成后不要只看截图：自己点一遍，刷新页面看 URL 参数是否还在、列表是否仍对。</li>
+<li><strong>端到端。</strong> 粘第 4 步提示补 e2e；全量测试与构建各跑一次。</li>
+<li><strong>失败了怎么办。</strong> 前后端字段对不上 → 回 <code>SPEC.md</code> 看是谁偏离，不许两边各改一半凑齐；e2e 不稳 → 先让它定位是时序还是真 Bug，不要直接重跑装没看见。</li>
+<li><strong>完成定义：</strong> 契约、后端、前端、e2e 四层测试全绿；<code>git diff --stat</code> 里没有契约之外的文件；PR 描述贴了测试命令与输出。</li>
+</ol>
+<h3>30.2 案例 B 手把手：结算接口偶发 500</h3>
+<ol>
+<li><strong>先收证据。</strong> 把一小时错误日志和一个 traceId 准备好，粘 §7 例子 B 的提示。硬性要求：它只能输出证据链和排序假设，<strong>不能改代码</strong>。</li>
+<li><strong>挑假设。</strong> 你看它列的 2–3 个假设，选可能性最高且能证伪的那个；让它写“什么现象出现就说明假设错了”。</li>
+<li><strong>本地复现。</strong> 让它用构造数据在本地或测试环境复现。复现不了就退回第 2 步换假设，不要进入修代码环节。</li>
+<li><strong>写回归测试。</strong> 把复现变成自动化测试并确认是红的。</li>
+<li><strong>修根因。</strong> 只改假设指向的那一处；跑回归测试转绿，再跑全量。</li>
+<li><strong>失败了怎么办。</strong> 修完又红在别处 → 大概率是症状修复或顺手改了公共逻辑，回看 diff，把无关改动拆出去。</li>
+<li><strong>完成定义：</strong> 回归测试红→绿可演示；全量绿；PR 里写明根因、证据链链接、以及“下次如何五分钟定位”（新增的日志/告警在哪）。</li>
+</ol>
+<h3>30.3 案例 C 手把手：<code>status</code> → <code>state</code> 跨层改名</h3>
+<ol>
+<li><strong>摸清引用面。</strong> 先让只读 Agent 全仓搜索 <code>status</code> 的读写点，输出文件清单，你圈定哪些属于本次、哪些是同名无关字段。</li>
+<li><strong>PR1 扩展。</strong> 按 §7 例子 C 第 1 步开分支做：加新列、双写、接口双字段返回，前端不动。提示里写死“本 PR 不删任何东西”。验证：旧测试全绿，新字段有值。</li>
+<li><strong>合 PR1 并观察。</strong> 部署到测试环境（或本地双跑），确认双写一致再开 PR2；没有一致证据不要往下走。</li>
+<li><strong>PR2 切换。</strong> 前端改读新字段；codemod 批量替换仓库内引用，Agent 只补工具报错的残余。验证：<code>&lt;typecheck&gt;</code> + 全量测试 + 手工走核心页面。</li>
+<li><strong>PR3 收缩。</strong> 拿到旧字段零流量证据（日志/指标截图存 PR）后，才删旧列与兼容代码。回滚说明写进迁移文件和 PR。</li>
+<li><strong>失败了怎么办。</strong> 双写不一致 → 停在 PR1 修写路径（重点查定时任务与另一个服务），不许跳到 PR2 用前端“适配”掩盖。</li>
+<li><strong>完成定义：</strong> 三个 PR 可独立回滚；旧字段有零流量证据才删除；最终全仓搜不到旧字段的业务引用。</li>
+</ol>
+<h3>30.4 案例 D 手把手：前后端契约漂移</h3>
+<ol>
+<li><strong>出差异表。</strong> 粘 §15 例子 D 的提示，要求只输出表，不改代码。逐行看它标的“哪边错”。</li>
+<li><strong>定方向。</strong> 你决定以 OpenAPI/proto 为准、还是以后端实现为准；在表里标注，并写进仓库的契约说明。</li>
+<li><strong>修生成或修实现（二选一）。</strong> 只开这一类改动；生成文件只能由生成命令产出，禁止手改。</li>
+<li><strong>补契约测试。</strong> 对公开端点加响应 schema 校验，进 CI。</li>
+<li><strong>故意弄坏验证。</strong> 本地改错一个字段类型，跑 CI 中的契约测试，确认变红，再改回。</li>
+<li><strong>失败了怎么办。</strong> “为了绿”放宽 schema → 打回；契约测试必须能抓住你刚刚故意弄坏的那类错误。</li>
+<li><strong>完成定义：</strong> 差异表清零、契约测试在 CI 里能红能绿、生成命令写进 <code>AGENTS.md</code>。</li>
+</ol>
+<h3>30.5 案例 E 手把手：运行时 / 框架大版本升级</h3>
+<ol>
+<li><strong>列命中点。</strong> 粘 §15 例子 E 的提示，让它先读官方迁移指南，输出 breaking changes × 仓库命中点清单。</li>
+<li><strong>开升级分支。</strong> 只动版本与直接相关的兼容点，一处兼容问题一个 commit。</li>
+<li><strong>双矩阵。</strong> 临时让 CI 同时跑旧版与新版（或在本地两个环境各跑全量），两个都绿才切默认。</li>
+<li><strong>分开配套依赖。</strong> 配套的小依赖另开 PR，不要裹进主升级。</li>
+<li><strong>冒烟与回滚。</strong> 核心路径冒烟脚本跑一遍；PR 里写清回滚命令与数据影响。</li>
+<li><strong>失败了怎么办。</strong> 用“一处一 commit”二分定位到具体改动；禁止靠到处加 <code>any</code>、关校验、吞异常混过去，看见就打回。</li>
+<li><strong>完成定义：</strong> 双矩阵全绿、冒烟通过、锁定文件只含必要变更、回滚说明可执行。</li>
+</ol>
+<h3>30.6 三工位（A/B/C）手把手：从派工到清理走一遍</h3>
+<p>（与 §17、§18 配合使用；这里是操作顺序。）</p>
+<ol>
+<li>你亲手写契约文件并 commit（§17）。</li>
+<li>在干净的主仓执行 §18.1 的 worktree 命令，跑 <code>git worktree list</code> 对数。</li>
+<li>三个窗口分别打开 a/b/c，各开新会话；粘 §18.2 的验身命令（三行），回贴给你核对。</li>
+<li>把三张工单（目标/范围/禁止/验收/交付五件事写全）分别粘进三个窗口。</li>
+<li>按 §18.3 的时间表巡检与做决策点：先绿的先预审不合入；A 越界直接 discard 该文件并新开会话；超时就按决策点 2 缩范围。</li>
+<li>每个工位交付后，在它自己的目录里跑三行收工检查（文件列表、stat、亲手重跑验收，见 §18 末或正文的“收工三眼”）。</li>
+<li>合并照 §18.4 抄：A 先合 → B rebase 后重跑它的验收再合 → C 最后合。</li>
+<li>另开一个新会话粘 §19 的只读审查票审总 diff，它说的问题你逐条决定改还是记债。</li>
+<li>清理照 §18.5 <code>git worktree remove</code> 三个目录、删分支。</li>
+<li><strong>失败分支速查：</strong> 两窗改同文件 → 停一窗、先验目录；B 测试被 A 的新签名弄红 → B 先 rebase 再改测试，禁止给测试加 <code>@Disabled</code> 蒙混；Agent 在 worktree 里自行 merge → 解开它的合并、回到你手里重合。</li>
+<li><strong>完成定义：</strong> 主线全绿、三个工位分支都已删、审查问题清零或已记为债、临时 worktree 目录不存在。</li>
+</ol>
+<h3>30.7 OpenAI Harness 案例的自用迷你版（在你的项目里一周搭起骨架）</h3>
+<p>大团队的全自动你学不来，但机制可以缩小：</p>
+<ol>
+<li><strong>把 AGENTS.md 砍成地图（30 分钟）。</strong> 只留约一屏：目录索引、构建/测试命令、禁止事项、到 <code>docs/</code> 的指针。</li>
+<li><strong>建 docs 骨架（1 小时）。</strong> <code>docs/</code> 放架构、当前计划（<code>exec-plans/active/</code>）、已知技术债清单；让 Agent 把散落在聊天里的三条决定誊进 docs 并 commit。</li>
+<li><strong>加一个机械校验（1 小时）。</strong> 给仓库加一个 CI 检查：文档链接失效、AGENTS.md 超长就红。规则从“希望它遵守”变成“不合就合不进来”。</li>
+<li><strong>每 worktree 可独立启动（半天）。</strong> 把本地启动写成一条命令写进 README/<code>init.sh</code>，并让日志能按时间/级别 grep；先做到你自己能一条命令起服务，再要求 Agent 用它自证。</li>
+<li><strong>试点一个过夜任务（可选）。</strong> 选一个有硬测试的小任务，限定最大轮次与只读起步，早上只看 PR 与测试输出。</li>
+<li><strong>失败了怎么办。</strong> Agent 总迷路 → 多半是 docs 缺索引，先补地图不要先加规则；它总复制坏模式 → 把那条品味写成 lint 并在报错里写明改法。</li>
+<li><strong>完成定义：</strong> 新人（或新会话）只读 AGENTS.md + docs 就能说清“在哪改、怎么验”；CI 能拦住过期文档；至少一个真实任务靠这套骨架跑完。</li>
+</ol>
+<h3>30.8 Agents SDK Skills 案例的自用迷你版（把一个重复活做成 Skill）</h3>
+<ol>
+<li><strong>挑活。</strong> 选你们每周至少做两次、且步骤固定的事（如发版检查、补测试、更文档）。</li>
+<li><strong>先口头跑一遍并记下命令。</strong> 把你脑子里的步骤写下来，特别标注“哪一步必须停下来给人看”。</li>
+<li><strong>落成 Skill 文件。</strong> 按你工具的技能格式建一个 <code>SKILL.md</code>（Claude Code 放在 <code>.claude/skills/&lt;名&gt;/</code>；Codex 对应 <code>.agents/skills/</code>）：写清触发条件（description 要具体到“当什么变更发生时”）、步骤、验收命令、交付格式。模型判断的部分留文字，机械重复的部分放 <code>scripts/</code>。</li>
+<li><strong>在 AGENTS.md 里写一条 if/then 强制路由。</strong> 例如：“动了运行时代码就跑 <code>$code-change-verification</code>（或对应命令名）。”没有这条，Skill 只是个摆设。</li>
+<li><strong>小步验证。</strong> 连用三天，记录它选错场景或漏步骤的次数；每次只改 description 或补一条禁止项，不要一次重写全部。</li>
+<li><strong>失败了怎么办。</strong> 不触发 → 改 description 的触发词；乱触发 → 把条件收紧到具体变更类型；步骤总漏最后一项 → 把那项做成脚本或拆成两个 Skill。</li>
+<li><strong>完成定义：</strong> 团队成员不用被提醒就会（被 AGENTS.md 要求）走这个 Skill；验收命令每次都真跑了；三天里无选错场景记录。</li>
+</ol>
+<h3>30.9 16-Agent 编译器案例的自用迷你版（在小项目上练任务锁并行）</h3>
+<p>不要在公司主仓无人值守地跑死循环；用一个练习仓或隔离环境：</p>
+<ol>
+<li><strong>备好硬验证器。</strong> 选一个有现成测试套件的小项目；先确认测试在未改代码时全绿，并让输出保持短（明细进文件、错误行带统一前缀如 <code>ERROR</code>）。</li>
+<li><strong>写任务清单。</strong> 把待办拆成小文件放进 <code>tasks/</code>（一件一文件），完成标准写在文件里。</li>
+<li><strong>上锁机制。</strong> 约定：Agent 开工先新建 <code>current_tasks/&lt;任务名&gt;.lock</code> 并 commit；两个 Agent 抢同一文件时以先到者为准，另一个换任务。做完删锁再提交成果。</li>
+<li><strong>两个窗口并行试点。</strong> 各开一个 worktree，分别认领不同任务；跑完在主仓合并，冲突由人解。</li>
+<li><strong>加采样防“跑测跑到天荒地老”。</strong> 明确要求“改动后先跑相关子集，合并前才跑全量”；若你的工具支持采样参数就用上，不支持就在票里写清子集范围。</li>
+<li><strong>失败了怎么办。</strong> 老是撞同一任务 → 任务太大，拆细；新提交弄坏旧测试 → 立刻把“不得弄坏已有测试”加成合并门禁并先修红；Agent 互相覆盖 → 回到锁与 worktree 检查。</li>
+<li><strong>完成定义：</strong> 两个任务并行完成且主线全绿；锁文件无残留；你能说出每个 Agent 分别改了哪些文件。</li>
+</ol>
+<h3>30.10 多 Agent Research 案例的自用迷你版（用它做一次技术选型调研）</h3>
+<ol>
+<li><strong>定问题与产出格式。</strong> 例：“为我们的日志系统在 A/B 两个库之间选型”，并要求最终表：结论、证据链接、风险、待验证项。</li>
+<li><strong>Lead 先写计划。</strong> 只开一个主会话，让它把问题拆成 3–4 个子问题（性能、维护状态、与现有栈的兼容、迁移成本），每个子问题写清要查什么、输出几行结论。</li>
+<li><strong>子 Agent 并行查。</strong> 按 §1 的办法把每个子问题派给一个子 Agent 或并行会话，明确“只返回结论 + 证据链接，不返回整页复制”。</li>
+<li><strong>Lead 汇总与质疑。</strong> 让 Lead 专门找子结论之间的矛盾与缺证处，缺的再派一轮，不要直接拼成最终稿。</li>
+<li><strong>你定板。</strong> 看表做决定，把决定与理由写进 <code>docs/</code> 或 ADR；这一步永远是人做。</li>
+<li><strong>失败了怎么办。</strong> 结论互相打架 → 多半是子任务边界重叠，收紧每个子问题的范围重派一轮；全是泛泛而谈 → 要求每条结论必须带可点证据，无证据的删掉。</li>
+<li><strong>完成定义：</strong> 一张可决策的表 + 每个结论有证据 + 决定已落盘； token 花费心里有数（并行不是免费的）。</li>
+</ol>
+<h3>30.11 dotnet/runtime 案例的自用迷你版（用云端 Coding Agent 清一小摞债）</h3>
+<ol>
+<li><strong>备料。</strong> 从你的 backlog 里挑 10 个边界清楚的小 issue（补测试、修明确 Bug、文档），每个都写清验收标准。</li>
+<li><strong>先试点一个。</strong> 把 1 个 issue 指派给云端 Agent（在 GitHub 上把 issue 指派给 Copilot 编码 Agent，或用你工具的无头/云端模式），等它开 PR。</li>
+<li><strong>按人类标准审。</strong> 跑 CI、按 §5 清单审 diff、该打回就打回，并统计：一次过 / 需返工 / 直接关闭。</li>
+<li><strong>扩到十个并算账。</strong> 10 个都走完，算你的真实合并率与平均审查分钟数；低于预期就缩小 issue 粒度再试，而不是加大批量。</li>
+<li><strong>沉淀。</strong> 哪类 issue 合并率最高，把那类固化为常用派工模板；合并率低的类型退回人做。</li>
+<li><strong>失败了怎么办。</strong> PR 太大审不动 → issue 拆到一两个文件级；总改错方向 → 验收标准写得不够可执行，先补测试再派。</li>
+<li><strong>完成定义：</strong> 有一份你自己的数字（派了 N 个、合了几个、平均审多久），而不是“感觉还不错”；机器人 PR 与人 PR 同一套门禁、无自动合并。</li>
+</ol>
+<h3>30.12 Cursor 工作流案例的自用迷你版（计划 + TDD 五步跑一个小功能）</h3>
+<ol>
+<li><strong>Plan。</strong> 打开 Plan 模式（<code>Shift+Tab</code>），让它调研并产出计划；计划存进工作区（如 <code>.cursor/plans/</code>），你亲手删掉多余步骤、补上它漏的约束后再批准。</li>
+<li><strong>TDD 第 1–2 步。</strong> 让它只写测试并明说处于 TDD、不要写假实现；跑测试确认全红，此刻只许动测试。</li>
+<li><strong>提交测试。</strong> 测试红得理直气壮时先 commit 测试（这一步别省，日后证明它没偷改测试靠的就是它）。</li>
+<li><strong>TDD 第 3–4 步。</strong> 让它写实现且禁止改测试，迭代到全绿；真需要改测试，必须先停下来给你理由。</li>
+<li><strong>提交实现并开 PR。</strong> 用你流程里的办法开 PR（如沉淀好的 <code>/pr</code> 命令：看 diff → 写提交信息 → <code>gh pr create</code>），PR 里贴测试输出。</li>
+<li><strong>失败了怎么办。</strong> 实现越改越歪 → 不要继续追提示，回滚到计划、把计划改具体后重跑；它偷改测试 → 用第 3 步的提交对 diff，当场打回。</li>
+<li><strong>完成定义：</strong> 计划文件还在仓库里、测试先于实现的两个提交都在、全绿、PR 可审。</li>
+</ol>
+<p>十二个流程都走完一遍，你对 Agent 的体感会从“有时神有时坑”变成“我清楚它在哪一步会坑、我在哪一步设了卡”。那正是这本手册前面所有原则存在的理由。</p>

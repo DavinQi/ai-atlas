@@ -646,3 +646,132 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 </tbody>
 </table>
 <p>Read cases as moves, not stories: copy exactly <strong>one</strong> practice from a case, run it until it is boring, then take the next. That is the rhythm every team above shares — fix the environment and the verifier first, and the model's capability gets amplified on its own.</p>
+<h2>30. Hand-holding walkthroughs: run every case once, step by step</h2>
+<p>The earlier sections explain <em>why</em> and <em>what to watch</em>. This one is only <em>how</em>: every case is broken into numbered steps with paste-ready prompts, commands to run, green/red signals, what to do when a step fails, and a definition of done. Replace <code>&lt;...&gt;</code> placeholders with your repo's real commands. <strong>Work one case at a time; do not stockpile parallel attempts.</strong></p>
+<h3>30.1 Case A walkthrough: order filter (frontend + API + database)</h3>
+<ol>
+<li><strong>Branch and task file.</strong> <code>git switch -c feat/order-status-filter</code>; create <code>SPEC.md</code> using the Step-1 prompt from Example A in §7, review the contract draft line by line, resolve its questions yourself, finalise and commit <code>SPEC.md</code>.</li>
+<li><strong>Backend red.</strong> Paste the Step-2 prompt, tests only. Check the transcript: failures must appear <em>before</em> any implementation. If it starts implementing, send it back with: &quot;Tests only. Show me red.&quot;</li>
+<li><strong>Backend green.</strong> Run <code>&lt;test&gt; &lt;typecheck&gt; &lt;lint&gt;</code> (the full stack, not just the files it mentions). Then hit the local endpoint with curl and compare status and fields against <code>SPEC.md</code> character for character.</li>
+<li><strong>Frontend wiring.</strong> Paste the Step-3 prompt. Do not accept a screenshot: click through it yourself, refresh, confirm the URL parameter persists and the list still matches.</li>
+<li><strong>End to end.</strong> Paste the Step-4 prompt for the e2e test; run the full suite and build once each.</li>
+<li><strong>When it fails.</strong> Field mismatch between layers → go back to <code>SPEC.md</code> and find who deviated; never let both sides &quot;meet in the middle&quot;. Flaky e2e → make it determine timing-vs-real-bug before any re-run.</li>
+<li><strong>Done when:</strong> contract, backend, frontend and e2e tests are all green; <code>git diff --stat</code> contains nothing outside the contract; the PR carries the test commands and output.</li>
+</ol>
+<h3>30.2 Case B walkthrough: intermittent checkout 500s</h3>
+<ol>
+<li><strong>Collect evidence first.</strong> Prepare one hour of error logs and one traceId; paste the prompt from Example B, §7. Hard rule: evidence chain and ranked hypotheses only — <strong>no code changes</strong>.</li>
+<li><strong>Pick a hypothesis.</strong> From its 2–3, choose the most likely one that is also falsifiable; have it state what observation would prove it wrong.</li>
+<li><strong>Reproduce locally.</strong> Constructed data, local or test environment. No reproduction → back to Step 2 with the next hypothesis; do not start fixing.</li>
+<li><strong>Regression test.</strong> Turn the reproduction into an automated test and confirm it is red.</li>
+<li><strong>Fix the root cause.</strong> Touch only what the hypothesis points at; regression test goes green, then the full suite.</li>
+<li><strong>When it fails.</strong> New redness elsewhere after the fix → it likely fixed a symptom or touched shared logic; inspect the diff and split unrelated changes out.</li>
+<li><strong>Done when:</strong> the regression test can be shown red→green; full suite green; the PR states the root cause, links the evidence chain, and records how the next occurrence gets diagnosed in five minutes (which log/alert was added).</li>
+</ol>
+<h3>30.3 Case C walkthrough: rename <code>status</code> → <code>state</code> across layers</h3>
+<ol>
+<li><strong>Map the blast radius.</strong> A read-only agent searches the whole repo for reads/writes of <code>status</code>; you mark which hits are in scope and which are unrelated namesakes.</li>
+<li><strong>PR1 (expand).</strong> New column, dual writes, API returns both fields, frontend untouched; write &quot;this PR deletes nothing&quot; into the prompt. Verify: old tests green, new field populated.</li>
+<li><strong>Merge PR1 and observe.</strong> Deploy to a test environment (or dual-run locally); confirm dual writes agree before opening PR2. No agreement evidence, no next step.</li>
+<li><strong>PR2 (switch).</strong> Frontend reads the new field; a codemod rewrites in-repo references in bulk; the agent handles only files the tool failed on. Verify: <code>&lt;typecheck&gt;</code> + full suite + clicking the core pages.</li>
+<li><strong>PR3 (contract).</strong> Only with evidence of zero traffic on the old field (log/metric proof attached to the PR) do you drop the column and compatibility code; rollback notes go in the migration and PR.</li>
+<li><strong>When it fails.</strong> Dual writes disagree → stop at PR1 and fix write paths (hunt cron jobs and the other service); never jump to PR2 and &quot;adapt&quot; in the frontend to hide it.</li>
+<li><strong>Done when:</strong> three independently revertible PRs; the old field was deleted only with zero-traffic evidence; a final repo search finds no business references to the old name.</li>
+</ol>
+<h3>30.4 Case D walkthrough: frontend/backend contract drift</h3>
+<ol>
+<li><strong>Diff table only.</strong> Paste the prompt from Example D, §15; output is a table, no code. Review its &quot;which side is wrong&quot; column yourself.</li>
+<li><strong>Pick the source of truth.</strong> OpenAPI/proto, or backend behaviour — decide and record it in the repo's contract notes.</li>
+<li><strong>Fix generation or implementation (one only).</strong> Generated files come only from the generate command; hand edits are forbidden.</li>
+<li><strong>Add contract tests.</strong> Schema-validate public endpoint responses; wire into CI.</li>
+<li><strong>Break it on purpose.</strong> Locally mistype one field, run the contract tests in CI, confirm red, revert.</li>
+<li><strong>When it fails.</strong> The schema gets loosened &quot;to go green&quot; → send back; contract tests must catch exactly the class of break you planted in Step 5.</li>
+<li><strong>Done when:</strong> the diff table is empty, contract tests demonstrably go red and green, and the generate command is documented in <code>AGENTS.md</code>.</li>
+</ol>
+<h3>30.5 Case E walkthrough: runtime / framework major upgrade</h3>
+<ol>
+<li><strong>List the hits.</strong> Paste the prompt from Example E, §15; it reads the official migration guide and outputs breaking changes × locations in your repo.</li>
+<li><strong>Upgrade branch.</strong> Version bump plus directly related compatibility fixes only; one commit per compatibility fix.</li>
+<li><strong>Dual matrix.</strong> CI temporarily runs old and new (or run the full suite in both environments locally); switch the default only when both are green.</li>
+<li><strong>Companion dependencies separately.</strong> Small companion bumps get their own PRs, never bundled into the main upgrade.</li>
+<li><strong>Smoke and rollback.</strong> Core-path smoke script passes; the PR documents rollback commands and data impact.</li>
+<li><strong>When it fails.</strong> Bisect using the one-fix-per-commit history; drive-bys are vetoed — no sprinkling <code>any</code>, disabling checks or swallowing exceptions to pass.</li>
+<li><strong>Done when:</strong> dual matrix green, smoke passes, lockfile contains only necessary changes, rollback is executable as written.</li>
+</ol>
+<h3>30.6 The three-station (A/B/C) walkthrough, end to end</h3>
+<p>(Companion to §§17–18; this is the operating order.)</p>
+<ol>
+<li>You write the contract file and commit it (§17).</li>
+<li>From a clean main checkout, run the §18.1 worktree commands; verify with <code>git worktree list</code>.</li>
+<li>Open a/b/c in three windows with fresh sessions; paste the three-line identity check (§18.2) and have each report back.</li>
+<li>Paste the three tickets (goal / allowed paths / prohibitions / acceptance / delivery — all five parts) into their windows.</li>
+<li>Run the §18.3 schedule and its decision points: early finishers get pre-review only; A out-of-bounds → discard the file and open a fresh session; timeout → shrink scope per Decision 2.</li>
+<li>On each delivery, in that station's own directory, run the three closing checks (file list, stat, re-run acceptance with your own hands).</li>
+<li>Merge by copying §18.4: A first → B rebases, re-runs its acceptance, merges → C last.</li>
+<li>Open a brand-new session, paste the read-only review ticket from §19 over the total diff, and decide per finding: fix now or record as debt.</li>
+<li>Clean up with §18.5: <code>git worktree remove</code> all three, delete branches.</li>
+<li><strong>Failure branches:</strong> two windows editing the same file → stop one, re-verify directories; B's tests broken by A's new signature → B rebases first, then adjusts tests (adding <code>@Disabled</code> to sneak past is forbidden); an agent merging inside its own worktree → unwind it and re-merge by hand.</li>
+<li><strong>Done when:</strong> main is green, all three station branches are deleted, review findings are cleared or recorded as debt, and no temp worktree directories remain.</li>
+</ol>
+<h3>30.7 The OpenAI Harness case, miniaturised (one week to a skeleton in your project)</h3>
+<p>You cannot copy a large team's full autonomy, but the mechanics shrink:</p>
+<ol>
+<li><strong>Cut AGENTS.md to a map (30 min).</strong> One screen: index, build/test commands, forbidden zones, pointers into <code>docs/</code>.</li>
+<li><strong>Scaffold docs (1 hour).</strong> <code>docs/</code> holds architecture, the current plan (<code>exec-plans/active/</code>), and a known-tech-debt list; have the agent transcribe three decisions from chat into docs and commit them.</li>
+<li><strong>Add one mechanical check (1 hour).</strong> CI fails on dead doc links or an over-length AGENTS.md. The rule changes from &quot;please obey&quot; to &quot;cannot merge&quot;.</li>
+<li><strong>Boot-anywhere worktrees (half a day).</strong> One command starts the local stack (in README/<code>init.sh</code>), logs greppable by time/level. Get <em>yourself</em> to one-command boot first, then require the agent to prove its work with it.</li>
+<li><strong>Pilot one overnight task (optional).</strong> Pick a small task with hard tests, cap the turns, start read-only, and review only the PR and test output in the morning.</li>
+<li><strong>When it fails.</strong> The agent keeps getting lost → usually the docs lack an index; fix the map before adding rules. It keeps copying a bad pattern → encode that taste as a lint whose error message states the fix.</li>
+<li><strong>Done when:</strong> a newcomer (or fresh session) reading only AGENTS.md + docs can say where to change and how to verify; CI blocks stale docs; at least one real task has completed on this skeleton.</li>
+</ol>
+<h3>30.8 The Agents SDK Skills case, miniaturised (one recurring job becomes a Skill)</h3>
+<ol>
+<li><strong>Pick the job.</strong> Something done at least twice a week with fixed steps (release checks, test backfill, doc updates).</li>
+<li><strong>Run it once by hand and note commands.</strong> Write down your in-head steps, marking exactly where a human must look before continuing.</li>
+<li><strong>Write the Skill file.</strong> In your tool's skill format, create <code>SKILL.md</code> (Claude Code: <code>.claude/skills/&lt;name&gt;/</code>; Codex: <code>.agents/skills/</code>): a specific trigger (<code>description</code> that says <em>when</em> — which change types), steps, acceptance commands, delivery format. Judgement stays as prose; mechanical repetition goes into <code>scripts/</code>.</li>
+<li><strong>Add one if/then route in AGENTS.md.</strong> E.g. &quot;when runtime code changes, run <code>$code-change-verification</code> (or your command name).&quot; Without this line the Skill is decoration.</li>
+<li><strong>Validate in small steps.</strong> Use it for three days; log every wrong-trigger or missed step; fix only the <code>description</code> or add one prohibition per iteration — never rewrite everything at once.</li>
+<li><strong>When it fails.</strong> Never triggers → sharpen trigger words in <code>description</code>; triggers wrongly → narrow to specific change types; always drops the last step → script that step or split into two Skills.</li>
+<li><strong>Done when:</strong> the team runs the Skill because AGENTS.md requires it, acceptance commands genuinely execute every time, and three days pass with no wrong-trigger log entries.</li>
+</ol>
+<h3>30.9 The 16-agent compiler case, miniaturised (task locks on a small project)</h3>
+<p>Do not run unsupervised infinite loops on a company main repo; use a practice repo or isolated environment:</p>
+<ol>
+<li><strong>Prepare a hard verifier.</strong> Pick a small project with an existing test suite; confirm the suite is green on untouched code, with short output (detail in files, error lines carrying a uniform prefix like <code>ERROR</code>).</li>
+<li><strong>Write the task list.</strong> Split the work into small files under <code>tasks/</code> (one item per file), each stating its own completion check.</li>
+<li><strong>Locking convention.</strong> Starting work means creating <code>current_tasks/&lt;task&gt;.lock</code> and committing it; first claim wins, the other agent picks a different task. Finish: delete the lock, commit the work.</li>
+<li><strong>Two-window parallel pilot.</strong> One worktree each, different tasks claimed; you merge in the main checkout and resolve conflicts yourself.</li>
+<li><strong>Sampling against &quot;testing forever&quot;.</strong> State explicitly: &quot;after a change run the relevant subset; the full suite runs only before merge&quot; — use a sampling flag if your tooling has one, otherwise name the subset in the ticket.</li>
+<li><strong>When it fails.</strong> Constant collisions → tasks too big, split them; new commits breaking old tests → promote &quot;never break existing tests&quot; to a merge gate and fix red first; agents overwriting each other → back to lock and worktree checks.</li>
+<li><strong>Done when:</strong> two tasks finished in parallel with main green, no lock files remain, and you can state which files each agent touched.</li>
+</ol>
+<h3>30.10 The multi-agent research case, miniaturised (run one tech-selection study)</h3>
+<ol>
+<li><strong>Fix the question and output shape.</strong> E.g. &quot;choose between libraries A and B for our logging&quot;; final table required: recommendation, evidence links, risks, open verification items.</li>
+<li><strong>The Lead writes the plan.</strong> One main session decomposes into 3–4 sub-questions (performance, maintenance status, fit with the existing stack, migration cost), each with what to check and a conclusion of a few lines.</li>
+<li><strong>Subagents search in parallel.</strong> Delegate each sub-question (§1 style) with &quot;return conclusions + evidence links only, no full-page copies&quot;.</li>
+<li><strong>The Lead synthesises and challenges.</strong> It must hunt contradictions and missing evidence between sub-conclusions; gaps trigger one more targeted round instead of being pasted over.</li>
+<li><strong>You decide.</strong> Read the table, decide, and write the decision and reasons into <code>docs/</code> or an ADR. This step is always human.</li>
+<li><strong>When it fails.</strong> Conclusions contradict → sub-question boundaries overlapped; tighten scopes and re-dispatch one round. All generic → require a clickable source per claim; unsourced claims get deleted.</li>
+<li><strong>Done when:</strong> one decision-ready table, every claim sourced, the decision on disk — and you know what the tokens cost (parallel is not free).</li>
+</ol>
+<h3>30.11 The dotnet/runtime case, miniaturised (clear a small debt pile with a cloud coding agent)</h3>
+<ol>
+<li><strong>Prepare the pile.</strong> Pick 10 small, well-bounded issues from your backlog (test backfill, clear bugs, docs), each with executable acceptance criteria.</li>
+<li><strong>Pilot exactly one.</strong> Assign a single issue to the cloud agent (in GitHub, assign the issue to the Copilot coding agent; or use your tool's headless/cloud mode) and wait for its PR.</li>
+<li><strong>Review to human standards.</strong> Run CI, review the diff against the §5 checklist, send back what fails, and record: merged as-is / needed rework / closed.</li>
+<li><strong>Scale to ten and do the maths.</strong> After all ten, compute your real merge rate and average review minutes; if it disappoints, shrink issue granularity instead of raising volume.</li>
+<li><strong>Sediment.</strong> Whichever issue type merges best becomes your standard dispatch template; low-yield types go back to humans.</li>
+<li><strong>When it fails.</strong> PRs too big to review → split issues to one-or-two-file scope; consistently wrong direction → the acceptance criteria were not executable; add tests before dispatching.</li>
+<li><strong>Done when:</strong> you hold your own numbers (dispatched N, merged how many, average review time) instead of &quot;feels fine&quot; — and bot PRs pass the same gates as human PRs, with no auto-merge.</li>
+</ol>
+<h3>30.12 The Cursor workflow case, miniaturised (plan + TDD five-step on one small feature)</h3>
+<ol>
+<li><strong>Plan.</strong> Enter Plan Mode (<code>Shift+Tab</code>); have it research and produce a plan; save the plan into the workspace (e.g. <code>.cursor/plans/</code>), delete surplus steps and add constraints it missed before approving.</li>
+<li><strong>TDD steps 1–2.</strong> It writes tests only, explicitly told it is TDD and must not fake implementations; run tests, confirm all red; tests-only edits allowed now.</li>
+<li><strong>Commit the tests.</strong> While they are honestly red, commit them (never skip this; it is later your proof the tests were not quietly edited).</li>
+<li><strong>TDD steps 3–4.</strong> It implements with tests frozen, iterating to green. If a test truly must change, it stops and gives you the reason first.</li>
+<li><strong>Commit the implementation and open the PR</strong> with your usual flow (e.g. a sedimented <code>/pr</code> command: inspect diff → write the message → <code>gh pr create</code>), pasting test output into the PR.</li>
+<li><strong>When it fails.</strong> Implementation spiralling → do not keep prompting; revert to the plan, sharpen it, re-run. It quietly edits tests → diff against the Step-3 commit and send back on sight.</li>
+<li><strong>Done when:</strong> the plan file is still in the repo, the tests-before-implementation commits both exist, everything is green, and the PR is reviewable by a human in one sitting.</li>
+</ol>
