@@ -1634,6 +1634,11 @@
           "chapter": 4,
           "article": "ch04/02-context-engineering",
           "diagram": 23
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
         }
       ],
       "core": {
@@ -2301,6 +2306,11 @@
           "chapter": 6,
           "article": "ch06/05-open-questions",
           "diagram": 39
+        },
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
         }
       ],
       "core": {
@@ -3063,6 +3073,22 @@
         }
       ],
       "date": "2026-01-26"
+    },
+    {
+      "id": "R132",
+      "title": "The lethal trifecta for AI agents: private data, untrusted content, and external communication",
+      "authors": "Simon Willison",
+      "year": 2025,
+      "date": "2025-06-16",
+      "url": "https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/",
+      "type": "doc",
+      "supports": [
+        {
+          "chapter": 4,
+          "article": "ch04/08-agent-maintenance-workflow",
+          "diagram": 29
+        }
+      ]
     }
   ]
 }

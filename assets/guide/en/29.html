@@ -1,114 +1,208 @@
-<h1>Maintaining Code with AI Agents: A Seven-Step Loop That Is Small, Verifiable and Traceable</h1>
+<h1>Hands-on Playbook: How Senior Engineers Use AI Agents on Real Full-Stack Maintenance</h1>
 <blockquote>
 <p>Companion to diagram #29 · Chapter 4 &quot;AI Coding Today&quot;</p>
 </blockquote>
-<p>The previous diagram was about laying the foundation in one week. This one goes a step further: once the foundation exists, how do you actually work with an agent while <strong>maintaining a real repository day to day</strong>? It is written for two kinds of readers: people just starting with Claude Code, Codex, Cursor or Copilot, and experienced engineers who already use them but find the results hit-and-miss.</p>
-<p>The short version: the difference between people who get a lot out of agents and people who don't is not how many commands they know. It is whether they have a <strong>closed loop</strong>. Anthropic's own best-practice guide puts it first: give the agent a check it can run itself (tests, a build, a screenshot to compare). That is the difference between a session you have to watch and one you can walk away from. Karpathy said it even more directly in his widely shared notes from early 2026: don't tell it what to do, give it success criteria and watch it go; get it to write tests first and then pass them. The seven steps below are built around that loop.</p>
-<h2>1. The seven-step loop</h2>
-<p><strong>Step 0: a project map.</strong> Put a guide for the agent at the repository root: <code>AGENTS.md</code> (read by Codex, Cursor and Copilot) or <code>CLAUDE.md</code> (Claude Code; recent versions also read AGENTS.md when there is no CLAUDE.md). You don't have to write it from scratch. Both Claude Code and Codex have <code>/init</code>, which scans the repository and drafts one. Your job is to cut and add: how to install dependencies, how to run tests, directory conventions, what must never be touched.</p>
-<p>Keep it short. The official docs name a failure pattern called &quot;the over-specified CLAUDE.md&quot;: when the file is too long, the important rules get lost in the noise. The test is simple: if the agent would not make a mistake without a given line, delete the line. Boris Cherny, who created Claude Code, has described how his team does it: after every correction, end with &quot;update CLAUDE.md so you don't make that mistake again&quot;, and keep pruning until the mistake rate measurably drops. The file grows out of real mistakes rather than being written as a rulebook in one go.</p>
-<p><strong>Step 1: read-only exploration.</strong> When you pick up unfamiliar code, the first move is not to have the agent change it but to have it explain it. Ask directly: &quot;Where does the login request come in, and which files does it pass through?&quot; &quot;Who calls this function?&quot; &quot;Why is there a lock here?&quot; These are the questions a new hire would normally ask a senior colleague. Ask the agent first, then check the files and line numbers it gives you with your own eyes.</p>
-<p><strong>Step 2: plan first.</strong> Whenever a change touches several files, you are unsure of the approach, or you don't know the code well, start in plan mode. In both Claude Code and Cursor you press <code>Shift+Tab</code> in the input box to switch. In plan mode the agent reads but does not write, and ends with a plan. A good plan answers three questions: which files change, in what order, and <strong>how we will prove it is right</strong>. Conversely, if you can describe the whole diff in one sentence (fix a typo, add a log line), skip the plan; the official docs say plainly that planning has overhead.</p>
-<p>The Claude Code team's experience is to pour effort into the plan so the implementation lands in one shot, and the moment the implementation goes sideways, don't keep pushing: switch back to plan mode and re-plan. Some open a second session and have it review the plan as a staff engineer.</p>
-<p><strong>Step 3: small steps.</strong> Have the agent do one thing at a time. Not because it can't do big things, but because <strong>you can't review big diffs</strong>. You can read a 50-line diff line by line; with a 2,000-line diff you will just click accept. The typical mistakes Karpathy describes live exactly there: making wrong assumptions on your behalf and running with them, overcomplicating code, changing comments and code it doesn't understand as a side effect. With small steps, each of these surfaces at the step where it happens.</p>
-<p><strong>Step 4: run the checks.</strong> This is the heart of the loop, marked in orange on the diagram. Put &quot;run the tests, the build and the linter&quot; into the task itself, and let the agent read the results and fix things until they pass. Then ask it for <strong>evidence</strong>: the command it ran and what it returned, not just &quot;done&quot;. Reviewing evidence is much faster than re-running everything yourself.</p>
-<p><strong>Step 5: review the diff.</strong> Only after the machine's gates pass is it a person's turn. You are not reading for syntax. You are looking for changes outside the task, deletions that shouldn't have happened, and simpler ways to do the same thing. A favourite move on Boris's team is to make the agent quiz you: &quot;Grill me on these changes and don't make a PR until I pass.&quot; Or, after a mediocre fix: &quot;Knowing everything you know now, scrap this and implement the elegant solution.&quot; Another option is to open a clean session or a subagent whose only job is to find faults. The context that wrote the code should not be the one judging it.</p>
-<p><strong>Step 6: commit and open a PR.</strong> Have the agent write a clear commit message and open the PR, then let CI guard the gate once more. At Anthropic, the first round of review on every PR is done by Claude, running non-interactively as <code>claude -p</code> inside a GitHub Action; the Codex equivalent is <code>codex exec</code>. By the time a person opens the PR, the low-level issues have already been filtered once.</p>
-<h2>2. Applying it to four common jobs</h2>
-<p><strong>Fixing a bug.</strong> Have the agent write a test that reproduces the problem, confirm that the test fails, then fix until it passes. &quot;Fails first&quot; matters: a test that has never failed proves nothing. Paste logs, stack traces and CI output in directly; they are more accurate than your paraphrase. Boris's team sometimes just says &quot;go fix the failing CI tests&quot; and doesn't prescribe how.</p>
-<p><strong>Refactoring.</strong> First add tests that pin the current behaviour, then change things in batches. Run the tests and commit after each batch so you can roll back precisely. Remind the agent explicitly that behaviour must not change, and watch in review for any &quot;improvements&quot; it slipped into the business logic.</p>
-<p><strong>Upgrading dependencies.</strong> Have it read the changelog of the target version and list the call sites that might be affected, then bump one dependency at a time and run the full suite after each. Bundling several major upgrades into one PR is the hardest thing to review and the hardest to roll back.</p>
-<p><strong>Writing docs.</strong> Let the agent read the code and draft the README, API notes or architecture notes, and check the facts yourself. Agents write docs fast, but they will also state plausible-sounding things as fact, so anything involving version numbers, commands or defaults should actually be run.</p>
-<h2>3. The few moves worth memorising</h2>
-<p>Every tool has many commands, and they change quickly. In day-to-day maintenance only a handful are used constantly, and the ideas carry across tools:</p>
+<p>This is written for people who already own a system. Your question is no longer &quot;how do I get it to write a function?&quot; but, facing a legacy codebase that spans frontend, backend, data and deployment, &quot;how do I plug an agent into my existing engineering discipline&quot; — letting it do the legwork and the exploring without letting it bypass your architectural constraints, test contracts and review process. The examples are full-stack throughout: one requirement usually touches the API, the database, frontend state and CI at the same time, and the seams between those layers are exactly where agents fail.</p>
+<h2>0. Five-minute alignment: the minimal loop</h2>
+<p>If you have no habits yet, memorise one chain; everything below is an elaboration of it: <strong>rule file first → read-only exploration → spec/plan → small steps → machine verification → human diff review → PR and CI</strong>. One branch and one session per task; if it is still wrong after two corrections, clear the context and start over; &quot;done&quot; without test output is not done. Beginners should keep asking <em>why</em>; senior engineers put their effort at the two ends — constraints and acceptance criteria up front, evidence and review at the back. The rest of this article assumes you can do this and focuses on scale, automation, and staying in control in a large codebase.</p>
+<h2>1. Context engineering: the right information, not the most information</h2>
+<p>Anthropic's <em>Effective context engineering for AI agents</em> states the problem clearly: context is a finite resource with an &quot;attention budget&quot;, and the more tokens you add, the worse the model's recall of what is in there — context rot. So the senior move is not to stuff the whole repository in; it is to layer it, fetch on demand, and keep it disposable.</p>
+<p><strong>Layer 1: the root rule file holds only invariants.</strong> <code>AGENTS.md</code> / <code>CLAUDE.md</code> contains what is true everywhere: how to install dependencies, how to run tests and builds, directory and layering conventions, and prohibitions (never edit migration files, never bypass the auth middleware, and so on). Rule of thumb: if deleting a line would not cause a mistake, delete the line. Anthropic's own best-practice guide names &quot;the over-specified CLAUDE.md&quot; as a classic failure mode — the longer the file, the more the critical constraints drown.</p>
+<p><strong>Layer 2: shard by directory.</strong> A large repo should not be governed by one giant file. Put local conventions in per-directory rule files (idempotency rules for the payments module, component conventions for the frontend) so the agent loads them only when it enters that code. Claude Code loads CLAUDE.md files from subdirectories on demand, Cursor scopes <code>.cursor/rules/</code> by file pattern, Copilot reads <code>.github/copilot-instructions.md</code> plus the nearest AGENTS.md. The mechanisms differ; the idea is the same: <strong>global rules state invariants, local rules stay local.</strong></p>
+<p><strong>Layer 3: personal preferences and secrets never enter committed rules.</strong> Local overrides (e.g. <code>CLAUDE.local.md</code>) hold personal habits; tokens, internal addresses and production details are never written anywhere the model will read and git will keep.</p>
+<p><strong>Let rules grow out of corrections.</strong> The practice the Claude Code team is most often quoted for: after every correction, add &quot;write this into the rule file so it doesn't happen again&quot;, then prune regularly. Rules then carry the scars of real incidents instead of reading like a constitution written in one sitting. Pair this with periodic audits: delete rules that have not fired in a month, and promote anything you keep reminding it about into a hook or a test (next section). Whatever a machine can enforce should not live in a prompt.</p>
+<p><strong>Concrete budget moves:</strong></p>
+<ul>
+<li><strong>Just-in-time retrieval, not pre-loading.</strong> Let the agent search for files and read only the fragments it needs; read big files by range; look at log tails and filtered output. Anthropic calls this just-in-time context: keep identifiers (paths, queries, links) in context and fetch the content when needed.</li>
+<li><strong>Isolate dirty work in subagents.</strong> Wide searches, reading forty files to find a call chain, an independent review pass — these burn large amounts of intermediate tokens. Delegate them to a subagent (Claude Code's <code>.claude/agents/</code>, or simply instructing &quot;use a subagent to investigate&quot;) so the main session receives only a one-to-two-thousand-token conclusion. On Boris Cherny's team this is the main technique for keeping the primary context clean.</li>
+<li><strong>Compact long sessions deliberately.</strong> Near the limit, use <code>/compact</code> with a focus (&quot;keep architectural decisions, unresolved failures, and the list of files changed; drop tool outputs&quot;). More robust than compaction is <strong>externalised notes</strong>: keep the plan, decisions and progress in <code>PLAN.md</code> / <code>NOTES.md</code> inside the repo. Context can be thrown away; the file survives, and a fresh session reads it and continues.</li>
+<li><strong><code>/clear</code> when you switch tasks.</strong> Two of the most common failure patterns in the official docs — the &quot;kitchen sink session&quot; and &quot;correcting over and over&quot; — both come from not clearing. Two failed corrections mean your first prompt was missing information; rewriting it with the lesson included is cheaper than coaxing a polluted context.</li>
+</ul>
+<h2>2. Parallel agents and long-running tasks: worktrees, orchestration, checkpoints</h2>
+<p>Parallelism is the most-cited productivity unlock, and also the fastest way to multiply your review debt. The Claude Code team's published practice is 3–5 git worktrees at once, each with its own session; Claude Code's <code>claude -w &lt;name&gt;</code> starts a session directly in a worktree. Three things matter in practice:</p>
+<ol>
+<li><strong>Tasks must be genuinely independent.</strong> Good candidates: bugs in different modules, competing design explorations, writing tests separately from fixing the implementation. Bad candidate: a refactor where one person must make sequential decisions along a single call chain — splitting it only manufactures merge conflicts.</li>
+<li><strong>Worktrees isolate files, not runtime.</strong> Ports, databases, caches and secrets are still shared. When running full-stack services in parallel, give each worktree its own port range and test database (or schema), and write it in the rule file. Otherwise you will spend an afternoon chasing a &quot;ghost bug&quot; that is actually another agent's server answering your requests.</li>
+<li><strong>Pick the orchestration pattern per task.</strong> Four common shapes: fan-out exploration (several subagents investigate, one summary), racing (two or three attempts at the same task, keep the cleanest diff), pipeline (explore → implement → review as separate roles), and lead-and-workers (the main session holds the plan, subagents do the work). The senior consensus: the number of parallel agents is set by your <strong>review bandwidth</strong>, not by your quota. If you can't review it, drop to two.</li>
+</ol>
+<p><strong>For long tasks (hours, multiple sessions), keep state in files, not in the conversation:</strong></p>
+<ul>
+<li><code>SPEC.md</code>: goal, explicit non-goals, the interface contract, acceptance criteria as an executable checklist.</li>
+<li><code>PLAN.md</code>: steps with status; tick each off and commit when done. Git commits are your checkpoints — rolling back to the last green commit is far more reliable than asking the conversation to &quot;undo that&quot;.</li>
+<li>Resume protocol: a new session's first instruction is to read SPEC/PLAN and the recent git log, restate where things stand and what the next step is, and only then start. This one step blocks most &quot;it forgot what we decided&quot; drift.</li>
+</ul>
+<h2>3. Codifying experience: custom commands, hooks, MCP</h2>
+<p><strong>Custom commands / skills: turn daily operations into assets.</strong> Anything you do twice a day deserves to be codified: release checks, tech-debt sweeps, PR descriptions in your team's format. In Claude Code these live in <code>.claude/skills/</code> (or the older <code>.claude/commands/</code>) and take arguments via <code>$ARGUMENTS</code>; write them as &quot;steps + acceptance&quot;, and commit them so the whole team shares them. A tech-debt command skeleton you can adapt:</p>
+<pre><code class="language-markdown">---
+description: Scan for duplicated code and stale workarounds; output an actionable cleanup list
+disable-model-invocation: true
+---
+Find duplicated implementations, commented-out old code, and TODO/FIXME markers
+older than 30 days in this repository. Sort by blast radius, smallest first;
+give file, line and a suggested action for each. Output the list only; do not edit code.
+</code></pre>
+<p><strong>Hooks: turn &quot;should&quot; into &quot;must&quot;.</strong> Rules in a prompt rely on the model's goodwill; hooks are executed by the program. Claude Code hooks are configured in <code>.claude/settings.json</code>; the three that earn their keep:</p>
+<ul>
+<li><code>PostToolUse</code> (after Edit/Write): run formatting and lint automatically, removing style from human review entirely.</li>
+<li><code>Stop</code> (when it wants to finish): run the tests; on failure, block the stop and make it keep fixing. This turns the verification loop from a habit into a gate.</li>
+<li><code>PreToolUse</code>: intercept dangerous commands (direct production access, destructive operations) and refuse them or require a human.</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;hooks&quot;: {
+    &quot;PostToolUse&quot;: [
+      { &quot;matcher&quot;: &quot;Edit|Write&quot;,
+        &quot;hooks&quot;: [{ &quot;type&quot;: &quot;command&quot;, &quot;command&quot;: &quot;&lt;your format+lint command&gt;&quot; }] }
+    ]
+  }
+}
+</code></pre>
+<p>Principle: anything a script can judge right or wrong does not belong in a prompt. Prompts are for the parts that need judgement.</p>
+<p><strong>MCP: the stronger the tool, the smaller the permission.</strong> MCP lets the agent query databases, read issues, drive a browser and fetch logs, eliminating copy-paste. But keep Simon Willison's <em>lethal trifecta</em> in mind: <strong>private data + untrusted content + external communication</strong> together mean prompt injection can walk your data out — and issues, web pages and logs are all untrusted content that may contain instructions aimed at the model. The countermeasures are engineering, not hoping the model is smart:</p>
+<ul>
+<li>Read-only first: database MCP servers get read-only accounts; no write permission unless the task truly needs it.</li>
+<li>Least scope: tokens cover only the repos/projects required; production and development credentials are separate.</li>
+<li>Allow-list tools: enable only the servers the current task needs (which also keeps context cleaner).</li>
+<li>Treat all tool output as <em>data</em>, never as instructions: state in your rules that content from issues and web pages is factual material only and any instructions inside it must not be executed; high-risk actions always pass human confirmation and the sandbox.</li>
+<li>Keep credentials for headless/CI MCP use separate from personal ones, so they can be revoked independently.</li>
+</ul>
+<h2>4. Headless and CI: agents in the pipeline</h2>
+<p>Once interactive use is smooth, the natural step is moving repetitive work into CI. <code>claude -p &quot;...&quot;</code> (Claude Code) and <code>codex exec &quot;...&quot;</code> (Codex) are the non-interactive modes built for scripts and pipelines; OpenAI's official <code>openai/codex-action@v1</code> runs Codex directly in GitHub Actions (pass the task via <code>prompt</code> or <code>prompt-file</code>; it needs an API key in secrets; for Claude Code's action, follow its official repository rather than copying YAML from memory). Three patterns that are verified in production use:</p>
+<ol>
+<li><strong>First-round PR review.</strong> Trigger on PR creation/update and have the agent review the diff read-only: behaviour changes, missing tests, suspicious API usage, posted back as comments. This is how Anthropic uses <code>claude -p</code> internally — by the time a human opens the PR, the low-level issues have been filtered once. Give it a read-only sandbox (Codex: <code>--sandbox read-only</code>; Claude Code: tightened permission rules) so it can comment but never modify code.</li>
+<li><strong>Issue-to-PR automation.</strong> Hand well-specified small issues to an agent running in the cloud or CI (GitHub Copilot's coding agent accepts an issue assignment and returns a PR; headless Codex/Claude Code with a script achieves the same). What matters is not generation but <strong>intake discipline</strong>: the same CI, the same human review, never auto-merge; branch protection and CODEOWNERS apply to bot PRs exactly as to human ones.</li>
+<li><strong>Scheduled maintenance.</strong> Nightly dependency patrols, flaky-test triage, docs-versus-code drift checks — producing issues or PRs, never commits to main.</li>
+</ol>
+<p>Headless permission discipline is stricter than interactive, because nobody is there to click &quot;approve&quot;: encode the boundary in sandbox and approval policy — read-only tasks stay read-only, write access is confined to the workspace, and bypass flags such as <code>--dangerously-skip-permissions</code> belong only in disposable, isolated environments holding no real secrets. Set cost guardrails too: maximum turns/budget per task with automatic stop, so a runaway loop cannot burn a night's quota.</p>
+<h2>5. Verification strategy: the line between senior and amateur</h2>
+<p><strong>Tests are the contract, not theatre.</strong> Specify acceptance in executable form when you assign work: which existing tests must stay green, which new tests the new behaviour needs, what the edge cases are. The standard bug-fix motion is a failing reproduction test first (red), then fix to green; before a refactor, pin current behaviour with characterization tests. For pure functions and protocol layers, <strong>property-based tests</strong> (tools such as Hypothesis or fast-check) pay off: the machine generates masses of inputs against invariants, which catches &quot;looks right&quot; implementations far better than three hand-written examples. One level up, keep a small <strong>evals set</strong> for the agent itself: a dozen real historical tasks with acceptance scripts; run it whenever you change models, rules or tooling, and judge by pass rate rather than vibes.</p>
+<p><strong>A senior diff-review checklist, in order:</strong></p>
+<ol>
+<li>Start with <code>git diff --stat</code>: is the blast radius proportional to the task? Extra files are extra risk.</li>
+<li><strong>Read the test diff separately.</strong> The most common form of agent cheating is editing tests to fit the implementation — deleted assertions, loosened expectations, skipped failing cases. Rule: every test change needs a stated reason, or it goes back.</li>
+<li>Look at what it did <em>not</em> change: callers, docs, type definitions, migrations that should have moved in sync.</li>
+<li>Be suspicious of every new API, config key and field name: make it cite where it is defined (in the repo or official docs). Anything unverifiable is a hallucination until proven otherwise.</li>
+<li>Hunt over-engineering: new abstractions, new config layers, extension points for futures that may never come. Karpathy's observation is exact: models will write 1,000 lines where 100 would do. In review, ask &quot;what can be cut?&quot; — usually half.</li>
+<li>Check failure paths: error handling, idempotency, concurrency, permission checks — and whether a &quot;drive-by optimisation&quot; quietly weakened any of them.</li>
+</ol>
+<p><strong>Frequent AI failure modes are cheaper to forbid in rules than to fix in review:</strong> silently editing tests, inventing APIs from memory, refactoring unrelated code while passing by, deleting comments and validation it didn't understand, &quot;fixing&quot; errors by swallowing exceptions, and copy-pasting boilerplate three times instead of reusing the existing helper. Boris's team checks specifically for duplicated implementations in review and makes the agent look for reusable functions during planning — moving that step earlier beats catching it later.</p>
+<h2>6. Large and legacy systems: migrations, upgrades, cross-layer refactors</h2>
+<p>In a big codebase, the right shape is the strangler pattern: new logic takes the new path, old logic is replaced incrementally, every step reversible.</p>
+<ul>
+<li><strong>Pin behaviour before touching structure.</strong> For any legacy module you are about to change, first have the agent add characterization tests (even if that just snapshots current output); only when those are green may refactoring begin.</li>
+<li><strong>Mechanical transforms belong to codemods; judgement belongs to the agent.</strong> Repo-wide renames of APIs or component props should be done by AST tooling (every language ecosystem has mature codemod/jscodeshift-style tools) deterministically, with the agent handling the long tail the tool cannot parse. Asking an agent to hand-edit hundreds of files with a regex mindset is how incidents happen.</li>
+<li><strong>Databases and APIs go expand–contract.</strong> Add the new column/endpoint and dual-write (expand), migrate the data and shift reads, verify, then delete the old one (contract). A single PR that changes frontend, backend and schema together is especially dangerous with an agent: you cannot review it, and it does not know which layer it skipped.</li>
+<li><strong>Upgrade one step at a time.</strong> Have the agent read the target version's changelog and migration guide first and list affected call sites; then bump one dependency, one major version, per PR, with the full test suite and build each time. On failure, bisect <em>which</em> dependency and version introduced it instead of reverting everything at once. Validate the CI version matrix (runtimes, databases) in the same PR, not after it lands on main.</li>
+</ul>
+<h2>7. Full-stack in practice: three complete walkthroughs</h2>
+<p>Each example gives you a prompt you can paste, the verification to run, and the review points. Replace placeholders like <code>&lt;test&gt;</code> with the actual scripts your repo defines (in <code>package.json</code>, a Makefile or your task runner).</p>
+<h3>Example A: end-to-end feature — filter the order list by status (frontend + API + database)</h3>
+<p><strong>Step 1: contract first, no implementation.</strong></p>
+<pre><code class="language-text">Do not write implementation code yet. Draft the API contract for &quot;filter the
+order list by status&quot; into SPEC.md: request parameters, the status enum,
+pagination semantics, the response for invalid parameters, and the
+backward-compatibility story. Then list every layer it touches: the database
+query, the API, frontend state and URL parameter sync, tests.
+Put anything you are unsure about in a list of questions for me; do not guess.
+</code></pre>
+<p><strong>Step 2: backend first, tests red first.</strong></p>
+<pre><code class="language-text">Implement the backend per SPEC.md. First write failing tests: every status
+value, the empty result, invalid status returning 400, pagination edges.
+Run them and confirm they fail before writing the implementation.
+Justify any index decision on the query; do not change the response shape
+of the existing order endpoints.
+</code></pre>
+<p>Verify: <code>&lt;test&gt; &lt;typecheck&gt; &lt;lint&gt;</code>, then one real request against the local service to confirm the response matches the contract.</p>
+<p><strong>Step 3: frontend, synced with the URL.</strong></p>
+<pre><code class="language-text">Build the filter UI: status lives in the URL query parameters so refreshes
+and shared links restore it; loading and empty states reuse the existing
+components. Add component tests for parameter parsing and request building.
+Do not introduce a new state-management library.
+</code></pre>
+<p>Verify: <code>&lt;test&gt; &lt;build&gt;</code>, then click through it in a real browser and keep before/after screenshots as evidence.</p>
+<p><strong>Step 4: end-to-end and regression.</strong></p>
+<pre><code class="language-text">Add one e2e test: selecting a status in the UI returns the same result as
+calling the API directly. Run the full test suite and build, paste a summary
+of the commands and output, and finish with one sentence listing what you
+did not verify.
+</code></pre>
+<p>Review points: contract versus implementation, word for word; are invalid parameters being silently swallowed by the frontend &quot;to help&quot;; N+1 queries or a missing index; URL parameters and component state fighting each other; any old assertion edited just to make it pass.</p>
+<h3>Example B: production-style debugging — intermittent 500s on checkout</h3>
+<pre><code class="language-text">The checkout endpoint returns intermittent 500s. Here is the last hour of
+error logs and one traceId (below). Build the evidence chain only: follow
+the traceId across gateway, service and database, lay out the timeline and
+the first failing hop. Then list 2–3 root-cause hypotheses ranked by
+likelihood, each with what would confirm or refute it.
+Do not change any code until there is evidence.
+&lt;paste logs&gt;
+</code></pre>
+<p>Once a hypothesis leads, have it reproduce locally with constructed data, turn that into a failing regression test, and only then fix. Verify: regression test goes red → green, full suite passes, and it explains why the fix does not mask the same error on other paths (for example by merely swallowing the exception). Review points: is the fix at the source or at the symptom; does the new logging/alerting make the next occurrence a five-minute diagnosis; were any unrelated configs touched on the way through.</p>
+<h3>Example C: cross-layer refactor — renaming <code>status</code> to <code>state</code></h3>
+<p>Never let it do this in one shot. Use expand–contract across three PRs:</p>
+<ol>
+<li><strong>PR1 (expand):</strong> add the new column with dual writes; the API returns both fields; the frontend still reads the old one. Write &quot;this PR deletes nothing&quot; into the prompt, verbatim.</li>
+<li><strong>PR2 (switch):</strong> frontend reads the new field; the API marks the old one deprecated; a codemod rewrites in-repo references in bulk and the agent handles only the files the tool failed on.</li>
+<li><strong>PR3 (contract):</strong> once metrics show the old field has no traffic, drop the column and the compatibility code, with rollback notes on the migration.</li>
+</ol>
+<p>Verification is the same each step: characterization tests stay green, <code>&lt;typecheck&gt;</code> catches missed references, and a dual-run comparison confirms old and new fields agree. Review points: do dual writes cover <em>every</em> write path (including cron jobs and the other service); is there actual evidence of zero traffic before the contract PR.</p>
+<h2>8. Team governance, cost, and measurement</h2>
+<p><strong>Review policy comes first.</strong> Add two fields to the PR template: whether an agent generated or assisted the change, and the verification evidence (which checks ran, where the output is). Accountability is explicit: <strong>the submitter owns the code; the tool takes no blame</strong> — &quot;the AI wrote it&quot; is never a merge argument. Changes to rule files, custom commands and hooks go through the same review as code, because they change how the whole team produces software. Tier the permissions: newcomers and bots default to read-only plus PRs; senior engineers may run parallel and headless tasks, but production sandboxes and approvals do not relax with seniority.</p>
+<p><strong>Cost and latency are engineering trade-offs, not mysticism.</strong> N parallel sessions cost roughly N× the tokens and N× the review. Long contexts and bloated tool sets bill continuously. Use cheap, fast models for exploration and boilerplate; reserve strong models for design and review; cap headless tasks by budget and turns; and count your own waiting time in the ledger — if you could write it in twenty minutes and the agent takes forty plus twenty of review, that is a negative-return task.</p>
+<p><strong>Measure outcomes, never vibes.</strong> One study every senior engineer should know: METR's 2025 randomised controlled trial (16 experienced open-source developers, 246 real tasks, in mature repositories they had maintained for an average of five years) found that allowing the then-current AI tools made completion <strong>19% slower</strong> on average — while the developers had predicted a 24% speedup beforehand and still believed afterwards that they had been 20% faster. Know its limits: small sample, tools as of early 2025, and experts working in their most familiar code; it does not prove &quot;AI is useless&quot;, but it decisively proves that <strong>perceived speed is not evidence</strong>. So measure at team level with delivery metrics: lead time, PR open-to-merge time, change failure rate, rollback rate, review round-trips — one cycle before and after adoption — and never with vanity metrics like &quot;percentage of AI-written code&quot;, which only rewards bloat.</p>
+<h2>9. Failure-mode playbook</h2>
 <table>
 <thead>
 <tr>
-<th>Move</th>
-<th>What it does</th>
-<th>Where</th>
+<th>Symptom</th>
+<th>Likely cause</th>
+<th>Fix</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>/init</code></td>
-<td>Scan the repo and draft the project guide</td>
-<td>Claude Code (CLAUDE.md), Codex (AGENTS.md)</td>
+<td>Drifting further off with every correction</td>
+<td>Context polluted by failed attempts</td>
+<td><code>/clear</code>; rewrite the prompt with the lessons as constraints and acceptance criteria</td>
 </tr>
 <tr>
-<td><code>/clear</code></td>
-<td>Empty the context when you switch tasks</td>
-<td>Claude Code</td>
+<td>A 2,000-line diff lands at once</td>
+<td>Task never decomposed, no plan</td>
+<td>Send it back; split by layer/step into separately green commits</td>
 </tr>
 <tr>
-<td><code>/compact</code></td>
-<td>Summarise a long session and keep going</td>
-<td>Claude Code, Codex</td>
+<td>Tests all green, feature wrong</td>
+<td>It edited the tests to fit the implementation</td>
+<td>Review the test diff separately; forbid unexplained test changes in the rules</td>
 </tr>
 <tr>
-<td><code>Shift+Tab</code></td>
-<td>Switch to plan mode: read and plan only</td>
-<td>Claude Code, Cursor</td>
+<td>APIs/fields that don't exist</td>
+<td>Generated from memory, never searched the repo</td>
+<td>Require a citation of the definition; verify with typecheck and search</td>
 </tr>
 <tr>
-<td><code>@file</code></td>
-<td>Put a specific file into context</td>
-<td>Claude Code, Cursor and others</td>
+<td>Works, but grotesquely over-built</td>
+<td>Default bias toward over-engineering</td>
+<td>Demand the minimal implementation first; in review, ask what can be deleted</td>
 </tr>
 <tr>
-<td><code>/review</code></td>
-<td>Review the current uncommitted changes</td>
-<td>Codex (Claude Code's equivalent is <code>/code-review</code>)</td>
+<td>Parallel sessions stepping on each other</td>
+<td>Tasks not independent, or shared ports/DB</td>
+<td>Split by file boundary; separate ports and test databases per worktree</td>
 </tr>
 <tr>
-<td><code>claude -p</code> / <code>codex exec</code></td>
-<td>Run non-interactively, for scripts and CI</td>
-<td>Claude Code, Codex</td>
+<td>Long task &quot;forgets&quot; earlier decisions</td>
+<td>State lives only in the conversation</td>
+<td>Externalise SPEC/PLAN as files; on resume, make it restate progress first</td>
+</tr>
+<tr>
+<td>MCP-connected agent behaving strangely</td>
+<td>Instructions smuggled in via tool output (prompt injection)</td>
+<td>Audit against the lethal trifecta: cut permissions, disable external-communication tools, require human confirmation for high-risk actions</td>
+</tr>
+<tr>
+<td>The CI agent occasionally causes damage</td>
+<td>Headless permissions too broad</td>
+<td>Start read-only, confine writes to the workspace, cap budget and turns, never auto-merge bot PRs</td>
 </tr>
 </tbody>
 </table>
-<p>Two more keys worth knowing in Claude Code: <code>Esc</code> interrupts at any time so you can redirect, and pressing <code>Esc</code> twice (or <code>/rewind</code>) takes you back to an earlier checkpoint.</p>
-<p>The most underrated of these is <code>/clear</code>. Two of the most common failure patterns in the official docs come down to it. One is the &quot;kitchen sink session&quot;: you do A, ask about B, then go back to A, and the context fills with irrelevant material. The other is &quot;correcting over and over&quot;: wrong, corrected, still wrong, and the context fills with failed attempts. The fix is the same: <strong>if it is still wrong after two corrections, <code>/clear</code>, fold what you learned into a better first prompt, and start again.</strong></p>
-<h2>4. Conventions that let a whole team trust it</h2>
-<ul>
-<li><strong>Rule files live in the repo.</strong> <code>AGENTS.md</code>, <code>CLAUDE.md</code>, <code>.cursor/rules/</code> and <code>.github/copilot-instructions.md</code> are reviewed and evolved together with the code. Personal preferences go in a local file (for example <code>CLAUDE.local.md</code>), not in the team's rules.</li>
-<li><strong>One task, one branch.</strong> The agent's changes always live on a branch and arrive through a PR; never let it push to main.</li>
-<li><strong>Tests first.</strong> A bug fix starts with a failing test; a refactor starts with tests that pin behaviour.</li>
-<li><strong>Small diffs.</strong> One PR solves one problem. If you can't review it, don't merge it.</li>
-<li><strong>Keep secrets out of context.</strong> Don't paste <code>.env</code> files, tokens or production credentials into the conversation. Keep high-risk commands (deleting data, changing permissions, pushing to production) behind human confirmation; don't open everything up just to save clicks. Codex's <code>--sandbox</code> and <code>--ask-for-approval</code> and Claude Code's <code>/permissions</code> exist to draw that line.</li>
-<li><strong>Review evidence.</strong> &quot;Done&quot; without test output or a screenshot is not done.</li>
-</ul>
-<h2>5. Prompt templates you can copy</h2>
-<p><strong>Understanding code:</strong></p>
-<pre><code class="language-text">Don't modify any files yet. Read src/auth/ and tell me where the login
-request enters, which functions it passes through, and where the session
-is stored. Give a file and line number for every claim.
-</code></pre>
-<p><strong>Fixing a bug:</strong></p>
-<pre><code class="language-text">Problem: &lt;paste the error / logs&gt;.
-First write a test that reproduces it, run it and confirm it fails. Then
-fix the root cause; don't make the error go away by swallowing exceptions.
-Finally run the full test suite and paste the commands and output.
-</code></pre>
-<p><strong>Refactoring:</strong></p>
-<pre><code class="language-text">Goal: extract the price calculation in OrderService into its own module,
-with behaviour exactly unchanged. First check that existing tests cover
-price calculation and add tests if they don't. Then change it step by step,
-running the tests after each step. Don't touch unrelated code.
-</code></pre>
-<p><strong>Reviewing:</strong></p>
-<pre><code class="language-text">Review the changes on this branch against main as a senior reviewer: list
-behaviour changes, missing tests, and places that could be simpler. Only
-list issues; don't edit anything.
-</code></pre>
-<h2>6. Two tracks for getting better</h2>
-<p><strong>Beginner track: one session, one task, read every diff.</strong> For the first two weeks, aim for understanding, not speed. Always go explore → plan → small step → run checks → read the diff → commit. Every time the agent trips you up, add the lesson to the rule file. Treat the agent as a capable new colleague who tends to assume things: it does the work, you sign it off. The Claude Code team also suggests switching the output style to &quot;Explanatory&quot; or &quot;Learning&quot; so it explains why it makes each change, which is one of the fastest ways to learn an unfamiliar repository.</p>
-<p><strong>Intermediate and advanced track: parallelise, reuse, automate.</strong></p>
-<ol>
-<li><strong>Parallelise.</strong> The Claude Code team's single biggest productivity tip is to run 3–5 git worktrees at once, each with its own session on an unrelated task (Claude Code's <code>claude -w &lt;name&gt;</code> starts a session directly in a worktree). It only pays off if the tasks really are independent and you can keep up with the reviews; Chapter 5 covers the costs.</li>
-<li><strong>Reuse.</strong> Anything you do more than once a day becomes a custom command or skill, committed to the repo for the whole team (in Claude Code, under <code>.claude/skills/</code> or <code>.claude/commands/</code>). When you need a dedicated role, define a subagent (<code>.claude/agents/</code>), such as a read-only code reviewer. Subagents have their own context, which also keeps the main session clean.</li>
-<li><strong>Connect.</strong> Use MCP to wire in your issue tracker, logs and a browser, so the agent gathers evidence itself instead of you copying and pasting.</li>
-<li><strong>Deterministic gates.</strong> A rule in a prompt can be forgotten; a rule in a hook runs every time, for example formatting and linting after every edit.</li>
-<li><strong>Agents in CI.</strong> Use <code>claude -p</code> or <code>codex exec</code> in the pipeline for a first round of review, or assign an issue directly to Copilot's coding agent and have it come back with a PR for you to review.</li>
-</ol>
-<p>Both tracks end in the same place: less of your time goes into writing, more into defining the problem and accepting the result. Karpathy's warning is worth keeping in mind: these models' mistakes are no longer syntax errors but the conceptual errors of a slightly sloppy, hasty junior developer. Hold the verification gate and you have a helper that never gets tired. Let go of it and the agent will confidently amplify the mistakes.</p>
+<p>A closing note for senior engineers: an agent amplifies the engineering capability you already have. With contracts, tests and review in place, it is a tireless execution layer; without them, it will amplify the chaos with the same tirelessness. The real skill shift is moving your effort from <em>writing</em> to <em>setting standards and accepting work</em> — that is what these tools are actually for.</p>
