@@ -41,3 +41,13 @@
 <li><strong>&quot;Toil means the team isn't working hard enough.&quot;</strong> The SRE Book treats toil as something to eliminate systematically with engineering, not a personal failing.</li>
 <li><strong>&quot;AI will replace the pipeline.&quot;</strong> The opposite: a reliable pipeline is the infrastructure that gives agents their verification signals.</li>
 </ul>
+<h2>7. Extension card: the fully automatic AI coding-agent pipeline (pause only for human confirmation)</h2>
+<p><strong>One-line takeaway:</strong> do not feed a small task to an agent prompt by prompt. Let it run by default through “task card → isolated worktree development → self-test and self-repair → PR and CI → acceptance pack”, with humans guarding only four gates.</p>
+<ul>
+<li><strong>Four pause points:</strong> confirm the task card; the same error survives 3 repair rounds / a forbidden path is touched / the diff limit is exceeded; CI is still red after 1 automatic repair round; merging to the main branch (a human always clicks Merge).</li>
+<li><strong>Write the hard red lines first:</strong> changing a public API, deleting data or editing migrations, touching config/secrets/dependencies, merging or releasing, spending money or sending externally, and auth/security changes — stop immediately, never “do it and report later”.</li>
+<li><strong>Green is never self-reported:</strong> the exit signal is the acceptance command exiting 0, with no fewer tests than the baseline and no abnormal rise in skipped tests. Deleting tests, adding <code>@Disabled</code>, or weakening assertions is a fake green.</li>
+<li><strong>Copyable sequence:</strong> write the task card (goal + executable acceptance + allowed/forbidden paths) → <code>git worktree add ../wt-&lt;task-id&gt; -b agent/&lt;task-id&gt;-&lt;action&gt; origin/main</code> → failing test first, then implementation → at most 3 self-repair rounds → <code>gh pr create</code> + <code>gh pr checks --watch</code> → acceptance pack (what changed / how it was verified / what was not verified / how to roll back).</li>
+<li><strong>Budget (rules of thumb, not a promise):</strong> a medium single-module task commonly takes 0–3 rounds and about 15–40 minutes including CI; set a per-task budget brake and read the stop report before raising it. Full version: Diagram #29, Hands-on Playbook §32.</li>
+</ul>
+<p>Source: WeChat official account “My Dev 日记” (My Dev Diary), “AI Coding Agent 全自动流水线：从开发到自测结束，只在人工确认时暂停” (The Fully Automatic AI Coding-Agent Pipeline), published 2026-10-19.</p>

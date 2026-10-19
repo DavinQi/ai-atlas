@@ -643,6 +643,16 @@ curl -sS -D - -X POST http://localhost:8080/api/orders \
 <td>§28</td>
 <td>Revert to the plan and re-run; TDD with tests committed first</td>
 </tr>
+<tr>
+<td>You want a small task to run unattended to a PR, pausing only for confirmation</td>
+<td>§32</td>
+<td>Write the four pause points and red lines first; green means the acceptance command exits 0 with no drop in test count</td>
+</tr>
+<tr>
+<td>A large requirement is hard to split, and parallel agents keep stepping on each other</td>
+<td>§33</td>
+<td>Clear the Q-list, freeze contracts, then split and schedule by the L0–L3 dependency graph</td>
+</tr>
 </tbody>
 </table>
 <p>Read cases as moves, not stories: copy exactly <strong>one</strong> practice from a case, run it until it is boring, then take the next. That is the rhythm every team above shares — fix the environment and the verifier first, and the model's capability gets amplified on its own.</p>
@@ -1420,3 +1430,61 @@ export function assertInvitationsEnabled(env: NodeJS.ProcessEnv = process.env): 
 <p><strong>When it fails:</strong> the agent writes a praise piece → demand &quot;problems and interception points only&quot;, adjectives deleted. Ten-plus candidate rules → cut by &quot;will we hit this again&quot; down to three; the rest stay in the retrospective as reference, not in the rule file (over-long rule files go unread — see §13).</p>
 <p><strong>Done when:</strong> retrospective, rules and cheat-sheet are committed, and you can state three numbers: how many sessions the run took, how many blocking findings review caught, and how many unplanned problems surfaced after release. On your next similar feature, those three numbers are the baseline you improve against.</p>
 <p>Walk this chapter once end to end and what you have trained is not &quot;the invitations feature&quot; — it is the chain itself as muscle memory: acceptance before code, contract frozen before tasks, red before green, review in a fresh session, flag-first release, rollback lines written before dashboards, and lessons sedimented into rules at the end. Swap in payments, permissions, import/export — only the contents of <code>SPEC.md</code> change; the chain does not.</p>
+<h2>32. The fully automatic pipeline: from development to the end of self-testing, pausing only for human confirmation</h2>
+<p><strong>One-line takeaway:</strong> the point of full automation is not “no humans” — it is moving humans out of the loop and onto the gates. Machines grind through writing code, running tests, extracting logs and the first repair rounds; humans keep scope, risk and the merge click, appearing only at four gates.</p>
+<p>Source: WeChat official account “My Dev 日记” (My Dev Diary), “AI Coding Agent 全自动流水线：从开发到自测结束，只在人工确认时暂停” (The Fully Automatic AI Coding-Agent Pipeline: From Development to the End of Self-Testing, Pausing Only for Human Confirmation), published 2026-10-19. This is the condensed version; the full commands, scripts and worked logs are in the original article.</p>
+<h3>32.1 Five stages, four pause points</h3>
+<pre><code>Requirement/defect → 1. task card [Gate A: human confirms the card] → 2. isolated worktree development
+→ 3. local self-test &amp; self-repair (max 3 rounds) [Gate B: same error after 3 rounds / forbidden path / diff limit]
+→ 4. automatic PR + CI gate [Gate C: still red after 1 CI repair round]
+→ 5. acceptance pack + human review [Gate D: merge is always human] → archive card, logs, PR and CI links</code></pre>
+<p>Every stage needs a machine-checkable exit: the exit of stage 3 is not the agent saying “fixed”, it is the task card’s acceptance command exiting 0. A pause report always states four things: where it is stuck, the options, the impact of each, and what was touched before asking.</p>
+<h3>32.2 Write red lines as paths and actions</h3>
+<ul>
+<li><strong>Must pause:</strong> changing a public API signature; deleting data or editing migrations; touching <code>application-*.yml</code>, data sources or dependency versions; merging to main, tagging, or editing workflows; really calling paid or external-send services; changing auth or crypto.</li>
+<li><strong>Automatic brakes:</strong> the same error repeating; a single-round diff over the limit (suggested &gt;15 files or &gt;800 lines, calibrate per project); fewer tests than baseline or an abnormal rise in skipped tests; missing information that would force a guess.</li>
+<li><strong>Fully automatic:</strong> editing code and tests inside allowed paths, running local checks, self-repairing from logs within the round limit, committing to the task branch, opening the PR, and one automatic repair round on the same branch when CI goes red.</li>
+</ul>
+<p>Write red lines as file paths, not adjectives: “never edit <code>pom.xml</code> or <code>db/migration/**</code>” can be enforced; “don’t touch dangerous files” cannot. Enforce forbidden paths mechanically with hooks/scripts, not by prompt politeness alone.</p>
+<h3>32.3 The copyable landing sequence</h3>
+<ol>
+<li>Task card first: background, goal, executable acceptance command, allowed/forbidden paths, open questions; never start with an open question unanswered.</li>
+<li>Isolated development: <code>git worktree add ../wt-&lt;task-id&gt; -b agent/&lt;task-id&gt;-&lt;action&gt; origin/main</code>; write the test first and watch it fail for “behaviour not implemented”, then write the minimal implementation.</li>
+<li>Self-repair loop, five parts: Goal (exit 0 and no drop in test count), Prompter (feed only the failure summary), Reader (extract only failing cases and key stack lines), Verifier (run the command independently — never ask the agent if it is done), Controller (max 3 rounds, hard stop on a repeated error).</li>
+<li>PR and gate: <code>gh pr create --body-file .agent/logs/pr-body.md</code>, <code>gh pr checks --watch</code>; protect main (required checks + at least 1 approval). Allow only 1 automatic CI repair round, and only in trusted-member repositories.</li>
+<li>Acceptance pack, four parts: what changed; how it was verified (commands/CI/test count baseline → now); what was not verified; how to roll back (prefer <code>git revert -m 1 &lt;merge-sha&gt;</code>, rehearsed once before merge).</li>
+</ol>
+<h3>32.4 Four wrecks and their brakes</h3>
+<ul>
+<li>Infinite loop burning budget → put the round limit in the script, not the prompt, and add a total time budget.</li>
+<li>Fake green (deleted tests / weakened assertions) → compare test counts with the baseline; the author of the change never owns the acceptance criteria.</li>
+<li>Drive-by config edits and refactors → mechanical forbidden-path blocks + diff-limit stops + one commit per small step.</li>
+<li>Parallel conflicts and oversized permissions → one card, one worktree, one branch; serial merges; task branches writable, main read-only; no secrets inside the worktree.</li>
+</ul>
+<p><strong>Budget (rules of thumb, not a promise):</strong> a medium single-module task commonly takes 0–3 repair rounds, about 15–40 minutes including CI, and 2–4 human interventions that are judgements, not labour. Start with that budget, then replace it with a month of your own logs.</p>
+
+<h2>33. Breaking down a large task: clear uncertainty first, then parallelise by dependency wave</h2>
+<p><strong>One-line takeaway:</strong> small tasks run on task cards; large tasks run on four steps — requirements analysis, architecture decision, card splitting, wave scheduling — that squeeze out uncertainty layer by layer. At every step the AI drafts options; confirming, choosing and freezing stay human.</p>
+<p>Source: WeChat official account “My Dev 日记” (My Dev Diary), “大任务拆卡实战：用 AI 做需求分析、架构设计与多模块任务拆分” (Breaking Down Large Tasks in Practice: Requirements Analysis, Architecture and Multi-Module Task Splitting with AI), to be published 2026-10-20. This is the condensed version; the full prompts, contract examples and the 11-card table are in the original article.</p>
+<h3>33.1 Why you cannot split cards directly</h3>
+<ul>
+<li>Cards too large, agent lost: the card secretly contains undecided architecture, which the agent then decides at random while coding.</li>
+<li>Cards too fine, integration explodes: splitting by technical actions (“create a table”, “write a DTO”) leaves only end-stage integration as the safety net.</li>
+<li>Dependencies unmapped, parallel agents collide: the precondition for parallelism is frozen contracts, not headcount; if a contract was never written down, nobody can “breach” it.</li>
+</ul>
+<p>The golden rule: one card = one independently verifiable behaviour slice — statable in one sentence, provable by one command, carrying its own allowed/forbidden boundaries, with dependencies named as card IDs and frozen contract versions. Red lines (rules of thumb): 3–10 files, 150–600 diff lines, 2–6 hours, 0–2 upstream dependencies, 1–3 acceptance commands, one main module. Justify any breach on the card, or split it.</p>
+<h3>33.2 The four steps (one gate each)</h3>
+<ol>
+<li><strong>Requirements analysis:</strong> feed the original wording, existing APIs/data, old-code paths, constraints and past incidents (facts, not conclusions). The AI produces A: behaviour list, B: uncertainty/conflict list (Q-01…, with two readings and their impact), C: non-functional list. [Gate 1] every Q item gets a conclusion + confirmer + date; any open item blocks architecture.</li>
+<li><strong>Architecture:</strong> the AI must offer 2–3 options with costs, plus a module-boundary table, interface contracts, data flow and draft ADRs. [Gate 2] a human chooses and freezes contracts at v1; delete any abstraction that cannot name the R-item it serves.</li>
+<li><strong>Task cards:</strong> dependency graph before cards, layered L0 foundation → L1 domain → L2 APIs/orchestration → L3 integration; cards cite contract versions, dependency card IDs and their layer, and may not invent fields. [Gate 3] run three checks per card: provable by command? failure does not drag down other cards? could a stranger start without asking?</li>
+<li><strong>Waves:</strong> cards in one wave must be mutually independent; write down each agent’s worktree/branch, the merge order, and the wave’s green commands. Same-module cards in one wave merge one at a time with a full re-run in between. [Gate 4] after a human confirms the parallel groups and merge order, each card runs independently through the §32 pipeline.</li>
+</ol>
+<h3>33.3 Worked example: order / inventory / payment in 11 cards</h3>
+<p>CARD-01 spike on payment callbacks → CARD-02 freeze contracts → CARD-03 tables and migrations → three parallel L1 cards (04 inventory reservation, 05 payment-callback domain logic, 06 order state machine) → two parallel L2 cards (07 order-placement orchestration, 08 payment-callback API) → 09 payment-success progression and 10 timeout cancellation/compensation (same module, staggered merges) → CARD-11 end-to-end integration (including insufficient stock, duplicate callbacks and timeout cancellation). Every card’s main acceptance is one copyable test command.</p>
+<h3>33.4 Do not skip the invisible cards; version contract changes</h3>
+<ul>
+<li>After each splitting round, walk the invisible-work checklist: data migration, config/flags, permissions/security, idempotency/retries, transactions/compensation, observability, test data, compatibility, rollback, docs/notification — a large task usually hits 3–5 of them, and most deserve their own card.</li>
+<li>Never edit a frozen contract inside a development card: stop the card → register the change → human confirms → bump the contract (v1→v2) → a change card moves unfinished cards to the new version → finished cards get a regression-only card.</li>
+<li>AGENTS.md should reference artefact paths and versions only (requirements conclusions, architecture, frozen contracts, accepted ADRs, the card, the wave plan), never copy their contents; when a card and a contract disagree, the contract wins and work stops for a report.</li>
+</ul>

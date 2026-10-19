@@ -41,3 +41,13 @@
 <li><strong>「琐事说明团队不够努力。」</strong> SRE Book 把琐事视为需要用工程手段系统消除的对象，而不是个人问题。</li>
 <li><strong>「AI 会替代流水线。」</strong> 恰恰相反，可靠的流水线是 Agent 获得验证信号的基础设施。</li>
 </ul>
+<h2>七、延伸卡：AI Coding Agent 全自动流水线（只在人工确认时暂停）</h2>
+<p><strong>一句话结论：</strong>小任务不要靠人一句句喂提示，要让 Agent 默认自动跑完「任务卡 → worktree 隔离开发 → 自测自修复 → 提 PR 等 CI → 验收包」，人只守四个闸口。</p>
+<ul>
+<li><strong>四个暂停点：</strong>确认任务卡；同一错误 3 轮修不好／动禁改路径／diff 超限；CI 红且自动修 1 轮仍红；合并主干（永远人工点 Merge）。</li>
+<li><strong>硬红线先写死：</strong>改对外接口、删数据或改迁移、动配置/密钥/依赖、合并发布、花钱外发、安全鉴权——踩到立即停，不许先做了再说。</li>
+<li><strong>判绿不靠自述：</strong>出口信号是验收命令退出码为 0，且测试数不比基线少、Skipped 不异常增加；删测试、加 <code>@Disabled</code>、改弱断言都算假绿。</li>
+<li><strong>可复制顺序：</strong>写任务卡（目标＋可执行验收＋允许/禁止路径）→ <code>git worktree add ../wt-&lt;任务号&gt; -b agent/&lt;任务号&gt;-&lt;动作&gt; origin/main</code> → 先写失败测试再写实现 → 自修复最多 3 轮 → <code>gh pr create</code>＋<code>gh pr checks --watch</code> → 出验收包（改了什么／怎么验的／没验什么／怎么回滚）。</li>
+<li><strong>算账（经验估计，不是承诺）：</strong>单模块中等任务常见 0–3 轮、约 15–40 分钟含 CI；给每单设预算刹车，超了先看停手报告再加预算。完整版见图 #29 实操手册 §32。</li>
+</ul>
+<p>来源：公众号「My Dev 日记」《AI Coding Agent 全自动流水线：从开发到自测结束，只在人工确认时暂停》，2026-10-19 已发表。</p>

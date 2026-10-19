@@ -84,3 +84,12 @@
 <li><strong>&quot;Clear requirements are the product manager's job.&quot;</strong> The handbook's approach is to have the AI ask, making clarification a team process.</li>
 <li><strong>&quot;With a spec, we don't need tests.&quot;</strong> The spec defines what is correct; tests prove it was done correctly.</li>
 </ul>
+<h2>8. Extension card: clear uncertainty first, then split a large task and parallelise by wave</h2>
+<p><strong>One-line takeaway:</strong> never ask an AI to “split this big requirement into a dozen cards” directly. Run requirements analysis until uncertainty is zero, let a human choose the architecture and freeze the contracts, then split by dependency layer into independently verifiable cards and execute in waves.</p>
+<ul>
+<li><strong>Four steps, four gates:</strong> requirements analysis (A: behaviour list / B: uncertainties and conflicts / C: non-functional requirements) → architecture (2–3 options compared + contracts + ADRs, chosen by a human) → task cards (dependency graph before cards) → waves (cards in one wave are mutually independent; merge order is written down). No architecture while the Q-list has open items; no cards before contracts are frozen.</li>
+<li><strong>Granularity red lines (rules of thumb):</strong> one card = one independently verifiable behaviour slice; 3–10 files changed, roughly 150–600 diff lines, 2–6 human-equivalent hours, 0–2 upstream dependencies, one main module. Any breach must be justified on the card — or split the card.</li>
+<li><strong>Layers:</strong> L0 foundation (contracts/tables/enums/spikes) → L1 domain → L2 APIs and orchestration → L3 integration and compensation; integration gets its own card and its own wave, never the tail of an API card.</li>
+<li><strong>Worked example:</strong> an order/inventory/payment checkout flow split into 11 cards (CARD-01 spike to CARD-11 end-to-end integration), three L1 cards in parallel and two L2 cards in parallel, merging same-module cards one at a time with a full re-run. Full version: Diagram #29, Hands-on Playbook §33.</li>
+</ul>
+<p>Source: WeChat official account “My Dev 日记” (My Dev Diary), “大任务拆卡实战：用 AI 做需求分析、架构设计与多模块任务拆分” (Breaking Down Large Tasks in Practice), to be published 2026-10-20.</p>
